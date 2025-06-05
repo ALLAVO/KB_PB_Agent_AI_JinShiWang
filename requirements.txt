@@ -1,0 +1,16 @@
+# Python 패키지 목록
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+# SQLAlchemy # DB 사용 시
+# psycopg2-binary # PostgreSQL 사용 시
+# python-jose[cryptography] # JWT 토큰 사용 시
+# passlib[bcrypt] # 비밀번호 해싱 사용 시
+# yfinance # Yahoo Finance 크롤링 시
+# transformers # 감성 분석 등 NLP 모델 사용 시
+# torch # PyTorch 모델 사용 시
+# tensorflow # TensorFlow 모델 사용 시
+# scikit-learn # 머신러닝 모델 사용 시
+# openai # GPT 사용 시
+# joblib # 모델 파일 로드/저장 시
