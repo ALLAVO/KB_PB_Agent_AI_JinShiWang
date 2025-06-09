@@ -43,4 +43,10 @@ kb_jinshiwang/
 ```
 
 ## 실행 방법
-(추후 작성)
+```
+백엔드
+uvicorn app.main:app --reload 
+
+프론트엔드
+npm start
+```

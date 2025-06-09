@@ -18,3 +18,31 @@ def analyze_sentiment(text: str) -> float:
     elif "부정적" in text:
         return -0.7
     return 0.1 # 중립 또는 알 수 없음
+
+import psycopg2
+from app.core.config import settings
+
+
+def check_db_connection():
+    try:
+        conn = psycopg2.connect(
+            host=settings.DB_HOST,
+            port=settings.DB_PORT,
+            dbname=settings.DB_NAME,
+            user=settings.DB_USER,
+            password=settings.DB_PASSWORD,
+        )
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM kb_enterprise_data LIMIT 1")
+        rows = cur.fetchall()
+        print('Sample Data from kb_enterprise_data:')
+        for row in rows:
+            print(row)
+        cur.close()
+        conn.close()
+
+    except Exception as e:
+        print("Error connecting to the database:", e)
+
+if __name__ == "__main__":
+    check_db_connection()
