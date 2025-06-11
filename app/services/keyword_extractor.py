@@ -3,6 +3,10 @@ import pandas as pd
 import string
 import spacy
 
+# 유의사항, 아래 spaCy 내부에 필요한 추가 리소스는 별도의 다운로드가 필요함
+# 어디에 적어야 할지 몰라서 여기에 적어둠
+# python -m spacy download en_core_web_sm
+
 # 모델 초기화
 nlp = spacy.load("en_core_web_sm")
 kw_model = KeyBERT('sentence-transformers/paraphrase-mpnet-base-v2')
@@ -13,16 +17,18 @@ def remove_last_sentences(text, n=3):
     return ' '.join(sentences[:-n]) if len(sentences) > n else text
 
 def preprocess(text):
-    """전처리: 소문자화, 불필요한 문장부호 제거, lemmatization"""
+    """전처리: 소문자화, 불필요한 문장부호 제거, 숫자 및 특수기호 일부 보존, lemmatization"""
     keep = {'$', '%', "'", '(', ')', '-'}
     remove = ''.join([p for p in string.punctuation if p not in keep])
     text = text.lower().translate(str.maketrans('', '', remove))
-    
+
     doc = nlp(text)
     return ' '.join([
         token.lemma_ for token in doc
-        if token.is_alpha or '-' in token.text
+        if not token.is_space and not token.is_punct
+        and (token.is_alpha or token.is_digit or '-' in token.text or token.text in keep)
     ])
+
 
 def extract_named_entities(text):
     """고유명사 원형 및 소문자 버전 추출"""
