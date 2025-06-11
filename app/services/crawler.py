@@ -2,10 +2,12 @@ import requests
 import time
 import os
 import json
+import yfinance as yf
 
 # 요청 간 최소 대기시간 (초 단위)
 RATE_LIMIT_SLEEP = 2
 
+##### 01. 제무재표 #####
 # CIK 캐시 파일 경로
 def get_cik_for_ticker(ticker: str) -> str:
     """
@@ -115,3 +117,83 @@ def get_financial_statements_from_sec(ticker: str, start_date: str = None, end_d
         return result
     except Exception as e:
         return {"error": f"Error fetching or parsing company facts: {e}"}
+    
+
+#### 02 . 회사 정보 #####  ---- 이 부분 수정하기!!!!
+def get_company_profile_from_yahoo(ticker: str, max_retries: int = 10, sleep_sec: int = 2) -> dict:
+    """
+    Yahoo Finance API를 통해 기업의 기본 정보를 반환합니다.
+    rate limit 발생 시 재시도하며, 요청 간 sleep을 둡니다.
+    반환: {
+        business_summary: "기업의 사업 개요",
+    }
+    """
+    import time
+    for attempt in range(max_retries):
+        try:
+            stock = yf.Ticker(ticker)
+            info = stock.info
+            # 최소 필수 정보가 있으면 반환
+            if info.get("longName") or info.get("shortName"):
+                return {
+                    "business_summary": info.get("longBusinessSummary"),
+                }
+            # 데이터가 없으면 에러
+            else:
+                raise Exception("No company info returned from Yahoo Finance.")
+        except Exception as e:
+            # rate limit 또는 기타 에러 발생 시 재시도
+            if attempt < max_retries - 1:
+                time.sleep(sleep_sec * (attempt + 1))  # 점진적으로 대기 시간 증가
+            else:
+                return {"error": f"Error fetching Yahoo Finance company profile: {e}"}
+
+
+#### 03 . 주가 + 기술지표 #####
+
+def get_weekly_stock_indicators_from_yahoo(ticker: str, start_date: str, end_date: str) -> dict:
+    """
+    Yahoo Finance에서 주간 주가(종가, 시가, 고가, 저가, 거래량)와 기술지표(5/10/20일 이동평균, 주간 변동성 등)를 반환합니다.
+    start_date, end_date: 'YYYY-MM-DD' (주차의 시작일, 마지막날)
+    반환: {
+        'close_avg', 'open_avg', 'high_avg', 'low_avg', 'volume_avg',
+        'ma5', 'ma10', 'ma20', 'volatility', 'price_change_pct'
+    }
+    """
+    import pandas as pd
+    import numpy as np
+    try:
+        stock = yf.Ticker(ticker)
+        # 주간 데이터 가져오기
+        df = stock.history(start=start_date, end=end_date, interval='1d')
+        if df.empty:
+            return {"error": "No price data in given period."}
+        # 주간 평균
+        close_avg = df['Close'].mean()
+        open_avg = df['Open'].mean()
+        high_avg = df['High'].mean()
+        low_avg = df['Low'].mean()
+        volume_avg = df['Volume'].mean()
+        # 이동평균 (과거 데이터 포함, 주간 마지막날 기준)
+        df_ma = stock.history(end=end_date, period='30d', interval='1d')
+        ma5 = df_ma['Close'].rolling(window=5).mean().iloc[-1] if len(df_ma) >= 5 else None
+        ma10 = df_ma['Close'].rolling(window=10).mean().iloc[-1] if len(df_ma) >= 10 else None
+        ma20 = df_ma['Close'].rolling(window=20).mean().iloc[-1] if len(df_ma) >= 20 else None
+        # 주간 변동성 (표준편차)
+        volatility = df['Close'].std()
+        # 주간 등락률
+        price_change_pct = ((df['Close'][-1] - df['Close'][0]) / df['Close'][0]) * 100 if len(df['Close']) > 1 else None
+        return {
+            'close_avg': close_avg,
+            'open_avg': open_avg,
+            'high_avg': high_avg,
+            'low_avg': low_avg,
+            'volume_avg': volume_avg,
+            'ma5': ma5,
+            'ma10': ma10,
+            'ma20': ma20,
+            'volatility': volatility,
+            'price_change_pct': price_change_pct
+        }
+    except Exception as e:
+        return {"error": f"Error fetching Yahoo Finance stock indicators: {e}"}
