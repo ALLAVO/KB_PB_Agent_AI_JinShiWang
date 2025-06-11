@@ -127,7 +127,7 @@ function App() {
         start_date: sentimentStart,
         end_date: sentimentEnd,
       });
-      const res = await fetch(`http://localhost:8000/api/sentiment/weekly?${params}`);
+      const res = await fetch(`http://localhost:8000/api/v1/sentiment/weekly?${params}`);
       if (!res.ok) throw new Error("API 호출 실패");
       const data = await res.json();
       setSentimentResult(data);
@@ -276,4 +276,3 @@ function App() {
 }
 
 export default App;
-

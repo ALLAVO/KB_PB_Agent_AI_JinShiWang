@@ -25,7 +25,7 @@ app.include_router(customer.router, prefix="/api/v1")
 app.include_router(company.router, prefix="/api/v1")
 app.include_router(prediction.router, prefix="/api/v1")
 app.include_router(report.router, prefix="/api/v1")
-app.include_router(sentiment.router)  # sentiment 라우터 등록
+app.include_router(sentiment.router, prefix="/api/v1")  # sentiment 라우터 prefix 추가
 
 @app.get("/")
 def read_root():
