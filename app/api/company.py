@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 
 from app.schemas.company import CompanyInfo
-from app.services.crawler import get_company_info_from_yahoo
+from app.services.get_company_info_from_yahoo import get_company_info_from_yahoo
 from app.services.sentiment import get_weekly_sentiment_scores_by_stock_symbol
 
 router = APIRouter()

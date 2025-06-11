@@ -262,7 +262,7 @@ function App() {
         </button>
       </div>
       {sentimentError && <div style={{ color: 'red' }}>{sentimentError}</div>}
-      {sentimentResult && (
+      {sentimentResult && (typeof sentimentResult.weekly_scores === 'object') && Object.keys(sentimentResult.weekly_scores).length > 0 && (
         <table border="1" style={{ margin: '0 auto', minWidth: 300 }}>
           <thead>
             <tr>
@@ -271,14 +271,17 @@ function App() {
             </tr>
           </thead>
           <tbody>
-            {Object.entries(sentimentResult).map(([week, score]) => (
+            {Object.entries(sentimentResult.weekly_scores).map(([week, score]) => (
               <tr key={week}>
                 <td>{week}</td>
-                <td>{score.toFixed(3)}</td>
+                <td>{typeof score === 'number' ? score.toFixed(3) : score}</td>
               </tr>
             ))}
           </tbody>
         </table>
+      )}
+      {sentimentResult && ((typeof sentimentResult.weekly_scores !== 'object') || Object.keys(sentimentResult.weekly_scores).length === 0) && (
+        <div>감성점수 데이터가 없습니다.</div>
       )}
     </div>
   );
