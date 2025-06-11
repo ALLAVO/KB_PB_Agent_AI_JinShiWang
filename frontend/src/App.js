@@ -1,6 +1,7 @@
 import logo from './logo.svg';
 import './App.css';
 import React, { useState } from "react";
+import { getWeeksOfMonth } from "./weekUtils";
 
 function App() {
   const [customerName, setCustomerName] = useState("");
@@ -22,8 +23,11 @@ function App() {
 
   // 감성점수 조회 관련 상태
   const [sentimentSymbol, setSentimentSymbol] = useState("");
-  const [sentimentStart, setSentimentStart] = useState("");
-  const [sentimentEnd, setSentimentEnd] = useState("");
+  const [sentimentYear, setSentimentYear] = useState(new Date().getFullYear());
+  const [sentimentMonth, setSentimentMonth] = useState(new Date().getMonth() + 1); // 1~12
+  const [sentimentWeek, setSentimentWeek] = useState(1);
+  const weeks = getWeeksOfMonth(sentimentYear, sentimentMonth);
+  const selectedWeek = weeks.find(w => w.week === Number(sentimentWeek));
   const [sentimentResult, setSentimentResult] = useState(null);
   const [sentimentLoading, setSentimentLoading] = useState(false);
   const [sentimentError, setSentimentError] = useState("");
@@ -112,10 +116,10 @@ function App() {
     setReportResult(await res.json());
   };
 
-  // 감성점수 조회 함수
+  // 감성점수 조회 함수 수정
   const fetchSentimentScores = async () => {
-    if (!sentimentSymbol || !sentimentStart || !sentimentEnd) {
-      setSentimentError("기업명, 시작일, 종료일을 모두 입력하세요.");
+    if (!sentimentSymbol || !selectedWeek) {
+      setSentimentError("기업명, 연, 월, 주차를 모두 입력하세요.");
       return;
     }
     setSentimentLoading(true);
@@ -124,8 +128,8 @@ function App() {
     try {
       const params = new URLSearchParams({
         stock_symbol: sentimentSymbol,
-        start_date: sentimentStart,
-        end_date: sentimentEnd,
+        start_date: selectedWeek.start.toISOString().slice(0, 10),
+        end_date: selectedWeek.end.toISOString().slice(0, 10),
       });
       const res = await fetch(`http://localhost:8000/api/v1/sentiment/weekly?${params}`);
       if (!res.ok) throw new Error("API 호출 실패");
@@ -236,18 +240,23 @@ function App() {
           onChange={e => setSentimentSymbol(e.target.value)}
           style={{ marginRight: 8 }}
         />
-        <input
-          type="date"
-          value={sentimentStart}
-          onChange={e => setSentimentStart(e.target.value)}
-          style={{ marginRight: 8 }}
-        />
-        <input
-          type="date"
-          value={sentimentEnd}
-          onChange={e => setSentimentEnd(e.target.value)}
-          style={{ marginRight: 8 }}
-        />
+        <select value={sentimentYear} onChange={e => setSentimentYear(Number(e.target.value))} style={{ marginRight: 8 }}>
+          {Array.from({ length: 6 }, (_, i) => 2022 + i).map(y => (
+            <option key={y} value={y}>{y}년</option>
+          ))}
+        </select>
+        <select value={sentimentMonth} onChange={e => setSentimentMonth(Number(e.target.value))} style={{ marginRight: 8 }}>
+          {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+            <option key={m} value={m}>{m}월</option>
+          ))}
+        </select>
+        <select value={sentimentWeek} onChange={e => setSentimentWeek(Number(e.target.value))} style={{ marginRight: 8 }}>
+          {weeks.map(w => (
+            <option key={w.week} value={w.week}>
+              {`${w.week}주차 (${w.start.getMonth() + 1}-${w.start.getDate()}~${w.end.getMonth() + 1}-${w.end.getDate()})`}
+            </option>
+          ))}
+        </select>
         <button onClick={fetchSentimentScores} disabled={sentimentLoading}>
           {sentimentLoading ? "조회 중..." : "감성점수 조회"}
         </button>
