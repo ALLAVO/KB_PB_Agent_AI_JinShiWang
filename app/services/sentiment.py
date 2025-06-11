@@ -25,7 +25,7 @@ def check_db_connection():
     except Exception as e:
         print("Error connecting to the database:", e)
 
-def get_articles_by_stock_symbol(stock_symbol: str):
+def get_articles_by_stock_symbol(stock_symbol: str, start_date: str = None, end_date: str = None):
     try:
         conn = psycopg2.connect(
             host=settings.DB_HOST,
@@ -35,31 +35,30 @@ def get_articles_by_stock_symbol(stock_symbol: str):
             password=settings.DB_PASSWORD,
         )
         cur = conn.cursor()
-
-        # stock_symbol이 str 타입이 아닐 경우 str로 변환 및 공백 제거
         stock_symbol_param = str(stock_symbol).strip()
-        # “특정 주식 심볼에 대해, 매주마다 가장 최신의 기사 하나씩만 가져와라.”
-        # stock_symbol_query = (
-        #     "SELECT DISTINCT ON (date_trunc('week', date)) article, date "
-        #     "FROM kb_enterprise_data "
-        #     "WHERE stock_symbol = %s "
-        #     "ORDER BY date_trunc('week', date), date DESC"
-        # )
-        # "특정 주식 심볼에 대해 2023년 이후의 모든 기사를 주차별로 정렬해 최신 기사부터 가져와."
+        # 날짜 조건 동적 생성
+        date_conditions = []
+        params = [stock_symbol_param]
+        if start_date:
+            date_conditions.append("date >= %s")
+            params.append(start_date)
+        if end_date:
+            date_conditions.append("date <= %s")
+            params.append(end_date)
+        date_query = " AND ".join(date_conditions)
+        if date_query:
+            date_query = " AND " + date_query
         stock_symbol_query = (
             "SELECT article, date, date_trunc('week', date) AS week_start "
             "FROM kb_enterprise_data "
-            "WHERE stock_symbol = %s AND date >= '2020-12-01' "
+            "WHERE stock_symbol = %s" + date_query + " "
             "ORDER BY date_trunc('week', date), date DESC;"
         )
         print("실행 쿼리:", stock_symbol_query)
-        print("파라미터:", stock_symbol_param)
-        cur.execute(stock_symbol_query, (stock_symbol_param,))
+        print("파라미터:", params)
+        cur.execute(stock_symbol_query, tuple(params))
         rows = cur.fetchall()
         print(f"조회된 row 수: {len(rows)}")
-        # for idx, row in enumerate(rows):
-        #     week_start = row[1] - timedelta(days=row[1].weekday())
-        #     print(f"주차 구분: {week_start.strftime('%Y-%m-%d')} ~", row)
         cur.close()
         conn.close()
         return rows
@@ -111,9 +110,9 @@ def get_sentiment_score_for_article(article: str, conn) -> float:
     return sentiment_score
 
 # 주식 심볼에 대한 주차별 감성 점수 계산 함수
-def get_weekly_sentiment_scores_by_stock_symbol(stock_symbol: str):
+def get_weekly_sentiment_scores_by_stock_symbol(stock_symbol: str, start_date: str = None, end_date: str = None):
     """
-    특정 주식 심볼에 대해 2023년 이후의 모든 기사에 대해 주차별로 감성점수 평균을 반환합니다.
+    특정 주식 심볼에 대해 입력받은 기간의 모든 기사에 대해 주차별로 감성점수 평균을 반환합니다.
     반환값 예시: { '2024-05-27': 0.12, '2024-06-03': -0.05, ... }
     """
     try:
@@ -124,7 +123,7 @@ def get_weekly_sentiment_scores_by_stock_symbol(stock_symbol: str):
             user=settings.DB_USER,
             password=settings.DB_PASSWORD,
         )
-        articles = get_articles_by_stock_symbol(stock_symbol)
+        articles = get_articles_by_stock_symbol(stock_symbol, start_date, end_date)
         weekly_scores = {}
         weekly_counts = {}
         for article, date, week_start in articles:
@@ -136,7 +135,6 @@ def get_weekly_sentiment_scores_by_stock_symbol(stock_symbol: str):
                 weekly_counts[week_key] = 0
             weekly_scores[week_key] += score
             weekly_counts[week_key] += 1
-        # 평균 계산
         for week in weekly_scores:
             weekly_scores[week] /= weekly_counts[week]
         print("주차별 평균 감성점수:", weekly_scores)
@@ -148,4 +146,4 @@ def get_weekly_sentiment_scores_by_stock_symbol(stock_symbol: str):
 
 if __name__ == "__main__":
     # 테스트 실행: 심볼을 원하는 것으로 변경
-    get_weekly_sentiment_scores_by_stock_symbol("XLK")
+    get_weekly_sentiment_scores_by_stock_symbol("AAPL", "2023-01-01", "2023-01-03")

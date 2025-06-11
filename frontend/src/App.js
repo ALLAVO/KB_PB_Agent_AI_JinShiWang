@@ -20,6 +20,14 @@ function App() {
   const [companyDate, setCompanyDate] = useState("");
   const [companyGranularity, setCompanyGranularity] = useState("year");
 
+  // 감성점수 조회 관련 상태
+  const [sentimentSymbol, setSentimentSymbol] = useState("");
+  const [sentimentStart, setSentimentStart] = useState("");
+  const [sentimentEnd, setSentimentEnd] = useState("");
+  const [sentimentResult, setSentimentResult] = useState(null);
+  const [sentimentLoading, setSentimentLoading] = useState(false);
+  const [sentimentError, setSentimentError] = useState("");
+
   // 포트폴리오 항목 추가
   const addPortfolioItem = () => {
     if (!stockSymbolInput || !quantityInput || !priceInput) return;
@@ -104,8 +112,34 @@ function App() {
     setReportResult(await res.json());
   };
 
+  // 감성점수 조회 함수
+  const fetchSentimentScores = async () => {
+    if (!sentimentSymbol || !sentimentStart || !sentimentEnd) {
+      setSentimentError("기업명, 시작일, 종료일을 모두 입력하세요.");
+      return;
+    }
+    setSentimentLoading(true);
+    setSentimentError("");
+    setSentimentResult(null);
+    try {
+      const params = new URLSearchParams({
+        stock_symbol: sentimentSymbol,
+        start_date: sentimentStart,
+        end_date: sentimentEnd,
+      });
+      const res = await fetch(`http://localhost:8000/api/sentiment/weekly?${params}`);
+      if (!res.ok) throw new Error("API 호출 실패");
+      const data = await res.json();
+      setSentimentResult(data);
+    } catch (e) {
+      setSentimentError("감성점수 조회 중 오류 발생");
+    } finally {
+      setSentimentLoading(false);
+    }
+  };
+
   return (
-    <div style={{ padding: 32 }}>
+    <div className="App">
       <h2>고객 생성</h2>
       <input
         placeholder="고객 이름"
@@ -192,8 +226,54 @@ function App() {
       <h2>보고서 생성 (고객+예측 생성 후 클릭)</h2>
       <button onClick={createReport}>보고서 생성</button>
       {reportResult && <pre>{JSON.stringify(reportResult, null, 2)}</pre>}
+
+      <h2>주차별 감성점수 조회</h2>
+      <div style={{ marginBottom: 16 }}>
+        <input
+          type="text"
+          placeholder="기업명(심볼)"
+          value={sentimentSymbol}
+          onChange={e => setSentimentSymbol(e.target.value)}
+          style={{ marginRight: 8 }}
+        />
+        <input
+          type="date"
+          value={sentimentStart}
+          onChange={e => setSentimentStart(e.target.value)}
+          style={{ marginRight: 8 }}
+        />
+        <input
+          type="date"
+          value={sentimentEnd}
+          onChange={e => setSentimentEnd(e.target.value)}
+          style={{ marginRight: 8 }}
+        />
+        <button onClick={fetchSentimentScores} disabled={sentimentLoading}>
+          {sentimentLoading ? "조회 중..." : "감성점수 조회"}
+        </button>
+      </div>
+      {sentimentError && <div style={{ color: 'red' }}>{sentimentError}</div>}
+      {sentimentResult && (
+        <table border="1" style={{ margin: '0 auto', minWidth: 300 }}>
+          <thead>
+            <tr>
+              <th>주차 시작일</th>
+              <th>감성점수</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(sentimentResult).map(([week, score]) => (
+              <tr key={week}>
+                <td>{week}</td>
+                <td>{score.toFixed(3)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
 
 export default App;
+
