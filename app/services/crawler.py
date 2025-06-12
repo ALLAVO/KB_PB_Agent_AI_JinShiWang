@@ -3,6 +3,8 @@ import time
 import os
 import json
 import yfinance as yf
+import pandas_datareader.data as web
+from app.core.config import settings
 
 # 요청 간 최소 대기시간 (초 단위)
 RATE_LIMIT_SLEEP = 2
@@ -119,34 +121,28 @@ def get_financial_statements_from_sec(ticker: str, start_date: str = None, end_d
         return {"error": f"Error fetching or parsing company facts: {e}"}
     
 
-#### 02 . 회사 정보 #####  ---- 이 부분 수정하기!!!!
-def get_company_profile_from_yahoo(ticker: str, max_retries: int = 10, sleep_sec: int = 2) -> dict:
+#### 02 . 회사 정보 #####
+def get_company_profile_from_alphavantage(ticker: str, api_key: str) -> dict:
     """
-    Yahoo Finance API를 통해 기업의 기본 정보를 반환합니다.
-    rate limit 발생 시 재시도하며, 요청 간 sleep을 둡니다.
-    반환: {
-        business_summary: "기업의 사업 개요",
-    }
+    Alpha Vantage Company Overview API를 통해 기업의 sector, industry, description, address를 반환합니다.
     """
-    import time
-    for attempt in range(max_retries):
-        try:
-            stock = yf.Ticker(ticker)
-            info = stock.info
-            # 최소 필수 정보가 있으면 반환
-            if info.get("longName") or info.get("shortName"):
-                return {
-                    "business_summary": info.get("longBusinessSummary"),
-                }
-            # 데이터가 없으면 에러
-            else:
-                raise Exception("No company info returned from Yahoo Finance.")
-        except Exception as e:
-            # rate limit 또는 기타 에러 발생 시 재시도
-            if attempt < max_retries - 1:
-                time.sleep(sleep_sec * (attempt + 1))  # 점진적으로 대기 시간 증가
-            else:
-                return {"error": f"Error fetching Yahoo Finance company profile: {e}"}
+    url = f"https://www.alphavantage.co/query?function=OVERVIEW&symbol={ticker}&apikey={api_key}"
+    try:
+        resp = requests.get(url)
+        if resp.status_code != 200:
+            return {"error": f"Alpha Vantage API request failed: {resp.status_code}"}
+        data = resp.json()
+        # Alpha Vantage는 데이터가 없으면 빈 dict 반환
+        if not data or 'Note' in data or 'Error Message' in data:
+            return {"error": f"No data or rate limited: {data.get('Note', data.get('Error Message', 'No data'))}"}
+        return {
+            "sector": data.get("Sector"),
+            "industry": data.get("Industry"),
+            "address": data.get("Address"),
+            "description": data.get("Description")
+        }
+    except Exception as e:
+        return {"error": f"Error fetching Alpha Vantage company profile: {e}"}
 
 
 #### 03 . 주가 + 기술지표 #####
@@ -197,3 +193,73 @@ def get_weekly_stock_indicators_from_yahoo(ticker: str, start_date: str, end_dat
         }
     except Exception as e:
         return {"error": f"Error fetching Yahoo Finance stock indicators: {e}"}
+
+
+#### 04 . 시황정보 : 증시, 채권, 환율 #####
+
+## 04-1. 미국 증시 지수
+def get_us_stock_indices_range(start_date: str, end_date: str) -> dict:
+    """
+    Stooq를 이용해 미국 증시(Dow, S&P500, Nasdaq) 지수의 기간별(시작~끝) 평균 종가를 반환합니다.
+    """
+    try:
+        dow_hist = web.DataReader('^DJI', 'stooq', start=start_date, end=end_date)
+        sp500_hist = web.DataReader('^SPX', 'stooq', start=start_date, end=end_date)
+        nasdaq_hist = web.DataReader('^NDQ', 'stooq', start=start_date, end=end_date)
+        return {
+            'dow_avg': float(dow_hist['Close'].mean()) if not dow_hist.empty else None,
+            'sp500_avg': float(sp500_hist['Close'].mean()) if not sp500_hist.empty else None,
+            'nasdaq_avg': float(nasdaq_hist['Close'].mean()) if not nasdaq_hist.empty else None
+        }
+    except Exception as e:
+        return {"error": f"Error fetching US stock indices (range) from Stooq: {e}"}
+
+
+# ## 04-2. 미국 국채 금리
+def get_us_treasury_yields_range(fred_api_key: str, start_date: str, end_date: str) -> dict:
+    """
+    FRED API를 이용해 미국 국채 2년물(DGS2), 10년물(DGS10) 기간별(시작~끝) 평균 금리를 반환합니다.
+    """
+    import pandas as pd
+    try:
+        url_2y = f"https://api.stlouisfed.org/fred/series/observations?series_id=DGS2&api_key={fred_api_key}&file_type=json&observation_start={start_date}&observation_end={end_date}"
+        url_10y = f"https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key={fred_api_key}&file_type=json&observation_start={start_date}&observation_end={end_date}"
+        resp_2y = requests.get(url_2y)
+        resp_10y = requests.get(url_10y)
+        obs_2y = resp_2y.json().get('observations', [])
+        obs_10y = resp_10y.json().get('observations', [])
+        vals_2y = [float(o['value']) for o in obs_2y if o['value'] not in ('.', None, '')]
+        vals_10y = [float(o['value']) for o in obs_10y if o['value'] not in ('.', None, '')]
+        return {
+            'us_2y_avg': float(pd.Series(vals_2y).mean()) if vals_2y else None,
+            'us_10y_avg': float(pd.Series(vals_10y).mean()) if vals_10y else None
+        }
+    except Exception as e:
+        return {"error": f"Error fetching US treasury yields (range): {e}"}
+
+
+# 04-3. 한국 환율
+def get_kr_fx_rates_range(_: str, start_date: str, end_date: str) -> dict:
+    """
+    Frankfurter API를 이용해 USD/KRW, EUR/KRW 환율의 기간별(시작~끝) 평균값을 반환합니다.
+    API Key 불필요.
+    """
+    import pandas as pd
+    try:
+        url_usd = f"https://api.frankfurter.app/{start_date}..{end_date}?from=USD&to=KRW"
+        url_eur = f"https://api.frankfurter.app/{start_date}..{end_date}?from=EUR&to=KRW"
+        resp_usd = requests.get(url_usd)
+        resp_usd.raise_for_status()
+        data_usd = resp_usd.json().get('rates', {})
+        vals_usd = [v['KRW'] for v in data_usd.values() if v.get('KRW')]
+        resp_eur = requests.get(url_eur)
+        resp_eur.raise_for_status()
+        data_eur = resp_eur.json().get('rates', {})
+        vals_eur = [v['KRW'] for v in data_eur.values() if v.get('KRW')]
+        return {
+            'usd_krw_avg': float(pd.Series(vals_usd).mean()) if vals_usd else None,
+            'eur_krw_avg': float(pd.Series(vals_eur).mean()) if vals_eur else None
+        }
+    except Exception as e:
+        return {"error": f"Error fetching KR FX rates from Frankfurter API: {e}"}
+

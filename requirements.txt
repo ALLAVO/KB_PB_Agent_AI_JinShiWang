@@ -9,6 +9,7 @@ pytest
 pytest-cov
 requests
 pandas
+pandas_datareader==0.10.0
 # DB/ORM
 sqlalchemy
 psycopg2-binary

@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     DB_USER: str
     DB_PASSWORD: str
 
+    # API KEY 설정
+    ALPHAVANTAGE_API_KEY: str | None = None
+    FRED_API_KEY: str | None = None
+
     @property
     def DATABASE_URL(self) -> str:
         return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
