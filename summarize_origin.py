@@ -1,14 +1,39 @@
 import pandas as pd
 from transformers import pipeline, AutoTokenizer
 import torch
+import psycopg2
+from app.core.config import settings
+import os
+from pathlib import Path
 
 
 def main():
-    # 데이터 로딩
-    kb_ent_sam = pd.read_csv("KB_enterprise_sample_data.csv")
+    # 데이터 로딩 (DB에서 불러오기)
+    try:
+        conn = psycopg2.connect(
+            host=settings.DB_HOST,
+            port=settings.DB_PORT,
+            dbname=settings.DB_NAME,
+            user=settings.DB_USER,
+            password=settings.DB_PASSWORD,
+        )
+        # 모든 기업 데이터 불러오기
+        query = "SELECT * FROM kb_enterprise_data"
+        # 쿼리 결과를 pandas DataFrame으로 변환
+        kb_ent_sam = pd.read_sql(query, conn)
+        conn.close()
+    except Exception as e:
+        print("DB에서 데이터 불러오기 실패:", e)
+        return
 
     # 토크나이저 로드 (BART 기준)
-    tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large-cnn")
+    tokenizer_dir = Path("./tokenizer_cache/bart-large-cnn")
+    if not tokenizer_dir.exists():
+        tokenizer_dir.mkdir(parents=True, exist_ok=True)
+        tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large-cnn")
+        tokenizer.save_pretrained(str(tokenizer_dir))
+    else:
+        tokenizer = AutoTokenizer.from_pretrained(str(tokenizer_dir))
 
     # GPU 사용 여부 확인
     device = 0 if torch.cuda.is_available() else -1
@@ -33,7 +58,7 @@ def main():
 
     # 길이 정보 반환 함수
     def get_length_info(df, idx):
-        text = df.loc[idx, "Article"]
+        text = df.loc[idx, "article"]
         tokens = count_tokens(text)
         length_cls = classify_length(tokens)
         return tokens, length_cls
@@ -60,9 +85,9 @@ def main():
 
     # 요약 수행 함수
     def summarize_by_length(df, idx):
-        text = df.loc[idx, "Article"]
+        text = df.loc[idx, "article"]
         tokens, cls = get_length_info(df, idx)
-        
+
         if cls == "short":
             return text
 
@@ -77,7 +102,7 @@ def main():
                 min_length=50,
                 truncation=True
             )[0]["summary_text"]
-        
+
         # very_long 처리 (Chunking)
         token_ids = tokenizer.encode(text, truncation=False)
         chunk_size = 1000
@@ -125,10 +150,9 @@ def main():
     print(f"길이 분류     : {cls}")
     print(f"사용 모델     : {model_used}")
     print("\n--- 원문 ---")
-    print(kb_ent_sam.loc[row_index, "Article"])
+    print(kb_ent_sam.loc[row_index, "article"])
     print("\n--- 요약 ---")
     print(summary)
-
 
 if __name__ == "__main__":
     main()

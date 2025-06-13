@@ -6,9 +6,9 @@ router = APIRouter()
 
 @router.get("/sentiment/weekly")
 def weekly_sentiment_scores(
-    stock_symbol: str = Query(...),
-    start_date: Optional[str] = Query(None),
-    end_date: Optional[str] = Query(None)):
+        stock_symbol: str = Query(...),
+        start_date: Optional[str] = Query(None),
+        end_date: Optional[str] = Query(None)):
     """
     주식 심볼별 주차별 감성점수 반환 API
     """

@@ -170,4 +170,4 @@ def get_weekly_sentiment_scores_by_stock_symbol(stock_symbol: str, start_date: s
 
 if __name__ == "__main__":
     # 테스트 실행: 심볼을 원하는 것으로 변경
-    get_weekly_sentiment_scores_by_stock_symbol("AAPL", "2023-01-01", "2023-01-03")
+    get_weekly_sentiment_scores_by_stock_symbol("AAPL", "2022-07-01", "2022-07-02")
