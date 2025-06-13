@@ -311,7 +311,45 @@ function App() {
           감성점수: {sentimentResult}
         </div>
       )}
-      {sentimentResult && typeof sentimentResult !== 'number' && (
+      {sentimentResult && typeof sentimentResult === 'object' && Object.keys(sentimentResult).length > 0 && (
+        <table border="1" style={{ margin: '0 auto', minWidth: 300 }}>
+          <thead>
+            <tr>
+              <th>주차 시작일</th>
+              <th>감성점수</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Array.isArray(sentimentResult)
+              ? sentimentResult.map((item, idx) => (
+                  <tr key={idx}>
+                    <td>{item.week || item.date || ''}</td>
+                    <td>{item.score}</td>
+                  </tr>
+                ))
+              : Object.entries(sentimentResult).map(([week, score]) => {
+                  // score가 객체라면 week, score 필드 추출
+                  if (score && typeof score === 'object' && 'week' in score && 'score' in score) {
+                    return (
+                      <tr key={score.week}>
+                        <td>{score.week}</td>
+                        <td>{score.score}</td>
+                      </tr>
+                    );
+                  } else {
+                    // 기존: week가 날짜, score가 숫자
+                    return (
+                      <tr key={week}>
+                        <td>{week}</td>
+                        <td>{score}</td>
+                      </tr>
+                    );
+                  }
+                })}
+          </tbody>
+        </table>
+      )}
+      {sentimentResult && (typeof sentimentResult !== 'object' || Object.keys(sentimentResult).length === 0) && (
         <div>감성점수 데이터가 없습니다.</div>
       )}
 
