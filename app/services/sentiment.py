@@ -1,6 +1,6 @@
 import psycopg2
 from app.core.config import settings
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 import re
 
 # DB 연결 테스트 및 샘플 데이터 조회
@@ -49,10 +49,10 @@ def get_articles_by_stock_symbol(stock_symbol: str, start_date: str = None, end_
         if date_query:
             date_query = " AND " + date_query
         stock_symbol_query = (
-            "SELECT article, date, date_trunc('week', date) AS week_start "
+            "SELECT article, date, date_trunc('week', date + INTERVAL '1 day') AS weekstart_sunday "
             "FROM kb_enterprise_data "
             "WHERE stock_symbol = %s" + date_query + " "
-            "ORDER BY date_trunc('week', date), date DESC;"
+            "ORDER BY weekstart_sunday, date DESC;"
         )
         print("실행 쿼리:", stock_symbol_query)
         print("파라미터:", params)
@@ -111,6 +111,25 @@ def get_sentiment_score_for_article(article: str, conn) -> float:
 
 # 주식 심볼에 대한 주차별 감성 점수 계산 함수
 def get_weekly_sentiment_scores_by_stock_symbol(stock_symbol: str, start_date: str = None, end_date: str = None):
+    # start_date, end_date가 문자열로 들어올 경우 datetime 객체로 변환 후 하루씩 더함
+    from datetime import datetime, timedelta
+    orig_start_date = start_date
+    orig_end_date = end_date
+    if start_date:
+        try:
+            start_date_dt = datetime.fromisoformat(start_date)
+        except Exception:
+            start_date_dt = datetime.strptime(start_date, '%Y-%m-%d')
+        start_date_dt += timedelta(days=1)
+        start_date = start_date_dt.strftime('%Y-%m-%d')
+    if end_date:
+        try:
+            end_date_dt = datetime.fromisoformat(end_date)
+        except Exception:
+            end_date_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        end_date_dt += timedelta(days=1)
+        end_date = end_date_dt.strftime('%Y-%m-%d')
+    print(f"[DEBUG] 전달받은 값 - stock_symbol: {stock_symbol}, start_date: {start_date}, end_date: {end_date} (원본: {orig_start_date}, {orig_end_date})")
     """
     특정 주식 심볼에 대해 입력받은 기간의 모든 기사에 대해 주차별로 감성점수 평균을 반환합니다.
     반환값 예시: { '2024-05-27': 0.12, '2024-06-03': -0.05, ... }
@@ -137,8 +156,13 @@ def get_weekly_sentiment_scores_by_stock_symbol(stock_symbol: str, start_date: s
             weekly_counts[week_key] += 1
         for week in weekly_scores:
             weekly_scores[week] /= weekly_counts[week]
+        # float -> int 변환
+        for week in weekly_scores:
+            weekly_scores[week] = int(round(weekly_scores[week]))
         print("주차별 평균 감성점수:", weekly_scores)
         conn.close()
+        # 항상 dict로 반환
+        print(f"[DEBUG] {stock_symbol}의 주차별 감성점수: {weekly_scores}")
         return weekly_scores
     except Exception as e:
         print("Error calculating weekly sentiment scores:", e)

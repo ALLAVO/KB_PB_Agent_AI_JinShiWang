@@ -306,25 +306,12 @@ function App() {
         </button>
       </div>
       {sentimentError && <div style={{ color: 'red' }}>{sentimentError}</div>}
-      {sentimentResult && (typeof sentimentResult.weekly_scores === 'object') && Object.keys(sentimentResult.weekly_scores).length > 0 && (
-        <table border="1" style={{ margin: '0 auto', minWidth: 300 }}>
-          <thead>
-            <tr>
-              <th>주차 시작일</th>
-              <th>감성점수</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(sentimentResult.weekly_scores).map(([week, score]) => (
-              <tr key={week}>
-                <td>{week}</td>
-                <td>{typeof score === 'number' ? score.toFixed(3) : score}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {typeof sentimentResult === 'number' && (
+        <div style={{ fontWeight: 'bold', fontSize: 20, margin: '16px 0' }}>
+          감성점수: {sentimentResult}
+        </div>
       )}
-      {sentimentResult && ((typeof sentimentResult.weekly_scores !== 'object') || Object.keys(sentimentResult.weekly_scores).length === 0) && (
+      {sentimentResult && typeof sentimentResult !== 'number' && (
         <div>감성점수 데이터가 없습니다.</div>
       )}
 
