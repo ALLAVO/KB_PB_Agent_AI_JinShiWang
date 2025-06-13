@@ -64,25 +64,6 @@ npm install
 npm start
 ```
 
-## 환경 변수 설정 (.env 예시)
-```
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=postgres
-DB_USER=youruser
-DB_PASSWORD=yourpassword
-ALPHAVANTAGE_API_KEY=... # Alpha Vantage API 키
-FRED_API_KEY=...         # FRED API 키
-```
-
-## 주요 서비스/크롤러 설명
-- app/services/crawler.py: SEC, Yahoo Finance, Alpha Vantage, Stooq, FRED, Frankfurter API 등 다양한 소스에서 재무/시장/환율 데이터 수집 및 평균값 반환, 에러 핸들링 및 API Key 관리 포함
-- .env 및 app/core/config.py: 모든 API Key 및 환경변수 관리
-
-## 테스트
-- 각 서비스 함수는 python3 -c "from app.services.crawler import ...; print(...())" 형태로 직접 테스트 가능
-- tests/ 디렉토리의 pytest 기반 테스트 코드 포함
-
 ---
 
 자세한 사용법, API 명세, 데이터 예시는 각 모듈/코드 내 docstring 참고
