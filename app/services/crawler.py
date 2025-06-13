@@ -107,10 +107,15 @@ def get_financial_statements_from_sec(ticker: str, start_date: str = None, end_d
                             value = closest['val']
                             value_date = closest['end']
                         else:
-                            # 구간 밖이면 start/end 중 더 가까운 값
-                            closest = min(filtered, key=lambda f: min(abs((datetime.strptime(f['end'], "%Y-%m-%d") - dt_start).days), abs((datetime.strptime(f['end'], "%Y-%m-%d") - dt_end).days)))
-                            value = closest['val']
-                            value_date = closest['end']
+                            # 구간 밖이면 dt_end 이전(과거) 값 중 가장 가까운 값만 반환
+                            past = [f for f in filtered if datetime.strptime(f['end'], "%Y-%m-%d") < dt_start]
+                            if past:
+                                closest = max(past, key=lambda f: datetime.strptime(f['end'], "%Y-%m-%d"))
+                                value = closest['val']
+                                value_date = closest['end']
+                            else:
+                                value = None
+                                value_date = None
                     else:
                         # 날짜 인풋 없으면 최신값
                         value = fact_list[0]['val']
@@ -124,7 +129,7 @@ def get_financial_statements_from_sec(ticker: str, start_date: str = None, end_d
 #### 02 . 회사 정보 #####
 def get_company_profile_from_alphavantage(ticker: str, api_key: str) -> dict:
     """
-    Alpha Vantage Company Overview API를 통해 기업의 sector, industry, description, address를 반환합니다.
+    Alpha Vantage Company Overview API를 통해 기업의 name, sector, industry, description, address를 반환합니다.
     """
     url = f"https://www.alphavantage.co/query?function=OVERVIEW&symbol={ticker}&apikey={api_key}"
     try:
@@ -136,6 +141,7 @@ def get_company_profile_from_alphavantage(ticker: str, api_key: str) -> dict:
         if not data or 'Note' in data or 'Error Message' in data:
             return {"error": f"No data or rate limited: {data.get('Note', data.get('Error Message', 'No data'))}"}
         return {
+            "company_name": data.get("Name"),
             "sector": data.get("Sector"),
             "industry": data.get("Industry"),
             "address": data.get("Address"),
@@ -147,52 +153,68 @@ def get_company_profile_from_alphavantage(ticker: str, api_key: str) -> dict:
 
 #### 03 . 주가 + 기술지표 #####
 
-def get_weekly_stock_indicators_from_yahoo(ticker: str, start_date: str, end_date: str) -> dict:
+def get_weekly_stock_indicators_from_stooq(ticker: str, start_date: str, end_date: str) -> dict:
     """
-    Yahoo Finance에서 주간 주가(종가, 시가, 고가, 저가, 거래량)와 기술지표(5/10/20일 이동평균, 주간 변동성 등)를 반환합니다.
+    Stooq에서 주간 주가(종가, 시가, 고가, 저가, 거래량)와 기술지표(주간 변동성 등)를 반환합니다.
     start_date, end_date: 'YYYY-MM-DD' (주차의 시작일, 마지막날)
     반환: {
         'close_avg', 'open_avg', 'high_avg', 'low_avg', 'volume_avg',
-        'ma5', 'ma10', 'ma20', 'volatility', 'price_change_pct'
+        'volatility', 'price_change_pct'
     }
     """
     import pandas as pd
-    import numpy as np
+    import pandas_datareader.data as web
     try:
-        stock = yf.Ticker(ticker)
-        # 주간 데이터 가져오기
-        df = stock.history(start=start_date, end=end_date, interval='1d')
+        if not ticker.endswith('.US'):
+            ticker = ticker + '.US'
+        df = web.DataReader(ticker, 'stooq', start=start_date, end=end_date)
         if df.empty:
             return {"error": "No price data in given period."}
-        # 주간 평균
+        df = df.sort_index()  # 날짜 오름차순
         close_avg = df['Close'].mean()
         open_avg = df['Open'].mean()
         high_avg = df['High'].mean()
         low_avg = df['Low'].mean()
         volume_avg = df['Volume'].mean()
-        # 이동평균 (과거 데이터 포함, 주간 마지막날 기준)
-        df_ma = stock.history(end=end_date, period='30d', interval='1d')
-        ma5 = df_ma['Close'].rolling(window=5).mean().iloc[-1] if len(df_ma) >= 5 else None
-        ma10 = df_ma['Close'].rolling(window=10).mean().iloc[-1] if len(df_ma) >= 10 else None
-        ma20 = df_ma['Close'].rolling(window=20).mean().iloc[-1] if len(df_ma) >= 20 else None
-        # 주간 변동성 (표준편차)
         volatility = df['Close'].std()
-        # 주간 등락률
-        price_change_pct = ((df['Close'][-1] - df['Close'][0]) / df['Close'][0]) * 100 if len(df['Close']) > 1 else None
+        price_change_pct = ((df['Close'].iloc[-1] - df['Close'].iloc[0]) / df['Close'].iloc[0]) * 100 if len(df['Close']) > 1 else None
         return {
             'close_avg': close_avg,
             'open_avg': open_avg,
             'high_avg': high_avg,
             'low_avg': low_avg,
             'volume_avg': volume_avg,
-            'ma5': ma5,
-            'ma10': ma10,
-            'ma20': ma20,
             'volatility': volatility,
             'price_change_pct': price_change_pct
         }
     except Exception as e:
-        return {"error": f"Error fetching Yahoo Finance stock indicators: {e}"}
+        return {"error": f"Error fetching stock indicators from Stooq: {e}"}
+
+def get_moving_averages_from_stooq(ticker: str, end_date: str, windows=[5, 10, 20]) -> dict:
+    """
+    Stooq에서 end_date 기준 과거 30일간의 종가로 이동평균(MA5, MA10, MA20)을 계산합니다.
+    반환: {'ma5': ..., 'ma10': ..., 'ma20': ...}
+    """
+    import pandas as pd
+    import pandas_datareader.data as web
+    try:
+        if not ticker.endswith('.US'):
+            ticker = ticker + '.US'
+        # 30일치 데이터 확보
+        df = web.DataReader(ticker, 'stooq', end=end_date, start=None)
+        df = df.sort_index()
+        result = {}
+        for w in windows:
+            if len(df) >= w:
+                result[f'ma{w}'] = df['Close'].rolling(window=w).mean().iloc[-1]
+            else:
+                result[f'ma{w}'] = None
+        return result
+    except Exception as e:
+        return {"error": f"Error calculating moving averages from Stooq: {e}"}
+
+# 기존 Yahoo 함수 대체
+get_weekly_stock_indicators_from_yahoo = get_weekly_stock_indicators_from_stooq
 
 
 #### 04 . 시황정보 : 증시, 채권, 환율 #####

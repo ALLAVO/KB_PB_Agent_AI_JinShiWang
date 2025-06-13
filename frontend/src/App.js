@@ -18,16 +18,30 @@ function App() {
   const [priceInput, setPriceInput] = useState("");
   const [predictionResult, setPredictionResult] = useState(null);
   const [reportResult, setReportResult] = useState(null);
-  const [companyDate, setCompanyDate] = useState("");
-  const [companyGranularity, setCompanyGranularity] = useState("year");
+  // 날짜 입력 상태를 App 전체에서 공통으로 사용
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [month, setMonth] = useState(new Date().getMonth() + 1); // 1~12
+  const weeks = getWeeksOfMonth(year, month);
+  const today = new Date();
+  // 오늘 이후가 포함된 주차는 제외
+  const validWeeks = weeks.filter(w => w.start <= today && w.end <= today || (w.start <= today && w.end >= today));
+  const [selectedWeekIdx, setSelectedWeekIdx] = useState(0);
+  const [startDate, setStartDate] = useState(validWeeks.length > 0 ? validWeeks[0].start.toISOString().slice(0, 10) : "");
+  const [endDate, setEndDate] = useState(validWeeks.length > 0 ? validWeeks[0].end.toISOString().slice(0, 10) : "");
+
+  // 주차 선택 시 startDate, endDate 자동 반영
+  React.useEffect(() => {
+    if (validWeeks.length > 0 && selectedWeekIdx < validWeeks.length) {
+      setStartDate(validWeeks[selectedWeekIdx].start.toISOString().slice(0, 10));
+      setEndDate(validWeeks[selectedWeekIdx].end.toISOString().slice(0, 10));
+    }
+  }, [selectedWeekIdx, year, month]);
 
   // 감성점수 조회 관련 상태
   const [sentimentSymbol, setSentimentSymbol] = useState("");
   const [sentimentYear, setSentimentYear] = useState(new Date().getFullYear());
   const [sentimentMonth, setSentimentMonth] = useState(new Date().getMonth() + 1); // 1~12
   const [sentimentWeek, setSentimentWeek] = useState(1);
-  const weeks = getWeeksOfMonth(sentimentYear, sentimentMonth);
-  const selectedWeek = weeks.find(w => w.week === Number(sentimentWeek));
   const [sentimentResult, setSentimentResult] = useState(null);
   const [sentimentLoading, setSentimentLoading] = useState(false);
   const [sentimentError, setSentimentError] = useState("");
@@ -78,11 +92,13 @@ function App() {
   const fetchCompany = async () => {
     let url = `http://localhost:8000/api/v1/companies/${companySymbol}`;
     const params = [];
-    if (companyDate) params.push(`date=${companyDate}`);
-    if (companyGranularity) params.push(`granularity=${companyGranularity}`);
+    if (startDate) params.push(`start_date=${startDate}`);
+    if (endDate) params.push(`end_date=${endDate}`);
     if (params.length > 0) url += `?${params.join("&")}`;
     const res = await fetch(url);
-    setCompanyInfo(await res.json());
+    const data = await res.json();
+    // 196줄까지(재무제표 포함) 보여주기 위해 그대로 저장
+    setCompanyInfo(data);
   };
 
   // 예측 요청
@@ -118,8 +134,8 @@ function App() {
 
   // 감성점수 조회 함수 수정
   const fetchSentimentScores = async () => {
-    if (!sentimentSymbol || !selectedWeek) {
-      setSentimentError("기업명, 연, 월, 주차를 모두 입력하세요.");
+    if (!sentimentSymbol || !startDate || !endDate) {
+      setSentimentError("기업명, 시작일, 종료일을 모두 입력하세요.");
       return;
     }
     setSentimentLoading(true);
@@ -128,8 +144,8 @@ function App() {
     try {
       const params = new URLSearchParams({
         stock_symbol: sentimentSymbol,
-        start_date: selectedWeek.start.toISOString().slice(0, 10),
-        end_date: selectedWeek.end.toISOString().slice(0, 10),
+        start_date: startDate,
+        end_date: endDate,
       });
       const res = await fetch(`http://localhost:8000/api/v1/sentiment/weekly?${params}`);
       if (!res.ok) throw new Error("API 호출 실패");
@@ -142,8 +158,50 @@ function App() {
     }
   };
 
+  // 시황정보 조회 함수 추가
+  const fetchMarketOverview = async () => {
+    if (!startDate || !endDate) return alert("시작일과 종료일을 모두 입력하세요.");
+    const res = await fetch(`http://localhost:8000/api/v1/market/overview?start_date=${startDate}&end_date=${endDate}`);
+    const data = await res.json();
+    setCompanyInfo({ ...companyInfo, market_overview: data });
+  };
+
+  // 연도 선택: 1999년부터 올해까지, 미래 연도는 선택 불가
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+  const currentDay = new Date().getDate();
+  const yearOptions = [];
+  for (let y = 1999; y <= currentYear; y++) yearOptions.push(y);
+  // 월 옵션: 올해라면 이번 달까지만, 과거라면 1~12월
+  const monthOptions = (year === currentYear)
+    ? Array.from({ length: currentMonth }, (_, i) => i + 1)
+    : Array.from({ length: 12 }, (_, i) => i + 1);
+  // 주차 옵션: 올해&이번달이면 오늘이 속한 주까지만, 그 외는 모두
+  const filteredWeeks = (year === currentYear && month === currentMonth)
+    ? validWeeks.filter(w => w.end <= today)
+    : validWeeks;
+
   return (
     <div className="App">
+      <h2>조회 기간 설정 (주차 단위)</h2>
+      <div style={{ marginBottom: 16 }}>
+        <select value={year} onChange={e => setYear(Number(e.target.value))} style={{ marginRight: 8 }}>
+          {yearOptions.map(y => (
+            <option key={y} value={y}>{y}년</option>
+          ))}
+        </select>
+        <select value={month} onChange={e => setMonth(Number(e.target.value))} style={{ marginRight: 8 }}>
+          {monthOptions.map(m => (
+            <option key={m} value={m}>{m}월</option>
+          ))}
+        </select>
+        <select value={selectedWeekIdx} onChange={e => setSelectedWeekIdx(Number(e.target.value))}>
+          {filteredWeeks.map((w, idx) => (
+            <option key={idx} value={idx}>{`${idx + 1}주차 (${w.start.getMonth() + 1}/${w.start.getDate()}~${w.end.getMonth() + 1}/${w.end.getDate()})`}</option>
+          ))}
+        </select>
+      </div>
+
       <h2>고객 생성</h2>
       <input
         placeholder="고객 이름"
@@ -205,23 +263,26 @@ function App() {
         value={companySymbol}
         onChange={(e) => setCompanySymbol(e.target.value)}
       />
-      <input
-        type="date"
-        value={companyDate}
-        onChange={e => setCompanyDate(e.target.value)}
-        style={{ marginLeft: 8 }}
-      />
-      <select
-        value={companyGranularity}
-        onChange={e => setCompanyGranularity(e.target.value)}
-        style={{ marginLeft: 8 }}
-      >
-        <option value="day">일</option>
-        <option value="month">월</option>
-        <option value="year">연</option>
-      </select>
       <button onClick={fetchCompany} style={{ marginLeft: 8 }}>기업 정보 조회</button>
-      {companyInfo && <pre>{JSON.stringify(companyInfo, null, 2)}</pre>}
+      {companyInfo && (
+        <div style={{textAlign: 'left', maxWidth: 700, margin: '0 auto'}}>
+          <h3>기업 개요</h3>
+          <pre>{JSON.stringify({
+            company_name: companyInfo.company_name,
+            stock_symbol: companyInfo.stock_symbol,
+            industry: companyInfo.industry,
+            sector: companyInfo.sector,
+            business_summary: companyInfo.business_summary,
+            address: companyInfo.address
+          }, null, 2)}</pre>
+          <h3>SEC 재무제표</h3>
+          <pre>{JSON.stringify(companyInfo.income_statements, null, 2)}</pre>
+          <h3>주가/기술지표 (Stooq)</h3>
+          <pre>{JSON.stringify(companyInfo.weekly_indicators, null, 2)}</pre>
+          <h3>이동평균 (MA, Stooq)</h3>
+          <pre>{JSON.stringify(companyInfo.moving_averages, null, 2)}</pre>
+        </div>
+      )}
 
       <h2>주가 예측 (고객 생성 후 클릭)</h2>
       <button onClick={createPrediction}>예측 요청</button>
@@ -240,23 +301,6 @@ function App() {
           onChange={e => setSentimentSymbol(e.target.value)}
           style={{ marginRight: 8 }}
         />
-        <select value={sentimentYear} onChange={e => setSentimentYear(Number(e.target.value))} style={{ marginRight: 8 }}>
-          {Array.from({ length: 6 }, (_, i) => 2022 + i).map(y => (
-            <option key={y} value={y}>{y}년</option>
-          ))}
-        </select>
-        <select value={sentimentMonth} onChange={e => setSentimentMonth(Number(e.target.value))} style={{ marginRight: 8 }}>
-          {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-            <option key={m} value={m}>{m}월</option>
-          ))}
-        </select>
-        <select value={sentimentWeek} onChange={e => setSentimentWeek(Number(e.target.value))} style={{ marginRight: 8 }}>
-          {weeks.map(w => (
-            <option key={w.week} value={w.week}>
-              {`${w.week}주차 (${w.start.getMonth() + 1}-${w.start.getDate()}~${w.end.getMonth() + 1}-${w.end.getDate()})`}
-            </option>
-          ))}
-        </select>
         <button onClick={fetchSentimentScores} disabled={sentimentLoading}>
           {sentimentLoading ? "조회 중..." : "감성점수 조회"}
         </button>
@@ -282,6 +326,21 @@ function App() {
       )}
       {sentimentResult && ((typeof sentimentResult.weekly_scores !== 'object') || Object.keys(sentimentResult.weekly_scores).length === 0) && (
         <div>감성점수 데이터가 없습니다.</div>
+      )}
+
+      <h2>시황정보 조회</h2>
+      <div style={{ marginBottom: 16 }}>
+        <button onClick={fetchMarketOverview}>시황정보 조회</button>
+      </div>
+      {companyInfo && companyInfo.market_overview && (
+        <div style={{textAlign: 'left', maxWidth: 700, margin: '0 auto'}}>
+          <h3>미국 증시 지수</h3>
+          <pre>{JSON.stringify(companyInfo.market_overview.us_stock_indices, null, 2)}</pre>
+          <h3>미국 국채 금리</h3>
+          <pre>{JSON.stringify(companyInfo.market_overview.us_treasury_yields, null, 2)}</pre>
+          <h3>한국 환율</h3>
+          <pre>{JSON.stringify(companyInfo.market_overview.kr_fx_rates, null, 2)}</pre>
+        </div>
       )}
     </div>
   );
