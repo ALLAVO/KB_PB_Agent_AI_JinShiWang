@@ -114,9 +114,11 @@ def summarize_article(stock_symbol: str, start_date: str, end_date: str):
         summary = summarize_by_length(article)
         results.append({
             "date": row["date"],
-            "article": article,
+            # "article": article,
             "summary": summary
         })
+
+    print("return results", results)
 
     return results
 
