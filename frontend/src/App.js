@@ -417,107 +417,145 @@ function App() {
         </button>
       </div>
       {sentimentSummaryError && <div style={{ color: 'red' }}>{sentimentSummaryError}</div>}
-      {/* 오류 해결: 객체를 바로 렌더링하지 않고, map으로 순회하여 키-값을 나열 */}
+      {/* 감성점수와 기사 요약을 분리하여 출력 */}
       {sentimentSummaryResult && typeof sentimentSummaryResult === 'object' && !Array.isArray(sentimentSummaryResult) && Object.keys(sentimentSummaryResult).length > 0 && (
-        <table border="1" style={{ margin: '0 auto', minWidth: 300 }}>
-          <thead>
-            <tr>
-              <th>주차 시작일</th>
-              <th>감성점수</th>
-              <th>기사 요약</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(sentimentSummaryResult).map(([week, data], idx) => {
-              // data가 객체라면 week, score, summary 필드 추출
-              let summaryText = '';
-              if (data && typeof data === 'object') {
-                // summary/article_summary가 배열(여러 기사 요약)일 경우 모두 합쳐서 보여줌
-                if (Array.isArray(data.summary)) {
-                  summaryText = data.summary.map((s, i) => `- ${s}`).join('\n');
-                } else if (typeof data.summary === 'string') {
-                  summaryText = data.summary;
-                } else if (Array.isArray(data.article_summary)) {
-                  summaryText = data.article_summary.map((s, i) => `- ${s}`).join('\n');
-                } else if (typeof data.article_summary === 'string') {
-                  summaryText = data.article_summary;
-                }
-                // summary가 없고, articles(배열)만 있을 때: 기사 요약 직접 생성
-                if (!summaryText && Array.isArray(data.articles) && data.articles.length > 0) {
-                  summaryText = `${sentimentSymbol}에 대한 주요 기사 요약:\n` + data.articles.map((a, i) => `- ${a.summary || a}`).join('\n');
-                }
-                // summary가 아예 없고, summaryResult에 별도 summaryList가 있을 때(예: summarize_article 결과)
-                if (!summaryText && data.summaryList && Array.isArray(data.summaryList)) {
-                  summaryText = `${sentimentSymbol}에 대한 주요 기사 요약:\n` + data.summaryList.map((s, i) => `- ${s}`).join('\n');
-                }
-                // summary가 아예 없고, summaryResult에 summaries가 있을 때(예: summarize_article 결과)
-                if (!summaryText && data.summaries && Array.isArray(data.summaries)) {
-                  summaryText = `${sentimentSymbol}에 대한 주요 기사 요약:\n` + data.summaries.map((s, i) => `- ${s}`).join('\n');
+        <>
+          {/* 감성점수 표 */}
+          <h3>주차별 감성점수</h3>
+          <table border="1" style={{ margin: '0 auto', minWidth: 300, marginBottom: 24 }}>
+            <thead>
+              <tr>
+                <th>주차 시작일</th>
+                <th>감성점수</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(sentimentSummaryResult).map(([week, data], idx) => (
+                <tr key={week}>
+                  <td>{week}</td>
+                  <td>{data && typeof data === 'object' && data.score !== undefined ? data.score : ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {/* 기사 요약 표 */}
+          <h3>주차별 기사 요약</h3>
+          <table border="1" style={{ margin: '0 auto', minWidth: 300 }}>
+            <thead>
+              <tr>
+                <th>주차 시작일</th>
+                <th>기사 요약</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(sentimentSummaryResult).map(([week, data], idx) => {
+                let summaryList = [];
+                if (data && typeof data === 'object') {
+                  // summary/article_summary가 배열(여러 기사 요약)일 경우 모두 리스트로 보여줌
+                  if (Array.isArray(data.summary)) {
+                    summaryList = data.summary;
+                  } else if (typeof data.summary === 'string') {
+                    summaryList = [data.summary];
+                  } else if (Array.isArray(data.article_summary)) {
+                    summaryList = data.article_summary;
+                  } else if (typeof data.article_summary === 'string') {
+                    summaryList = [data.article_summary];
+                  }
+                  // summary가 없고, articles(배열)만 있을 때: 기사 요약 직접 생성
+                  if (summaryList.length === 0 && Array.isArray(data.articles) && data.articles.length > 0) {
+                    summaryList = data.articles.map(a => a.summary || a);
+                  }
+                  if (summaryList.length === 0 && data.summaryList && Array.isArray(data.summaryList)) {
+                    summaryList = data.summaryList;
+                  }
+                  if (summaryList.length === 0 && data.summaries && Array.isArray(data.summaries)) {
+                    summaryList = data.summaries;
+                  }
                 }
                 return (
                   <tr key={week}>
                     <td>{week}</td>
-                    <td>{data.score !== undefined ? data.score : ''}</td>
-                    <td style={{ whiteSpace: 'pre-line' }}>{summaryText}</td>
+                    <td style={{ whiteSpace: 'pre-line' }}>
+                      {summaryList.length > 0 ? (
+                        <ul style={{ paddingLeft: 16 }}>
+                          {summaryList.map((s, i) => <li key={i}>{s}</li>)}
+                        </ul>
+                      ) : ''}
+                    </td>
                   </tr>
                 );
-              } else {
-                // 기존: week가 날짜, data가 숫자 등
-                return (
-                  <tr key={week}>
-                    <td>{week}</td>
-                    <td>{data}</td>
-                    <td></td>
-                  </tr>
-                );
-              }
-            })}
-          </tbody>
-        </table>
+              })}
+            </tbody>
+          </table>
+        </>
       )}
       {/* 배열 형태도 지원 */}
       {sentimentSummaryResult && Array.isArray(sentimentSummaryResult) && sentimentSummaryResult.length > 0 && (
-        <table border="1" style={{ margin: '0 auto', minWidth: 300 }}>
-          <thead>
-            <tr>
-              <th>주차 시작일</th>
-              <th>감성점수</th>
-              <th>기사 요약</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sentimentSummaryResult.map((item, idx) => {
-              let summaryText = '';
-              if (item) {
-                if (Array.isArray(item.summary)) {
-                  summaryText = item.summary.map((s, i) => `- ${s}`).join('\n');
-                } else if (typeof item.summary === 'string') {
-                  summaryText = item.summary;
-                } else if (Array.isArray(item.article_summary)) {
-                  summaryText = item.article_summary.map((s, i) => `- ${s}`).join('\n');
-                } else if (typeof item.article_summary === 'string') {
-                  summaryText = item.article_summary;
-                }
-                if (!summaryText && Array.isArray(item.articles) && item.articles.length > 0) {
-                  summaryText = `${sentimentSymbol}에 대한 주요 기사 요약:\n` + item.articles.map((a, i) => `- ${a.summary || a}`).join('\n');
-                }
-                if (!summaryText && item.summaryList && Array.isArray(item.summaryList)) {
-                  summaryText = `${sentimentSymbol}에 대한 주요 기사 요약:\n` + item.summaryList.map((s, i) => `- ${s}`).join('\n');
-                }
-                if (!summaryText && item.summaries && Array.isArray(item.summaries)) {
-                  summaryText = `${sentimentSymbol}에 대한 주요 기사 요약:\n` + item.summaries.map((s, i) => `- ${s}`).join('\n');
-                }
-              }
-              return (
+        <>
+          <h3>주차별 감성점수</h3>
+          <table border="1" style={{ margin: '0 auto', minWidth: 300, marginBottom: 24 }}>
+            <thead>
+              <tr>
+                <th>주차 시작일</th>
+                <th>감성점수</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sentimentSummaryResult.map((item, idx) => (
                 <tr key={idx}>
                   <td>{item.week || item.date || ''}</td>
                   <td>{item.score}</td>
-                  <td style={{ whiteSpace: 'pre-line' }}>{summaryText}</td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+          <h3>주차별 기사 요약</h3>
+          <table border="1" style={{ margin: '0 auto', minWidth: 300 }}>
+            <thead>
+              <tr>
+                <th>주차 시작일</th>
+                <th>기사 요약</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sentimentSummaryResult.map((item, idx) => {
+                let summaryList = [];
+                if (item) {
+                  if (Array.isArray(item.summary)) {
+                    summaryList = item.summary;
+                  } else if (typeof item.summary === 'string') {
+                    summaryList = [item.summary];
+                  } else if (Array.isArray(item.article_summary)) {
+                    summaryList = item.article_summary;
+                  } else if (typeof item.article_summary === 'string') {
+                    summaryList = [item.article_summary];
+                  }
+                  if (summaryList.length === 0 && Array.isArray(item.articles) && item.articles.length > 0) {
+                    summaryList = item.articles.map(a => a.summary || a);
+                  }
+                  if (summaryList.length === 0 && item.summaryList && Array.isArray(item.summaryList)) {
+                    summaryList = item.summaryList;
+                  }
+                  if (summaryList.length === 0 && item.summaries && Array.isArray(item.summaries)) {
+                    summaryList = item.summaries;
+                  }
+                }
+                return (
+                  <tr key={idx}>
+                    <td>{item.week || item.date || ''}</td>
+                    <td style={{ whiteSpace: 'pre-line' }}>
+                      {summaryList.length > 0 ? (
+                        <ul style={{ paddingLeft: 16 }}>
+                          {summaryList.map((s, i) => <li key={i}>{s}</li>)}
+                        </ul>
+                      ) : ''}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </>
       )}
       {sentimentSummaryResult && ((typeof sentimentSummaryResult !== 'object' && !Array.isArray(sentimentSummaryResult)) || Object.keys(sentimentSummaryResult).length === 0) && (
         <div>감성점수+기사 요약 데이터가 없습니다.</div>
