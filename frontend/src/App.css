@@ -191,15 +191,15 @@
 
 .sidebar-yearmonth select.sidebar-period-select,
 .sidebar-period select.sidebar-period-select {
-  color: #302A24;
-  background: rgba(255,255,255,0.8);
+  color: #302a24;
+  background: rgba(255, 255, 255, 0.8);
 }
 
 .sidebar-period select.sidebar-period-select {
   width: 210px;
   max-width: 260px;
   min-width: 180px;
-  font-size: 1.0rem;
+  font-size: 1rem;
   border-radius: 10px;
   padding: 12px 0 12px 0px;
   border: none;
@@ -211,6 +211,7 @@
   text-align: center;
   transition: none;
 }
+
 .sidebar-period select.sidebar-period-select:focus {
   border: none;
   box-shadow: 0 2px 8px #0001;
@@ -231,7 +232,7 @@
 
 .sidebar-period-select {
   width: 100px;
-  font-size: 1.0rem;
+  font-size: 1rem;
   border-radius: 10px;
   padding: 12px 0 12px 0px;
   margin-bottom: 0;
@@ -245,6 +246,7 @@
   text-align: center;
   transition: none;
 }
+
 .sidebar-period-select:focus {
   border: none;
   box-shadow: 0 2px 8px #0001;
@@ -258,6 +260,25 @@
   border-right: 1.5px solid #e6dfd3;
   border-top: 1.5px solid #e6dfd3;
   border-bottom: 1.5px solid #e6dfd3;
+  position: relative;
+}
+
+.main-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #302A24;
+  margin-bottom: 24px;
+  margin-top: 0;
+  letter-spacing: -0.01em;
+  background: none;
+  border: none;
+  text-align: left;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 36px 32px 0 32px;
+  z-index: 11;
 }
 
 .main-placeholder {

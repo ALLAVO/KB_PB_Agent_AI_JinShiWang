@@ -146,8 +146,9 @@ function ChatPanel() {
 function MainPanel() {
   return (
     <div className="main-panel">
+      <div className="main-title">[2025년 6월 1주차] 시황 리포트</div>
       {/* 실제 데이터/그래프/뉴스 등은 추후 구현 */}
-      <div className="main-placeholder">[2025년 6월 1주차] 시황 리포트 (데이터 영역)</div>
+      <div className="main-placeholder" style={{marginTop: '48px'}}>[2025년 6월 1주차] 시황 리포트 (데이터 영역)</div>
     </div>
   );
 }
