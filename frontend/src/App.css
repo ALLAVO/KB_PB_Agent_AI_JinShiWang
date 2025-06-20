@@ -171,12 +171,42 @@
   font-weight: bold;
 }
 
+.sidebar-yearmonth {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 24px;
+  margin-bottom: 0;
+}
+
 .sidebar-period {
-  margin: 32px 0 0 0;
+  margin: 12px 0 0 0;
   width: 100%;
   display: flex;
   justify-content: center;
   padding-bottom: 20px;
+}
+
+.sidebar-period select.sidebar-period-select {
+  width: 210px;
+  max-width: 260px;
+  min-width: 180px;
+  font-size: 1.0rem;
+  border-radius: 10px;
+  padding: 12px 0 12px 0px;
+  border: none;
+  background: #fff;
+  box-shadow: 0 2px 8px #0001;
+  color: #2d2418;
+  font-weight: 500;
+  appearance: none;
+  text-align: center;
+  transition: none;
+}
+.sidebar-period select.sidebar-period-select:focus {
+  border: none;
+  box-shadow: 0 2px 8px #0001;
 }
 
 .sidebar-period select {
@@ -190,6 +220,27 @@
   min-width: 180px;
   box-shadow: 0 2px 8px #0001;
   text-align: center;
+}
+
+.sidebar-period-select {
+  width: 100px;
+  font-size: 1.0rem;
+  border-radius: 10px;
+  padding: 12px 0 12px 0px;
+  margin-bottom: 0;
+  border: none;
+  background: #fff;
+  box-shadow: 0 2px 8px #0001;
+  outline: none;
+  color: #2d2418;
+  font-weight: 500;
+  appearance: none;
+  text-align: center;
+  transition: none;
+}
+.sidebar-period-select:focus {
+  border: none;
+  box-shadow: 0 2px 8px #0001;
 }
 
 .main-panel {

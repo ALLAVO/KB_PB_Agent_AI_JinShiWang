@@ -1,8 +1,27 @@
 import React, { useState } from "react";
 import "./App.css";
 import kblogo from "./kblogo";
+import { getWeeksOfMonth } from "./weekUtils";
 
 function Sidebar({ userName, menu, subMenu, onMenuClick, onSubMenuClick, selectedMenu, selectedSubMenu, period, onPeriodChange }) {
+  // 연도/월 상태 추가
+  const [year, setYear] = React.useState(2025);
+  const [month, setMonth] = React.useState(6);
+
+  // 연도/월 옵션 생성
+  const yearOptions = Array.from({ length: 2025 - 1990 + 1 }, (_, i) => 1990 + i);
+  const monthOptions = Array.from({ length: 12 }, (_, i) => i + 1);
+
+  // 주차 옵션 생성 (선택된 연/월 기준)
+  const weekOptions = getWeeksOfMonth(year, month).map(({ week, start, end }) => {
+    const startStr = `${String(start.getMonth() + 1).padStart(2, '0')}.${String(start.getDate()).padStart(2, '0')}`;
+    const endStr = `${String(end.getMonth() + 1).padStart(2, '0')}.${String(end.getDate()).padStart(2, '0')}`;
+    return {
+      value: `${startStr} - ${endStr} (${week}주차)`,
+      label: `${startStr} - ${endStr} (${week}주차)`
+    };
+  });
+
   return (
     <div className="sidebar">
       <div className="sidebar-user">
@@ -27,10 +46,27 @@ function Sidebar({ userName, menu, subMenu, onMenuClick, onSubMenuClick, selecte
           </div>
         ))}
       </div>
+      <div className="sidebar-yearmonth">
+        <select 
+          value={year} 
+          onChange={e => setYear(Number(e.target.value))} 
+          className="sidebar-period-select"
+        >
+          {yearOptions.map(y => <option key={y} value={y}>{y}년</option>)}
+        </select>
+        <select 
+          value={month} 
+          onChange={e => setMonth(Number(e.target.value))} 
+          className="sidebar-period-select"
+        >
+          {monthOptions.map(m => <option key={m} value={m}>{m}월</option>)}
+        </select>
+      </div>
       <div className="sidebar-period">
-        <select value={period} onChange={e => onPeriodChange(e.target.value)}>
-          <option value="25.06.01 - 25.06.07">25.06.01 - 25.06.07</option>
-          {/* 실제 구현시 기간 옵션 동적 생성 */}
+        <select value={period} onChange={e => onPeriodChange(e.target.value)} className="sidebar-period-select">
+          {weekOptions.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
         </select>
       </div>
     </div>
