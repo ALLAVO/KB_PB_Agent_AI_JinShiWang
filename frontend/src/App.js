@@ -2,6 +2,37 @@ import React, { useState } from "react";
 import "./App.css";
 import kblogo from "./kblogo";
 import { getWeeksOfMonth } from "./weekUtils";
+import sendIcon from "./assets/send.png";
+import cloud1 from "./assets/cloud1.png";
+import cloud2 from "./assets/cloud2.png";
+import cloud3 from "./assets/cloud3.png";
+
+function StackIconDecoration() {
+  return (
+    <img
+      src={require('./assets/stack.png')}
+      alt="stack"
+      style={{
+        position: 'absolute',
+        right: '32px',
+        top: '32px',
+        width: 25,
+        height: 25,
+        zIndex: 2
+      }}
+    />
+  );
+}
+
+function CloudDecorations() {
+  return (
+    <>
+      <img src={cloud1} alt="cloud1" style={{ position: 'absolute', left: '0px', top: '80px', width: '50%', opacity: 1.0, pointerEvents: 'none', zIndex: 0 }} />
+      <img src={cloud2} alt="cloud2" style={{ position: 'absolute', right: '0px', top: '38%', width: '50%', opacity: 1.0, pointerEvents: 'none', zIndex: 0 }} />
+      <img src={cloud3} alt="cloud3" style={{ position: 'absolute', left: '0px', bottom: '60px', width: '50%', opacity: 1.0, pointerEvents: 'none', zIndex: 0 }} />
+    </>
+  );
+}
 
 function Sidebar({ userName, menu, subMenu, onMenuClick, onSubMenuClick, selectedMenu, selectedSubMenu, period, onPeriodChange }) {
   // 연도/월 상태 추가
@@ -75,22 +106,37 @@ function Sidebar({ userName, menu, subMenu, onMenuClick, onSubMenuClick, selecte
 
 function ChatPanel() {
   const [input, setInput] = useState("");
-  // 실제 채팅 기능은 추후 구현
+  // textarea 높이 자동 조절
+  const textareaRef = React.useRef(null);
+  React.useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
+    }
+  }, [input]);
   return (
-    <div className="chat-panel">
-      <div className="chat-title">진시황과의 상담</div>
+    <div className="chat-panel" style={{position:'relative'}}>
+      <StackIconDecoration />
+      <div className="chat-title-row" style={{display:'flex',alignItems:'center',justifyContent:'space-between',paddingRight:48}}>
+        <div className="chat-title" style={{ color: '#302A24' }}>진시황과의 상담</div>
+      </div>
       <div className="chat-messages">
+        <CloudDecorations />
         {/* 채팅 메시지 영역 */}
       </div>
       <div className="chat-input-row">
-        <input
-          className="chat-input"
-          placeholder="진시황에게 질문하세요...."
-          value={input}
-          onChange={e => setInput(e.target.value)}
-        />
+        <div className="chat-input-bg">
+          <textarea
+            ref={textareaRef}
+            className="chat-input"
+            placeholder="진시황에게 질문하세요..."
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            rows={1}
+          />
+        </div>
         <button className="chat-send-btn" disabled>
-          <span role="img" aria-label="send">✈️</span>
+          <img src={sendIcon} alt="send" style={{width:25,height:25,opacity:0.7}} />
         </button>
       </div>
     </div>
