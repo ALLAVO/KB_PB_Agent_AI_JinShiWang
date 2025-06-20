@@ -36,3 +36,239 @@
     transform: rotate(360deg);
   }
 }
+
+.app-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: #f8f6f2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 32px;
+  box-shadow: 0 8px 32px 0 #0002, 0 1.5px 0 #e6dfd3;
+  overflow: hidden;
+}
+
+/* 상단 중앙 notch 효과 */
+.app-container .notch {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 22px;
+  background: #111;
+  border-bottom-left-radius: 22px 12px;
+  border-bottom-right-radius: 22px 12px;
+  z-index: 10;
+}
+
+.app-layout {
+  display: flex;
+  height: 100vh;
+  background: #f8f6f2;
+  font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+}
+
+.sidebar {
+  width: 100%;
+  max-width: 250px;
+  min-width: 120px;
+  background: #e6dfd3;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 0 0 0;
+  border-top-left-radius: 24px;
+  border-bottom-left-radius: 24px;
+  box-shadow: 2px 0 8px #0001;
+  align-items: center;
+}
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-left: 0;
+  justify-content: center;
+  width: 100%;
+}
+
+.sidebar-user-badge {
+  display: flex;
+  align-items: center;
+  background: #6e625a;
+  border-radius: 10px;
+  padding: 5px 12px 5px 12px;
+  width: 75%;
+  max-width: 230px;
+  min-width: 150px;
+  min-height: 0;
+  box-shadow: 0 2px 8px #0002;
+  gap: 12px;
+  justify-content: center;
+}
+
+.sidebar-user-logo {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  margin-right: 0;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sidebar-user-icon {
+  font-size: 1.5rem;
+  margin-right: 8px;
+}
+
+.sidebar-user-name {
+  font-weight: 400;
+  color: #fff;
+  font-size: 1.3rem;
+  background: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+.sidebar-menu {
+  flex: 1;
+  padding-left: 10px;
+  width: 80%;
+  max-width: 250px;
+  min-width: 180px;
+}
+
+.sidebar-menu-item {
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+  cursor: pointer;
+  color: #4d3c2b;
+  font-weight: 500;
+}
+
+.sidebar-menu-item.selected {
+  color: #b08d57;
+  font-weight: bold;
+}
+
+.sidebar-submenu {
+  margin-top: 6px;
+  margin-left: 12px;
+}
+
+.sidebar-submenu-item {
+  font-size: 1rem;
+  color: #7b6a58;
+  margin-bottom: 4px;
+  cursor: pointer;
+}
+
+.sidebar-submenu-item.selected {
+  color: #b08d57;
+  font-weight: bold;
+}
+
+.sidebar-period {
+  margin: 32px 0 0 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding-bottom: 20px;
+}
+
+.sidebar-period select {
+  border-radius: 8px;
+  border: 1px solid #d2c6b2;
+  padding: 12px 24px;
+  background: #f8f6f2;
+  font-size: 0.9rem;
+  width: 83%;
+  max-width: 260px;
+  min-width: 180px;
+  box-shadow: 0 2px 8px #0001;
+  text-align: center;
+}
+
+.main-panel {
+  flex: 2.5;
+  background: #fff;
+  padding: 36px 32px 0 32px;
+  min-width: 600px;
+  border-right: 1.5px solid #e6dfd3;
+  border-top: 1.5px solid #e6dfd3;
+  border-bottom: 1.5px solid #e6dfd3;
+}
+
+.main-placeholder {
+  color: #b8b0a3;
+  font-size: 1.2rem;
+  text-align: center;
+  margin-top: 120px;
+}
+
+.chat-panel {
+  flex: 1.5;
+  background: #fff;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-top-right-radius: 24px;
+  border-bottom-right-radius: 24px;
+  border-top: 1.5px solid #e6dfd3;
+  border-bottom: 1.5px solid #e6dfd3;
+  padding: 36px 32px 0 32px;
+  overflow: hidden;
+}
+
+.chat-title, .chat-messages, .chat-input-row {
+  position: relative;
+  z-index: 1;
+}
+.chat-title {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #7b6a58;
+  margin-bottom: 16px;
+}
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 16px;
+}
+.chat-input-row {
+  display: flex;
+  align-items: center;
+  background: #ede7df;
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin-bottom: 24px;
+}
+.chat-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  outline: none;
+  color: #7b6a58;
+}
+.chat-send-btn {
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  color: #b08d57;
+  cursor: pointer;
+  margin-left: 8px;
+}
+.chat-send-btn:disabled {
+  color: #d2c6b2;
+  cursor: not-allowed;
+}
+
+@media (max-width: 1100px) {
+  .main-panel { min-width: 400px; padding: 24px 8px 0 8px; }
+  .chat-panel { padding: 24px 8px 0 8px; }
+  .sidebar { padding: 16px 0 0 0; }
+}
