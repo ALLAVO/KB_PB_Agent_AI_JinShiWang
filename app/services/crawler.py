@@ -331,36 +331,3 @@ def get_kr_fx_rates_6months(end_date: str) -> dict:
     except Exception as e:
         return {'error': f'Error fetching 6-month KR FX rates: {e}'}
 
-def get_commodity_prices_6months(fred_api_key: str, end_date: str) -> dict:
-    """
-        FRED API를 이용해 WTI(원유)와 금(Gold) 6개월치 일별 가격 데이터를 반환합니다.
-        end_date: 'YYYY-MM-DD' (마지막 날짜)
-        반환: {
-            'dates': [...],
-            'wti': [...],
-            'gold': [...]
-        }
-        """
-    try:
-        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
-        start_dt = end_dt - timedelta(days=182)
-        start_str = start_dt.strftime('%Y-%m-%d')
-        end_str = end_dt.strftime('%Y-%m-%d')
-        url_wti = f"https://api.stlouisfed.org/fred/series/observations?series_id=DCOILWTICO&api_key={fred_api_key}&file_type=json&observation_start={start_str}&observation_end={end_str}"
-        url_gold = f"https://api.stlouisfed.org/fred/series/observations?series_id=GOLDAMGBD228NLBM&api_key={fred_api_key}&file_type=json&observation_start={start_str}&observation_end={end_str}"
-        resp_wti = requests.get(url_wti)
-        resp_gold = requests.get(url_gold)
-        obs_wti = resp_wti.json().get('observations', [])
-        obs_gold = resp_gold.json().get('observations', [])
-        # 날짜 교집합만 사용
-        dates = sorted(list(set([o['date'] for o in obs_wti if o['value'] not in ('.', None, '')]) & set([o['date'] for o in obs_gold if o['value'] not in ('.', None, '')])))
-        wti = [float(o['value']) for o in obs_wti if o['value'] not in ('.', None, '') and o['date'] in dates]
-        gold = [float(o['value']) for o in obs_gold if o['value'] not in ('.', None, '') and o['date'] in dates]
-        return {
-            'dates': dates,
-            'wti': wti,
-            'gold': gold
-        }
-    except Exception as e:
-        return {'error': f'Error fetching 6-month commodity prices from FRED: {e}'}
-
