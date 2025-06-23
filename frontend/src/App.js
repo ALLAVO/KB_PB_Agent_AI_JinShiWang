@@ -169,29 +169,43 @@ function CustomerPipeline({ year, month, weekStr }) {
 }
 
 function MarketPipeline({ year, month, weekStr }) {
+  const [started, setStarted] = useState(false);
   const chartData = '시장 차트 예시';
   const tableData = [
     { 지수: 'KOSPI', 값: 2650, 변동: '+1.2%' },
     { 지수: 'KOSDAQ', 값: 900, 변동: '-0.5%' }
   ];
   const textSummary = `${year}년 ${month}월 ${weekStr} 시장 데이터 분석 요약입니다.`;
+
   return (
     <div>
-      <div className="pipeline-title">
-        <img src={titlecloud} alt="cloud" />증시 지표
-      </div>
-      <div className="pipeline-graph">{chartData}</div>
-      <table className="pipeline-table">
-        <thead>
-          <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
-        </thead>
-        <tbody>
-          {tableData.map((row, idx) => (
-            <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="pipeline-text">{textSummary}</div>
+      {!started && (
+        <button
+          className="report-start-btn"
+          onClick={() => setStarted(true)}
+        >
+          리포트 출력
+        </button>
+      )}
+      {started && (
+        <>
+          <div className="pipeline-title">
+            <img src={titlecloud} alt="cloud" />증시 지표
+          </div>
+          <div className="pipeline-graph">{chartData}</div>
+          <table className="pipeline-table">
+            <thead>
+              <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
+            </thead>
+            <tbody>
+              {tableData.map((row, idx) => (
+                <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="pipeline-text">{textSummary}</div>
+        </>
+      )}
     </div>
   );
 }
