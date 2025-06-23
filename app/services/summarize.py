@@ -125,8 +125,8 @@ def summarize_article(stock_symbol: str, start_date: str, end_date: str):
 # 예시 실행 및 결과 출력
 if __name__ == "__main__":
     stock_symbol = "AAPL"
-    start_date = "2022-07-02"
-    end_date = "2022-07-03"
+    start_date = "2022-07-03"
+    end_date = "2022-07-05"
     summaries = summarize_article(stock_symbol, start_date, end_date)
     for item in summaries:
         print(f"날짜: {item['date']}")

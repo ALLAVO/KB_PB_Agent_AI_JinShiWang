@@ -1,39 +1,46 @@
-import psycopg2
+from app.db.connection import check_db_connection
 from app.core.config import settings
 from datetime import timedelta, datetime, timezone
 import re
 
+# def check_db_connection():
+#     try:
+#         conn = psycopg2.connect(
+#             host=settings.DB_HOST,
+#             port=settings.DB_PORT,
+#             dbname=settings.DB_NAME,
+#             user=settings.DB_USER,
+#             password=settings.DB_PASSWORD,
+#         )
+#         return conn
+#     except Exception as e:
+#         print("Error connecting to the database:", e)
+#         return None
+
 # DB 연결 테스트 및 샘플 데이터 조회
-def check_db_connection():
+def print_sample_data():
+    conn = check_db_connection()
+    if conn is None:
+        return
     try:
-        conn = psycopg2.connect(
-            host=settings.DB_HOST,
-            port=settings.DB_PORT,
-            dbname=settings.DB_NAME,
-            user=settings.DB_USER,
-            password=settings.DB_PASSWORD,
-        )
         cur = conn.cursor()
-        cur.execute("SELECT * FROM kb_enterprise_data LIMIT 1")
+        cur.execute("SELECT * FROM kb_enterprise_dataset LIMIT 1")
         rows = cur.fetchall()
         print('Sample Data from kb_enterprise_data:')
         for row in rows:
             print(row)
         cur.close()
         conn.close()
-
     except Exception as e:
-        print("Error connecting to the database:", e)
+        print("Error fetching sample data:", e)
+        if conn:
+            conn.close()
 
 def get_articles_by_stock_symbol(stock_symbol: str, start_date: str = None, end_date: str = None):
+    conn = check_db_connection()
+    if conn is None:
+        return []
     try:
-        conn = psycopg2.connect(
-            host=settings.DB_HOST,
-            port=settings.DB_PORT,
-            dbname=settings.DB_NAME,
-            user=settings.DB_USER,
-            password=settings.DB_PASSWORD,
-        )
         cur = conn.cursor()
         stock_symbol_param = str(stock_symbol).strip()
         # 날짜 조건 동적 생성
@@ -49,8 +56,8 @@ def get_articles_by_stock_symbol(stock_symbol: str, start_date: str = None, end_
         if date_query:
             date_query = " AND " + date_query
         stock_symbol_query = (
-            "SELECT article, date, date_trunc('week', date + INTERVAL '1 day') AS weekstart_sunday "
-            "FROM kb_enterprise_data "
+            "SELECT article, date, weekstart_sunday "
+            "FROM kb_enterprise_dataset "
             "WHERE stock_symbol = %s" + date_query + " "
             "ORDER BY weekstart_sunday, date DESC;"
         )
@@ -64,6 +71,8 @@ def get_articles_by_stock_symbol(stock_symbol: str, start_date: str = None, end_
         return rows
     except Exception as e:
         print("Error fetching articles for ticker:", stock_symbol, e)
+        if conn:
+            conn.close()
         return []
 
 def preprocess_text(text: str) -> list:
@@ -76,12 +85,11 @@ def preprocess_text(text: str) -> list:
     return words
 
 # 주어진 기사 본문에서 감성 점수를 계산하는 함수
-def get_sentiment_score_for_article(article: str, conn) -> float:
-    """
-    기사 본문(article)에서 단어별로 mcdonald_masterdictionary 테이블을 참조해 감성점수를 정교하게 계산하여 반환합니다.
-    - positive_count, negative_count, positive_score_sum, negative_score_sum을 모두 집계
-    - 평균 감성 점수 = (positive_score_sum - negative_score_sum) / (positive_count + negative_count)
-    """
+def get_sentiment_score_for_article(article: str, conn=None) -> float:
+    if conn is None:
+        conn = check_db_connection()
+        if conn is None:
+            return 0.0
     cur = conn.cursor()
     words = preprocess_text(article)
     positive_count = 0
@@ -99,7 +107,6 @@ def get_sentiment_score_for_article(article: str, conn) -> float:
             if negative > 0:
                 negative_count += 1
                 negative_score_sum += negative
-            # print(f"[DEBUG] 단어: '{word}', positive: {positive}, negative: {negative}, pos_sum: {positive_score_sum}, neg_sum: {negative_score_sum}, pos_cnt: {positive_count}, neg_cnt: {negative_count}")
     cur.close()
     total_count = positive_count + negative_count
     if total_count == 0:
@@ -135,13 +142,9 @@ def get_weekly_sentiment_scores_by_stock_symbol(stock_symbol: str, start_date: s
     반환값 예시: { '2024-05-27': 0.12, '2024-06-03': -0.05, ... }
     """
     try:
-        conn = psycopg2.connect(
-            host=settings.DB_HOST,
-            port=settings.DB_PORT,
-            dbname=settings.DB_NAME,
-            user=settings.DB_USER,
-            password=settings.DB_PASSWORD,
-        )
+        conn = check_db_connection()
+        if conn is None:
+            return {}
         articles = get_articles_by_stock_symbol(stock_symbol, start_date, end_date)
         weekly_scores = {}
         weekly_counts = {}
@@ -156,12 +159,10 @@ def get_weekly_sentiment_scores_by_stock_symbol(stock_symbol: str, start_date: s
             weekly_counts[week_key] += 1
         for week in weekly_scores:
             weekly_scores[week] /= weekly_counts[week]
-        # float -> int 변환
         for week in weekly_scores:
             weekly_scores[week] = int(round(weekly_scores[week]))
         print("주차별 평균 감성점수:", weekly_scores)
         conn.close()
-        # 항상 dict로 반환
         print(f"[DEBUG] {stock_symbol}의 주차별 감성점수: {weekly_scores}")
         return weekly_scores
     except Exception as e:
@@ -170,4 +171,5 @@ def get_weekly_sentiment_scores_by_stock_symbol(stock_symbol: str, start_date: s
 
 if __name__ == "__main__":
     # 테스트 실행: 심볼을 원하는 것으로 변경
-    get_weekly_sentiment_scores_by_stock_symbol("AAPL", "2022-07-01", "2022-07-02")
+    print_sample_data()
+    get_weekly_sentiment_scores_by_stock_symbol("AAPL", "2022-07-03", "2022-07-05")
