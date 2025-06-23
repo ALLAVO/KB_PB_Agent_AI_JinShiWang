@@ -1,2 +1,0 @@
-<!-- JejuHallasan 웹폰트 적용: public/index.html의 <head>에 아래 코드 추가 -->
-<link href="https://fonts.googleapis.com/earlyaccess/jejuhallasan.css" rel="stylesheet" />
