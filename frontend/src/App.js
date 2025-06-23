@@ -6,6 +6,7 @@ import sendIcon from "./assets/send.png";
 import cloud1 from "./assets/cloud1.png";
 import cloud2 from "./assets/cloud2.png";
 import cloud3 from "./assets/cloud3.png";
+import titlecloud from "./assets/titlecloud.png";
 
 function StackIconDecoration() {
   return (
@@ -34,15 +35,10 @@ function CloudDecorations() {
   );
 }
 
-function Sidebar({ userName, menu, subMenu, onMenuClick, onSubMenuClick, selectedMenu, selectedSubMenu, period, onPeriodChange }) {
-  // 연도/월 상태 추가
-  const [year, setYear] = React.useState(2025);
-  const [month, setMonth] = React.useState(6);
-
+function Sidebar({ userName, menu, subMenu, onMenuClick, onSubMenuClick, selectedMenu, selectedSubMenu, year, setYear, month, setMonth, period, onPeriodChange }) {
   // 연도/월 옵션 생성
   const yearOptions = Array.from({ length: 2025 - 1990 + 1 }, (_, i) => 1990 + i);
   const monthOptions = Array.from({ length: 12 }, (_, i) => i + 1);
-
   // 주차 옵션 생성 (선택된 연/월 기준)
   const weekOptions = getWeeksOfMonth(year, month).map(({ week, start, end }) => {
     const startStr = `${String(start.getMonth() + 1).padStart(2, '0')}.${String(start.getDate()).padStart(2, '0')}`;
@@ -143,12 +139,149 @@ function ChatPanel() {
   );
 }
 
-function MainPanel() {
+function CustomerPipeline({ year, month, weekStr }) {
+  const chartData = '고객 차트 예시';
+  const tableData = [
+    { 이름: '홍길동', 등급: 'Gold', 최근방문: '2025-06-01' },
+    { 이름: '김철수', 등급: 'Silver', 최근방문: '2025-06-03' }
+  ];
+  const textSummary = `${year}년 ${month}월 ${weekStr} 고객 데이터 분석 요약입니다.`;
+  return (
+    <div>
+      <div className="pipeline-title">
+        <img src={titlecloud} alt="cloud" />고객 Pipeline
+      </div>
+      <div className="pipeline-graph">{chartData}</div>
+      <table className="pipeline-table">
+        <thead>
+          <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
+        </thead>
+        <tbody>
+          {tableData.map((row, idx) => (
+            <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="pipeline-text">{textSummary}</div>
+    </div>
+  );
+}
+
+function MarketPipeline({ year, month, weekStr }) {
+  const chartData = '시장 차트 예시';
+  const tableData = [
+    { 지수: 'KOSPI', 값: 2650, 변동: '+1.2%' },
+    { 지수: 'KOSDAQ', 값: 900, 변동: '-0.5%' }
+  ];
+  const textSummary = `${year}년 ${month}월 ${weekStr} 시장 데이터 분석 요약입니다.`;
+  return (
+    <div>
+      <div className="pipeline-title">
+        <img src={titlecloud} alt="cloud" />증시 지표
+      </div>
+      <div className="pipeline-graph">{chartData}</div>
+      <table className="pipeline-table">
+        <thead>
+          <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
+        </thead>
+        <tbody>
+          {tableData.map((row, idx) => (
+            <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="pipeline-text">{textSummary}</div>
+    </div>
+  );
+}
+
+function IndustryPipeline({ year, month, weekStr }) {
+  const chartData = '산업 차트 예시';
+  const tableData = [
+    { 산업: 'IT', 성장률: '5.2%' },
+    { 산업: '바이오', 성장률: '3.1%' }
+  ];
+  const textSummary = `${year}년 ${month}월 ${weekStr} 산업 데이터 분석 요약입니다.`;
+  return (
+    <div>
+      <div className="pipeline-title">
+        <img src={titlecloud} alt="cloud" />산업 Pipeline
+      </div>
+      <div className="pipeline-graph">{chartData}</div>
+      <table className="pipeline-table">
+        <thead>
+          <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
+        </thead>
+        <tbody>
+          {tableData.map((row, idx) => (
+            <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="pipeline-text">{textSummary}</div>
+    </div>
+  );
+}
+
+function CompanyPipeline({ year, month, weekStr }) {
+  const chartData = '기업 차트 예시';
+  const tableData = [
+    { 기업명: '삼성전자', 시가총액: '500조', PER: 12.3 },
+    { 기업명: '네이버', 시가총액: '60조', PER: 35.1 }
+  ];
+  const textSummary = `${year}년 ${month}월 ${weekStr} 기업 데이터 분석 요약입니다.`;
+  return (
+    <div>
+      <div className="pipeline-title">
+        <img src={titlecloud} alt="cloud" />기업 Pipeline
+      </div>
+      <div className="pipeline-graph">{chartData}</div>
+      <table className="pipeline-table">
+        <thead>
+          <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
+        </thead>
+        <tbody>
+          {tableData.map((row, idx) => (
+            <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="pipeline-text">{textSummary}</div>
+    </div>
+  );
+}
+
+function PipelinePanel({ name, year, month, weekStr }) {
+  if (name === 'customer') return <CustomerPipeline year={year} month={month} weekStr={weekStr} />;
+  if (name === 'market') return <MarketPipeline year={year} month={month} weekStr={weekStr} />;
+  if (name === 'industry') return <IndustryPipeline year={year} month={month} weekStr={weekStr} />;
+  if (name === 'company') return <CompanyPipeline year={year} month={month} weekStr={weekStr} />;
+  return null;
+}
+
+function MainPanel({ year, month, period, selectedMenu, selectedSubMenu }) {
+  // 주차 정보 추출 (예: "(1주차)")
+  const weekMatch = period.match(/\((\d+주차)\)/);
+  const weekStr = weekMatch ? weekMatch[1] : "";
+
+  // 메뉴/서브메뉴에 따라 보여줄 pipeline 결정
+  let pipelineName = null;
+  if (selectedMenu === "고객 관리") {
+    pipelineName = "customer";
+  } else if (selectedMenu === "진시황의 혜안") {
+    if (selectedSubMenu === "시황") pipelineName = "market";
+    else if (selectedSubMenu === "산업") pipelineName = "industry";
+    else if (selectedSubMenu === "기업") pipelineName = "company";
+  }
+
   return (
     <div className="main-panel">
-      <div className="main-title">[2025년 6월 1주차] 시황 리포트</div>
-      {/* 실제 데이터/그래프/뉴스 등은 추후 구현 */}
-      <div className="main-placeholder" style={{marginTop: '48px'}}>[2025년 6월 1주차] 시황 리포트 (데이터 영역)</div>
+      <div className="main-title">[{year}년 {month}월 {weekStr}] 시황 리포트</div>
+      <div className="main-placeholder" style={{marginTop: '48px'}}>
+        {pipelineName && (
+          <PipelinePanel name={pipelineName} year={year} month={month} weekStr={weekStr} />
+        )}
+      </div>
     </div>
   );
 }
@@ -156,7 +289,9 @@ function MainPanel() {
 function App() {
   const [selectedMenu, setSelectedMenu] = useState("진시황의 혜안");
   const [selectedSubMenu, setSelectedSubMenu] = useState("시황");
-  const [period, setPeriod] = useState("25.06.01 - 25.06.07");
+  const [year, setYear] = useState(2025);
+  const [month, setMonth] = useState(6);
+  const [period, setPeriod] = useState("06.01 - 06.07 (1주차)");
 
   return (
     <div className="app-layout">
@@ -168,10 +303,14 @@ function App() {
         selectedSubMenu={selectedSubMenu}
         onMenuClick={setSelectedMenu}
         onSubMenuClick={setSelectedSubMenu}
+        year={year}
+        setYear={setYear}
+        month={month}
+        setMonth={setMonth}
         period={period}
         onPeriodChange={setPeriod}
       />
-      <MainPanel />
+      <MainPanel year={year} month={month} period={period} selectedMenu={selectedMenu} selectedSubMenu={selectedSubMenu} />
       <ChatPanel />
     </div>
   );

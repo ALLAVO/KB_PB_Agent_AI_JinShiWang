@@ -5,6 +5,8 @@ import json
 import yfinance as yf
 import pandas_datareader.data as web
 from app.core.config import settings
+import pandas as pd
+from datetime import datetime, timedelta
 
 # 요청 간 최소 대기시간 (초 단위)
 RATE_LIMIT_SLEEP = 2
@@ -220,68 +222,145 @@ get_weekly_stock_indicators_from_yahoo = get_weekly_stock_indicators_from_stooq
 #### 04 . 시황정보 : 증시, 채권, 환율 #####
 
 ## 04-1. 미국 증시 지수
-def get_us_stock_indices_range(start_date: str, end_date: str) -> dict:
+def get_us_indices_6months_chart(end_date: str) -> dict:
     """
-    Stooq를 이용해 미국 증시(Dow, S&P500, Nasdaq) 지수의 기간별(시작~끝) 평균 종가를 반환합니다.
+    DOW, S&P500, NASDAQ 6개월치 일별 종가 데이터를 반환합니다.
+    end_date: 'YYYY-MM-DD' (그래프 마지막 날짜)
+    반환: {
+        'dow': {'dates': [...], 'closes': [...]},
+        'sp500': {'dates': [...], 'closes': [...]},
+        'nasdaq': {'dates': [...], 'closes': [...]}
+    }
     """
+
     try:
-        dow_hist = web.DataReader('^DJI', 'stooq', start=start_date, end=end_date)
-        sp500_hist = web.DataReader('^SPX', 'stooq', start=start_date, end=end_date)
-        nasdaq_hist = web.DataReader('^NDQ', 'stooq', start=start_date, end=end_date)
-        return {
-            'dow_avg': float(dow_hist['Close'].mean()) if not dow_hist.empty else None,
-            'sp500_avg': float(sp500_hist['Close'].mean()) if not sp500_hist.empty else None,
-            'nasdaq_avg': float(nasdaq_hist['Close'].mean()) if not nasdaq_hist.empty else None
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        start_dt = end_dt - timedelta(days=182)  # 약 6개월(182일)
+        start_str = start_dt.strftime('%Y-%m-%d')
+        end_str = end_dt.strftime('%Y-%m-%d')
+
+        indices = {
+            'dow': '^DJI',
+            'sp500': '^SPX',
+            'nasdaq': '^NDQ'
         }
+        result = {}
+        for key, ticker in indices.items():
+            df = web.DataReader(ticker, 'stooq', start=start_str, end=end_str)
+            df = df.sort_index()
+            if df.empty:
+                result[key] = {'dates': [], 'closes': []}
+            else:
+                result[key] = {
+                    'dates': [d.strftime('%Y-%m-%d') for d in df.index],
+                    'closes': df['Close'].tolist()
+                }
+        return result
     except Exception as e:
-        return {"error": f"Error fetching US stock indices (range) from Stooq: {e}"}
+        return {'error': f'Error fetching 6-month US indices data: {e}'}
 
 
 # ## 04-2. 미국 국채 금리
-def get_us_treasury_yields_range(fred_api_key: str, start_date: str, end_date: str) -> dict:
+def get_us_treasury_yields_6months(fred_api_key: str, end_date: str) -> dict:
     """
-    FRED API를 이용해 미국 국채 2년물(DGS2), 10년물(DGS10) 기간별(시작~끝) 평균 금리를 반환합니다.
+    FRED API를 이용해 미국 국채 2년물(DGS2), 10년물(DGS10) 6개월(182일)치 일별 금리 데이터를 반환합니다.
+    end_date: 'YYYY-MM-DD' (마지막 날짜)
+    반환: {
+        'dates': [...],
+        'us_2y': [...],
+        'us_10y': [...]
+    }
     """
-    import pandas as pd
+
     try:
-        url_2y = f"https://api.stlouisfed.org/fred/series/observations?series_id=DGS2&api_key={fred_api_key}&file_type=json&observation_start={start_date}&observation_end={end_date}"
-        url_10y = f"https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key={fred_api_key}&file_type=json&observation_start={start_date}&observation_end={end_date}"
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        start_dt = end_dt - timedelta(days=182)
+        start_str = start_dt.strftime('%Y-%m-%d')
+        end_str = end_dt.strftime('%Y-%m-%d')
+        url_2y = f"https://api.stlouisfed.org/fred/series/observations?series_id=DGS2&api_key={fred_api_key}&file_type=json&observation_start={start_str}&observation_end={end_str}"
+        url_10y = f"https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key={fred_api_key}&file_type=json&observation_start={start_str}&observation_end={end_str}"
         resp_2y = requests.get(url_2y)
         resp_10y = requests.get(url_10y)
         obs_2y = resp_2y.json().get('observations', [])
         obs_10y = resp_10y.json().get('observations', [])
-        vals_2y = [float(o['value']) for o in obs_2y if o['value'] not in ('.', None, '')]
-        vals_10y = [float(o['value']) for o in obs_10y if o['value'] not in ('.', None, '')]
+        dates = [o['date'] for o in obs_2y if o['value'] not in ('.', None, '')]
+        us_2y = [float(o['value']) for o in obs_2y if o['value'] not in ('.', None, '')]
+        us_10y = [float(o['value']) for o in obs_10y if o['value'] not in ('.', None, '')]
         return {
-            'us_2y_avg': float(pd.Series(vals_2y).mean()) if vals_2y else None,
-            'us_10y_avg': float(pd.Series(vals_10y).mean()) if vals_10y else None
+            'dates': dates,
+            'us_2y': us_2y,
+            'us_10y': us_10y
         }
     except Exception as e:
-        return {"error": f"Error fetching US treasury yields (range): {e}"}
+        return {'error': f'Error fetching 6-month US treasury yields: {e}'}
 
 
 # 04-3. 한국 환율
-def get_kr_fx_rates_range(_: str, start_date: str, end_date: str) -> dict:
+
+def get_kr_fx_rates_6months(end_date: str) -> dict:
     """
-    Frankfurter API를 이용해 USD/KRW, EUR/KRW 환율의 기간별(시작~끝) 평균값을 반환합니다.
-    API Key 불필요.
+    Frankfurter API를 이용해 USD/KRW, EUR/KRW 환율의 6개월(182일)치 일별 데이터를 반환합니다.
+    end_date: 'YYYY-MM-DD' (마지막 날짜)
+    반환: {
+        'dates': [...],
+        'usd_krw': [...],
+        'eur_usd': [...]
+    }
     """
-    import pandas as pd
     try:
-        url_usd = f"https://api.frankfurter.app/{start_date}..{end_date}?from=USD&to=KRW"
-        url_eur = f"https://api.frankfurter.app/{start_date}..{end_date}?from=EUR&to=KRW"
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        start_dt = end_dt - timedelta(days=182)
+        start_str = start_dt.strftime('%Y-%m-%d')
+        end_str = end_dt.strftime('%Y-%m-%d')
+        url_usd = f"https://api.frankfurter.app/{start_str}..{end_str}?from=USD&to=KRW"
+        url_eur = f"https://api.frankfurter.app/{start_str}..{end_str}?from=EUR&to=USD"
         resp_usd = requests.get(url_usd)
         resp_usd.raise_for_status()
         data_usd = resp_usd.json().get('rates', {})
-        vals_usd = [v['KRW'] for v in data_usd.values() if v.get('KRW')]
         resp_eur = requests.get(url_eur)
         resp_eur.raise_for_status()
         data_eur = resp_eur.json().get('rates', {})
-        vals_eur = [v['KRW'] for v in data_eur.values() if v.get('KRW')]
+        dates = sorted(list(set(data_usd.keys()) | set(data_eur.keys())))
+        usd_krw = [data_usd.get(date, {}).get('KRW') for date in dates]
+        eur_usd = [data_eur.get(date, {}).get('USD') for date in dates]
         return {
-            'usd_krw_avg': float(pd.Series(vals_usd).mean()) if vals_usd else None,
-            'eur_krw_avg': float(pd.Series(vals_eur).mean()) if vals_eur else None
+            'dates': dates,
+            'usd_krw': usd_krw,
+            'eur_usd': eur_usd
         }
     except Exception as e:
-        return {"error": f"Error fetching KR FX rates from Frankfurter API: {e}"}
+        return {'error': f'Error fetching 6-month KR FX rates: {e}'}
+
+def get_commodity_prices_6months(fred_api_key: str, end_date: str) -> dict:
+    """
+        FRED API를 이용해 WTI(원유)와 금(Gold) 6개월치 일별 가격 데이터를 반환합니다.
+        end_date: 'YYYY-MM-DD' (마지막 날짜)
+        반환: {
+            'dates': [...],
+            'wti': [...],
+            'gold': [...]
+        }
+        """
+    try:
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        start_dt = end_dt - timedelta(days=182)
+        start_str = start_dt.strftime('%Y-%m-%d')
+        end_str = end_dt.strftime('%Y-%m-%d')
+        url_wti = f"https://api.stlouisfed.org/fred/series/observations?series_id=DCOILWTICO&api_key={fred_api_key}&file_type=json&observation_start={start_str}&observation_end={end_str}"
+        url_gold = f"https://api.stlouisfed.org/fred/series/observations?series_id=GOLDAMGBD228NLBM&api_key={fred_api_key}&file_type=json&observation_start={start_str}&observation_end={end_str}"
+        resp_wti = requests.get(url_wti)
+        resp_gold = requests.get(url_gold)
+        obs_wti = resp_wti.json().get('observations', [])
+        obs_gold = resp_gold.json().get('observations', [])
+        # 날짜 교집합만 사용
+        dates = sorted(list(set([o['date'] for o in obs_wti if o['value'] not in ('.', None, '')]) & set([o['date'] for o in obs_gold if o['value'] not in ('.', None, '')])))
+        wti = [float(o['value']) for o in obs_wti if o['value'] not in ('.', None, '') and o['date'] in dates]
+        gold = [float(o['value']) for o in obs_gold if o['value'] not in ('.', None, '') and o['date'] in dates]
+        return {
+            'dates': dates,
+            'wti': wti,
+            'gold': gold
+        }
+    except Exception as e:
+        return {'error': f'Error fetching 6-month commodity prices from FRED: {e}'}
 
