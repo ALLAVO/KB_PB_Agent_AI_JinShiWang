@@ -34,15 +34,10 @@ function CloudDecorations() {
   );
 }
 
-function Sidebar({ userName, menu, subMenu, onMenuClick, onSubMenuClick, selectedMenu, selectedSubMenu, period, onPeriodChange }) {
-  // 연도/월 상태 추가
-  const [year, setYear] = React.useState(2025);
-  const [month, setMonth] = React.useState(6);
-
+function Sidebar({ userName, menu, subMenu, onMenuClick, onSubMenuClick, selectedMenu, selectedSubMenu, year, setYear, month, setMonth, period, onPeriodChange }) {
   // 연도/월 옵션 생성
   const yearOptions = Array.from({ length: 2025 - 1990 + 1 }, (_, i) => 1990 + i);
   const monthOptions = Array.from({ length: 12 }, (_, i) => i + 1);
-
   // 주차 옵션 생성 (선택된 연/월 기준)
   const weekOptions = getWeeksOfMonth(year, month).map(({ week, start, end }) => {
     const startStr = `${String(start.getMonth() + 1).padStart(2, '0')}.${String(start.getDate()).padStart(2, '0')}`;
@@ -143,12 +138,15 @@ function ChatPanel() {
   );
 }
 
-function MainPanel() {
+function MainPanel({ year, month, period }) {
+  // 주차 정보 추출 (예: "(1주차)")
+  const weekMatch = period.match(/\((\d+주차)\)/);
+  const weekStr = weekMatch ? weekMatch[1] : "";
   return (
     <div className="main-panel">
-      <div className="main-title">[2025년 6월 1주차] 시황 리포트</div>
+      <div className="main-title">[{year}년 {month}월 {weekStr}] 시황 리포트</div>
       {/* 실제 데이터/그래프/뉴스 등은 추후 구현 */}
-      <div className="main-placeholder" style={{marginTop: '48px'}}>[2025년 6월 1주차] 시황 리포트 (데이터 영역)</div>
+      <div className="main-placeholder" style={{marginTop: '48px'}}>[{year}년 {month}월 {weekStr}] 시황 리포트 (데이터 영역)</div>
     </div>
   );
 }
@@ -156,7 +154,9 @@ function MainPanel() {
 function App() {
   const [selectedMenu, setSelectedMenu] = useState("진시황의 혜안");
   const [selectedSubMenu, setSelectedSubMenu] = useState("시황");
-  const [period, setPeriod] = useState("25.06.01 - 25.06.07");
+  const [year, setYear] = useState(2025);
+  const [month, setMonth] = useState(6);
+  const [period, setPeriod] = useState("06.01 - 06.07 (1주차)");
 
   return (
     <div className="app-layout">
@@ -168,10 +168,14 @@ function App() {
         selectedSubMenu={selectedSubMenu}
         onMenuClick={setSelectedMenu}
         onSubMenuClick={setSelectedSubMenu}
+        year={year}
+        setYear={setYear}
+        month={month}
+        setMonth={setMonth}
         period={period}
         onPeriodChange={setPeriod}
       />
-      <MainPanel />
+      <MainPanel year={year} month={month} period={period} />
       <ChatPanel />
     </div>
   );
