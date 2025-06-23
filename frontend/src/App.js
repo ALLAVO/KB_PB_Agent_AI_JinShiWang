@@ -6,6 +6,7 @@ import sendIcon from "./assets/send.png";
 import cloud1 from "./assets/cloud1.png";
 import cloud2 from "./assets/cloud2.png";
 import cloud3 from "./assets/cloud3.png";
+import titlecloud from "./assets/titlecloud.png";
 
 function StackIconDecoration() {
   return (
@@ -138,15 +139,124 @@ function ChatPanel() {
   );
 }
 
-function PipelinePanel({ name, year, month, weekStr }) {
-  // 실제로는 API 연동 및 데이터 fetch 로직이 들어갈 예정
+function CustomerPipeline({ year, month, weekStr }) {
+  const chartData = '고객 차트 예시';
+  const tableData = [
+    { 이름: '홍길동', 등급: 'Gold', 최근방문: '2025-06-01' },
+    { 이름: '김철수', 등급: 'Silver', 최근방문: '2025-06-03' }
+  ];
+  const textSummary = `${year}년 ${month}월 ${weekStr} 고객 데이터 분석 요약입니다.`;
   return (
-    <div className={`pipeline-panel pipeline-${name}`}>
-      <div className="pipeline-title">{name.charAt(0).toUpperCase() + name.slice(1)} Pipeline</div>
-      {/* TODO: {name} 데이터 API 연동 및 렌더링 */}
-      <div className="pipeline-placeholder">[{year}년 {month}월 {weekStr}] {name} 데이터 영역</div>
+    <div>
+      <div className="pipeline-title">
+        <img src={titlecloud} alt="cloud" />고객 Pipeline
+      </div>
+      <div className="pipeline-graph">{chartData}</div>
+      <table className="pipeline-table">
+        <thead>
+          <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
+        </thead>
+        <tbody>
+          {tableData.map((row, idx) => (
+            <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="pipeline-text">{textSummary}</div>
     </div>
   );
+}
+
+function MarketPipeline({ year, month, weekStr }) {
+  const chartData = '시장 차트 예시';
+  const tableData = [
+    { 지수: 'KOSPI', 값: 2650, 변동: '+1.2%' },
+    { 지수: 'KOSDAQ', 값: 900, 변동: '-0.5%' }
+  ];
+  const textSummary = `${year}년 ${month}월 ${weekStr} 시장 데이터 분석 요약입니다.`;
+  return (
+    <div>
+      <div className="pipeline-title">
+        <img src={titlecloud} alt="cloud" />증시 지표
+      </div>
+      <div className="pipeline-graph">{chartData}</div>
+      <table className="pipeline-table">
+        <thead>
+          <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
+        </thead>
+        <tbody>
+          {tableData.map((row, idx) => (
+            <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="pipeline-text">{textSummary}</div>
+    </div>
+  );
+}
+
+function IndustryPipeline({ year, month, weekStr }) {
+  const chartData = '산업 차트 예시';
+  const tableData = [
+    { 산업: 'IT', 성장률: '5.2%' },
+    { 산업: '바이오', 성장률: '3.1%' }
+  ];
+  const textSummary = `${year}년 ${month}월 ${weekStr} 산업 데이터 분석 요약입니다.`;
+  return (
+    <div>
+      <div className="pipeline-title">
+        <img src={titlecloud} alt="cloud" />산업 Pipeline
+      </div>
+      <div className="pipeline-graph">{chartData}</div>
+      <table className="pipeline-table">
+        <thead>
+          <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
+        </thead>
+        <tbody>
+          {tableData.map((row, idx) => (
+            <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="pipeline-text">{textSummary}</div>
+    </div>
+  );
+}
+
+function CompanyPipeline({ year, month, weekStr }) {
+  const chartData = '기업 차트 예시';
+  const tableData = [
+    { 기업명: '삼성전자', 시가총액: '500조', PER: 12.3 },
+    { 기업명: '네이버', 시가총액: '60조', PER: 35.1 }
+  ];
+  const textSummary = `${year}년 ${month}월 ${weekStr} 기업 데이터 분석 요약입니다.`;
+  return (
+    <div>
+      <div className="pipeline-title">
+        <img src={titlecloud} alt="cloud" />기업 Pipeline
+      </div>
+      <div className="pipeline-graph">{chartData}</div>
+      <table className="pipeline-table">
+        <thead>
+          <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
+        </thead>
+        <tbody>
+          {tableData.map((row, idx) => (
+            <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="pipeline-text">{textSummary}</div>
+    </div>
+  );
+}
+
+function PipelinePanel({ name, year, month, weekStr }) {
+  if (name === 'customer') return <CustomerPipeline year={year} month={month} weekStr={weekStr} />;
+  if (name === 'market') return <MarketPipeline year={year} month={month} weekStr={weekStr} />;
+  if (name === 'industry') return <IndustryPipeline year={year} month={month} weekStr={weekStr} />;
+  if (name === 'company') return <CompanyPipeline year={year} month={month} weekStr={weekStr} />;
+  return null;
 }
 
 function MainPanel({ year, month, period, selectedMenu, selectedSubMenu }) {
