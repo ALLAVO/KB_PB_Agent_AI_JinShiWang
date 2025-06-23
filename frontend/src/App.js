@@ -138,15 +138,40 @@ function ChatPanel() {
   );
 }
 
-function MainPanel({ year, month, period }) {
+function PipelinePanel({ name, year, month, weekStr }) {
+  // 실제로는 API 연동 및 데이터 fetch 로직이 들어갈 예정
+  return (
+    <div className={`pipeline-panel pipeline-${name}`}>
+      <div className="pipeline-title">{name.charAt(0).toUpperCase() + name.slice(1)} Pipeline</div>
+      {/* TODO: {name} 데이터 API 연동 및 렌더링 */}
+      <div className="pipeline-placeholder">[{year}년 {month}월 {weekStr}] {name} 데이터 영역</div>
+    </div>
+  );
+}
+
+function MainPanel({ year, month, period, selectedMenu, selectedSubMenu }) {
   // 주차 정보 추출 (예: "(1주차)")
   const weekMatch = period.match(/\((\d+주차)\)/);
   const weekStr = weekMatch ? weekMatch[1] : "";
+
+  // 메뉴/서브메뉴에 따라 보여줄 pipeline 결정
+  let pipelineName = null;
+  if (selectedMenu === "고객 관리") {
+    pipelineName = "customer";
+  } else if (selectedMenu === "진시황의 혜안") {
+    if (selectedSubMenu === "시황") pipelineName = "market";
+    else if (selectedSubMenu === "산업") pipelineName = "industry";
+    else if (selectedSubMenu === "기업") pipelineName = "company";
+  }
+
   return (
     <div className="main-panel">
       <div className="main-title">[{year}년 {month}월 {weekStr}] 시황 리포트</div>
-      {/* 실제 데이터/그래프/뉴스 등은 추후 구현 */}
-      <div className="main-placeholder" style={{marginTop: '48px'}}>[{year}년 {month}월 {weekStr}] 시황 리포트 (데이터 영역)</div>
+      <div className="main-placeholder" style={{marginTop: '48px'}}>
+        {pipelineName && (
+          <PipelinePanel name={pipelineName} year={year} month={month} weekStr={weekStr} />
+        )}
+      </div>
     </div>
   );
 }
@@ -175,7 +200,7 @@ function App() {
         period={period}
         onPeriodChange={setPeriod}
       />
-      <MainPanel year={year} month={month} period={period} />
+      <MainPanel year={year} month={month} period={period} selectedMenu={selectedMenu} selectedSubMenu={selectedSubMenu} />
       <ChatPanel />
     </div>
   );
