@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./App.css";
 import kblogo from "./kblogo";
 import { getWeeksOfMonth } from "./weekUtils";
@@ -140,7 +140,7 @@ function ChatPanel() {
   );
 }
 
-function CustomerPipeline({ year, month, weekStr }) {
+function CustomerPipeline({ year, month, weekStr, onSetReportTitle }) {
   const [started, setStarted] = useState(false);
   const [inputSymbol, setInputSymbol] = useState("");
   const [error, setError] = useState("");
@@ -158,7 +158,17 @@ function CustomerPipeline({ year, month, weekStr }) {
     }
     setError("");
     setStarted(true);
+    if (onSetReportTitle) {
+      onSetReportTitle(`${inputSymbol.trim()}님 리포트`);
+    }
   };
+
+  useEffect(() => {
+    if (!started && onSetReportTitle) {
+      onSetReportTitle('고객 리포트');
+    }
+    // eslint-disable-next-line
+  }, [started]);
 
   return (
     <div>
@@ -246,7 +256,7 @@ function MarketPipeline({ year, month, weekStr }) {
   );
 }
 
-function IndustryPipeline({ year, month, weekStr }) {
+function IndustryPipeline({ year, month, weekStr, onSetReportTitle }) {
   const [started, setStarted] = useState(false);
   const [inputSymbol, setInputSymbol] = useState("");
   const [error, setError] = useState("");
@@ -264,7 +274,17 @@ function IndustryPipeline({ year, month, weekStr }) {
     }
     setError("");
     setStarted(true);
+    if (onSetReportTitle) {
+      onSetReportTitle(`${inputSymbol.trim()} 산업 리포트`);
+    }
   };
+
+  useEffect(() => {
+    if (!started && onSetReportTitle) {
+      onSetReportTitle('산업 리포트');
+    }
+    // eslint-disable-next-line
+  }, [started]);
 
   return (
     <div>
@@ -310,7 +330,7 @@ function IndustryPipeline({ year, month, weekStr }) {
   );
 }
 
-function CompanyPipeline({ year, month, weekStr }) {
+function CompanyPipeline({ year, month, weekStr, onSetReportTitle }) {
   const [started, setStarted] = useState(false);
   const [inputSymbol, setInputSymbol] = useState("");
   const [sentiment, setSentiment] = useState(null);
@@ -341,6 +361,9 @@ function CompanyPipeline({ year, month, weekStr }) {
     }
     setError("");
     setStarted(true); // 버튼 클릭 시 바로 결과물 표시
+    if (onSetReportTitle) {
+      onSetReportTitle(`${inputSymbol.trim()} 기업 리포트`);
+    }
     if (!startDate || !endDate || !inputSymbol) return;
     setLoading(true);
     setSentiment(null);
@@ -349,6 +372,13 @@ function CompanyPipeline({ year, month, weekStr }) {
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   };
+
+  useEffect(() => {
+    if (!started && onSetReportTitle) {
+      onSetReportTitle('기업 리포트');
+    }
+    // eslint-disable-next-line
+  }, [started]);
 
   return (
     <div>
@@ -399,11 +429,11 @@ function CompanyPipeline({ year, month, weekStr }) {
   );
 }
 
-function PipelinePanel({ name, year, month, weekStr }) {
-  if (name === 'customer') return <CustomerPipeline year={year} month={month} weekStr={weekStr} />;
+function PipelinePanel({ name, year, month, weekStr, onSetReportTitle }) {
+  if (name === 'customer') return <CustomerPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} />;
   if (name === 'market') return <MarketPipeline year={year} month={month} weekStr={weekStr} />;
-  if (name === 'industry') return <IndustryPipeline year={year} month={month} weekStr={weekStr} />;
-  if (name === 'company') return <CompanyPipeline year={year} month={month} weekStr={weekStr} />;
+  if (name === 'industry') return <IndustryPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} />;
+  if (name === 'company') return <CompanyPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} />;
   return null;
 }
 
@@ -425,29 +455,35 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu }) {
 
   // 메뉴/서브메뉴에 따라 보여줄 pipeline 결정
   let pipelineName = null;
-  let reportTitle = '';
+  let defaultReportTitle = '';
   if (selectedMenu === "고객 관리") {
     pipelineName = "customer";
-    reportTitle = "고객 리포트";
+    defaultReportTitle = "고객 리포트";
   } else if (selectedMenu === "진시황의 혜안") {
     if (selectedSubMenu === "시황") {
       pipelineName = "market";
-      reportTitle = "시황 리포트";
+      defaultReportTitle = "시황 리포트";
     } else if (selectedSubMenu === "산업") {
       pipelineName = "industry";
-      reportTitle = "산업 리포트";
+      defaultReportTitle = "산업 리포트";
     } else if (selectedSubMenu === "기업") {
       pipelineName = "company";
-      reportTitle = "기업 리포트";
+      defaultReportTitle = "기업 리포트";
     }
   }
+
+  const [reportTitle, setReportTitle] = useState(defaultReportTitle);
+  useEffect(() => {
+    setReportTitle(defaultReportTitle);
+    // eslint-disable-next-line
+  }, [selectedMenu, selectedSubMenu, year, month, period]);
 
   return (
     <div className="main-panel">
       <div className="main-title">[{year}년 {month}월 {(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()}] {reportTitle}</div>
       <div className="main-placeholder" style={{marginTop: '32px'}}>
         {pipelineName && (
-          <PipelinePanel name={pipelineName} year={year} month={month} weekStr={(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()} />
+          <PipelinePanel name={pipelineName} year={year} month={month} weekStr={(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()} onSetReportTitle={['industry','company','customer'].includes(pipelineName) ? setReportTitle : undefined} />
         )}
       </div>
     </div>
