@@ -141,29 +141,54 @@ function ChatPanel() {
 }
 
 function CustomerPipeline({ year, month, weekStr }) {
+  const [started, setStarted] = useState(false);
+  const [inputSymbol, setInputSymbol] = useState("");
   const chartData = '고객 차트 예시';
   const tableData = [
     { 이름: '홍길동', 등급: 'Gold', 최근방문: '2025-06-01' },
     { 이름: '김철수', 등급: 'Silver', 최근방문: '2025-06-03' }
   ];
   const textSummary = `${year}년 ${month}월 ${weekStr} 고객 데이터 분석 요약입니다.`;
+
+  const handleSearch = () => {
+    setStarted(true);
+  };
+
   return (
     <div>
-      <div className="pipeline-title">
-        <img src={titlecloud} alt="cloud" />고객 Pipeline
-      </div>
-      <div className="pipeline-graph">{chartData}</div>
-      <table className="pipeline-table">
-        <thead>
-          <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
-        </thead>
-        <tbody>
-          {tableData.map((row, idx) => (
-            <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="pipeline-text">{textSummary}</div>
+      {!started && (
+        <div className="customer-search-form">
+          <label style={{marginBottom: 0}}>
+            <input
+              type="text"
+              value={inputSymbol}
+              onChange={e => setInputSymbol(e.target.value)}
+              className="customer-symbol-input center-text"
+              placeholder="고객님 성함을 입력해주세요..."
+            />
+          </label>
+          <button className="customer-search-btn" onClick={handleSearch}>리포트 출력</button>
+        </div>
+      )}
+      {started && (
+        <>
+          <div className="pipeline-title">
+            <img src={titlecloud} alt="cloud" />고객 Pipeline
+          </div>
+          <div className="pipeline-graph">{chartData}</div>
+          <table className="pipeline-table">
+            <thead>
+              <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
+            </thead>
+            <tbody>
+              {tableData.map((row, idx) => (
+                <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="pipeline-text">{textSummary}</div>
+        </>
+      )}
     </div>
   );
 }
@@ -211,29 +236,54 @@ function MarketPipeline({ year, month, weekStr }) {
 }
 
 function IndustryPipeline({ year, month, weekStr }) {
+  const [started, setStarted] = useState(false);
+  const [inputSymbol, setInputSymbol] = useState("");
   const chartData = '산업 차트 예시';
   const tableData = [
     { 산업: 'IT', 성장률: '5.2%' },
     { 산업: '바이오', 성장률: '3.1%' }
   ];
   const textSummary = `${year}년 ${month}월 ${weekStr} 산업 데이터 분석 요약입니다.`;
+
+  const handleSearch = () => {
+    setStarted(true);
+  };
+
   return (
     <div>
-      <div className="pipeline-title">
-        <img src={titlecloud} alt="cloud" />산업 Pipeline
-      </div>
-      <div className="pipeline-graph">{chartData}</div>
-      <table className="pipeline-table">
-        <thead>
-          <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
-        </thead>
-        <tbody>
-          {tableData.map((row, idx) => (
-            <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="pipeline-text">{textSummary}</div>
+      {!started && (
+        <div className="industry-search-form">
+          <label style={{marginBottom: 0}}>
+            <input
+              type="text"
+              value={inputSymbol}
+              onChange={e => setInputSymbol(e.target.value)}
+              className="industry-symbol-input center-text"
+              placeholder="산업군 이름을 입력해주세요..."
+            />
+          </label>
+          <button className="industry-search-btn" onClick={handleSearch}>리포트 출력</button>
+        </div>
+      )}
+      {started && (
+        <>
+          <div className="pipeline-title">
+            <img src={titlecloud} alt="cloud" />산업 Pipeline
+          </div>
+          <div className="pipeline-graph">{chartData}</div>
+          <table className="pipeline-table">
+            <thead>
+              <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
+            </thead>
+            <tbody>
+              {tableData.map((row, idx) => (
+                <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="pipeline-text">{textSummary}</div>
+        </>
+      )}
     </div>
   );
 }
@@ -344,17 +394,26 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu }) {
 
   // 메뉴/서브메뉴에 따라 보여줄 pipeline 결정
   let pipelineName = null;
+  let reportTitle = '';
   if (selectedMenu === "고객 관리") {
     pipelineName = "customer";
+    reportTitle = "고객 리포트";
   } else if (selectedMenu === "진시황의 혜안") {
-    if (selectedSubMenu === "시황") pipelineName = "market";
-    else if (selectedSubMenu === "산업") pipelineName = "industry";
-    else if (selectedSubMenu === "기업") pipelineName = "company";
+    if (selectedSubMenu === "시황") {
+      pipelineName = "market";
+      reportTitle = "시황 리포트";
+    } else if (selectedSubMenu === "산업") {
+      pipelineName = "industry";
+      reportTitle = "산업 리포트";
+    } else if (selectedSubMenu === "기업") {
+      pipelineName = "company";
+      reportTitle = "기업 리포트";
+    }
   }
 
   return (
     <div className="main-panel">
-      <div className="main-title">[{year}년 {month}월 {(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()}] 시황 리포트</div>
+      <div className="main-title">[{year}년 {month}월 {(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()}] {reportTitle}</div>
       <div className="main-placeholder" style={{marginTop: '32px'}}>
         {pipelineName && (
           <PipelinePanel name={pipelineName} year={year} month={month} weekStr={(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()} />
