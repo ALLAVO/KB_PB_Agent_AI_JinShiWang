@@ -3,6 +3,7 @@ from transformers import pipeline, AutoTokenizer
 import torch
 from app.db.connection import check_db_connection
 from pathlib import Path
+from app.services.sentiment import get_top3_articles_closest_to_weekly_score_from_list
 
 def summarize_article(stock_symbol: str, start_date: str, end_date: str):
     # 데이터 로딩 (DB에서 불러오기)
@@ -118,13 +119,128 @@ def summarize_article(stock_symbol: str, start_date: str, end_date: str):
 
     return results
 
-# 예시 실행 및 결과 출력
+def summarize_top3_articles(top3_articles):
+    """
+    top3_articles: [(article, date, weekstart_sunday, article_score, pos_cnt, neg_cnt), ...]
+    각 기사에 대해 요약을 추가하여 반환
+    반환값: [
+        {
+            'article': article,
+            'date': date,
+            'weekstart': weekstart,
+            'score': article_score,
+            'pos_cnt': pos_cnt,
+            'neg_cnt': neg_cnt,
+            'summary': summary
+        }, ...
+    ]
+    """
+    tokenizer_dir = Path("./tokenizer_cache/bart-large-cnn")
+    if not tokenizer_dir.exists():
+        tokenizer_dir.mkdir(parents=True, exist_ok=True)
+        tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large-cnn")
+        tokenizer.save_pretrained(str(tokenizer_dir))
+    else:
+        tokenizer = AutoTokenizer.from_pretrained(str(tokenizer_dir))
+    device = 0 if torch.cuda.is_available() else -1
+    summarizers = {
+        "medium": pipeline(
+            "summarization",
+            model="facebook/bart-large-cnn",
+            device=device
+        ),
+        "long": pipeline(
+            "summarization",
+            model="google/pegasus-cnn_dailymail",
+            device=device
+        ),
+        "very_long": pipeline(
+            "summarization",
+            model="allenai/led-base-16384",
+            tokenizer="allenai/led-base-16384",
+            device=device
+        )
+    }
+    def count_tokens(text):
+        if pd.isnull(text) or not isinstance(text, str):
+            return 0
+        return len(tokenizer.encode(text, truncation=False))
+    def classify_length(token_count):
+        if token_count <= 200:
+            return "short"
+        elif token_count <= 700:
+            return "medium"
+        elif token_count <= 1000:
+            return "long"
+        else:
+            return "very_long"
+    def summarize_by_length(text):
+        tokens = count_tokens(text)
+        cls = classify_length(tokens)
+        if cls == "short":
+            return text
+        if cls in ("medium", "long"):
+            max_len = max(50, int(tokens * 0.2)) if cls == "medium" else max(75, int(tokens * 0.15))
+            return summarizers[cls](
+                text,
+                max_length=max_len,
+                min_length=50,
+                truncation=True
+            )[0]["summary_text"]
+        # very_long 처리 (Chunking)
+        token_ids = tokenizer.encode(text, truncation=False)
+        chunk_size = 1000
+        chunks = [
+            tokenizer.decode(token_ids[i:i + chunk_size])
+            for i in range(0, len(token_ids), chunk_size)
+        ]
+        interim_summaries = [
+            summarizers["very_long"](
+                chunk,
+                max_length=200,
+                min_length=75,
+                truncation=True
+            )[0]["summary_text"]
+            for chunk in chunks
+        ]
+        combined = " ".join(interim_summaries)
+        final_summary = summarizers["very_long"](
+            combined,
+            max_length=200,
+            min_length=75,
+            truncation=True
+        )[0]["summary_text"]
+        return final_summary
+
+    results = []
+    for item in top3_articles:
+        article, date, weekstart, score, pos_cnt, neg_cnt = item
+        summary = summarize_by_length(article)
+        #
+        results.append({
+            'article': article,
+            'date': date,
+            'weekstart': weekstart,
+            'score': score,
+            'pos_cnt': pos_cnt,
+            'neg_cnt': neg_cnt,
+            'summary': summary
+        })
+    return results
+
+# 사용 예시 (sentiment.py에서 top3 기사 리스트를 받아 요약)
 if __name__ == "__main__":
-    stock_symbol = "AAPL"
-    start_date = "2022-07-03"
-    end_date = "2022-07-05"
-    summaries = summarize_article(stock_symbol, start_date, end_date)
-    for item in summaries:
-        print(f"날짜: {item['date']}")
-        print(f"요약: {item['summary']}")
-        print("=" * 40)
+    # 예시: sentiment.py에서 top3 기사 리스트를 받아옴 (직접 호출 예시)
+    from app.services.sentiment import get_weekly_sentiment_scores_by_stock_symbol
+    stock_symbol = "GS"
+    start_date = "2023-12-11"
+    end_date = "2023-12-14"
+    sentiment_result = get_weekly_sentiment_scores_by_stock_symbol(stock_symbol, start_date, end_date)
+    weekly_top3 = sentiment_result.get("weekly_top3_articles", {})
+    for week, top3_articles in weekly_top3.items():
+        print(f"\n[주차: {week}] Top3 기사 요약 결과:")
+        summaries = summarize_top3_articles(top3_articles)
+        for i, item in enumerate(summaries, 1):
+            print(f"{i}. 날짜: {item['date']}, 점수: {item['score']}, pos_cnt: {item['pos_cnt']}, neg_cnt: {item['neg_cnt']}")
+            print(f"요약: {item['summary']}")
+            print("-" * 40)
