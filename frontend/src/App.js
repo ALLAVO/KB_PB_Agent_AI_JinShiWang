@@ -14,14 +14,7 @@ function StackIconDecoration() {
     <img
       src={require('./assets/stack.png')}
       alt="stack"
-      style={{
-        position: 'absolute',
-        right: '32px',
-        top: '32px',
-        width: 25,
-        height: 25,
-        zIndex: 2
-      }}
+      className="stack-icon-decoration"
     />
   );
 }
@@ -29,9 +22,9 @@ function StackIconDecoration() {
 function CloudDecorations() {
   return (
     <>
-      <img src={cloud1} alt="cloud1" style={{ position: 'absolute', left: '0px', top: '80px', width: '50%', opacity: 1.0, pointerEvents: 'none', zIndex: 0 }} />
-      <img src={cloud2} alt="cloud2" style={{ position: 'absolute', right: '0px', top: '38%', width: '50%', opacity: 1.0, pointerEvents: 'none', zIndex: 0 }} />
-      <img src={cloud3} alt="cloud3" style={{ position: 'absolute', left: '0px', bottom: '60px', width: '50%', opacity: 1.0, pointerEvents: 'none', zIndex: 0 }} />
+      <img src={cloud1} alt="cloud1" className="cloud-decoration cloud1" />
+      <img src={cloud2} alt="cloud2" className="cloud-decoration cloud2" />
+      <img src={cloud3} alt="cloud3" className="cloud-decoration cloud3" />
     </>
   );
 }
@@ -112,10 +105,10 @@ function ChatPanel() {
     }
   }, [input]);
   return (
-    <div className="chat-panel" style={{position:'relative'}}>
+    <div className="chat-panel chat-panel-relative">
       <StackIconDecoration />
-      <div className="chat-title-row" style={{display:'flex',alignItems:'center',justifyContent:'space-between',paddingRight:48}}>
-        <div className="chat-title" style={{ color: '#302A24' }}>진시황과의 상담</div>
+      <div className="chat-title-row">
+        <div className="chat-title">진시황과의 상담</div>
       </div>
       <div className="chat-messages">
         <CloudDecorations />
@@ -133,7 +126,7 @@ function ChatPanel() {
           />
         </div>
         <button className="chat-send-btn" disabled>
-          <img src={sendIcon} alt="send" style={{width:25,height:25,opacity:0.7}} />
+          <img src={sendIcon} alt="send" className="chat-send-icon" />
         </button>
       </div>
     </div>
@@ -175,7 +168,7 @@ function CustomerPipeline({ year, month, weekStr, onSetReportTitle }) {
       {!started && (
         <div className="customer-search-form">
           {error && (
-            <div style={{ color: 'red', fontWeight: 'bold', marginBottom: 8 }}>
+            <div className="error-message">
               {error}
             </div>
           )}
@@ -291,7 +284,7 @@ function IndustryPipeline({ year, month, weekStr, onSetReportTitle }) {
       {!started && (
         <div className="industry-search-form">
           {error && (
-            <div style={{ color: 'red', fontWeight: 'bold', marginBottom: 8 }}>
+            <div className="error-message">
               {error}
             </div>
           )}
@@ -385,7 +378,7 @@ function CompanyPipeline({ year, month, weekStr, onSetReportTitle }) {
       {!started && (
         <div className="company-search-form">
           {error && (
-            <div style={{ color: 'red', fontWeight: 'bold', marginBottom: 8 }}>
+            <div className="error-message">
               {error}
             </div>
           )}
@@ -419,7 +412,7 @@ function CompanyPipeline({ year, month, weekStr, onSetReportTitle }) {
           </table>
           <div className="pipeline-text">{textSummary}</div>
           {/* 감성점수 표시 */}
-          <div style={{marginTop: 32, fontSize: 18}}>
+          <div className="sentiment-score">
             <b>감성점수(샘플): </b>
             {loading ? '로딩 중...' : error && error !== '종목코드를 입력해주세요' ? `오류: ${error}` : sentiment ? JSON.stringify(sentiment) : '데이터 없음'}
           </div>

@@ -309,20 +309,20 @@
 .chat-title-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 30px 20px 0 30px;
-  background: none;
+  justify-content: left;
+  padding-top: 35px;
+  padding-left: 30px;
 }
 
 .chat-title {
-  font-size: 1.2rem;
-  font-weight: 400;
-  color: #222;
-  margin: 0;
-  padding: 0;
-  letter-spacing: -0.01em;
-  background: none;
-  border: none;
+  font-size: 1.25rem;
+  color: #302A24;
+}
+
+.chat-send-icon {
+  width: 25px;
+  height: 25px;
+  opacity: 0.7;
 }
 
 .chat-title + .chat-messages {
@@ -674,6 +674,45 @@
   border: 1.5px solid #ffd43b;
   box-shadow: 0 2px 12px rgba(255, 212, 59, 0.18);
   background: #fffde7;
+}
+
+.stack-icon-decoration {
+  position: absolute;
+  right: 32px;
+  top: 38px;
+  width: 25px;
+  height: 25px;
+  z-index: 2;
+}
+
+.cloud-decoration {
+  position: absolute;
+  width: 50%;
+  opacity: 1.0;
+  pointer-events: none;
+  z-index: 0;
+}
+.cloud1 {
+  left: 0px;
+  top: 80px;
+}
+.cloud2 {
+  right: 0px;
+  top: 38%;
+}
+.cloud3 {
+  left: 0px;
+  bottom: 60px;
+}
+
+.chat-panel-relative {
+  position: relative;
+}
+
+.error-message {
+  color: red;
+  font-weight: bold;
+  margin-bottom: 8px;
 }
 
 @media (max-width: 1100px) {
