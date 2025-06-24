@@ -202,8 +202,8 @@ def get_top3_articles_closest_to_weekly_score_from_list(articles, weekly_score):
 
 if __name__ == "__main__":
     # 테스트 실행: 심볼을 원하는 것으로 변경
-    # result = get_weekly_sentiment_scores_by_stock_symbol("GS", "2023-12-11", "2023-12-14")
-    result = get_weekly_sentiment_scores_by_stock_symbol("AAPL", "2022-07-11", "2022-07-12")
+    result = get_weekly_sentiment_scores_by_stock_symbol("GS", "2023-12-11", "2023-12-14")
+    # result = get_weekly_sentiment_scores_by_stock_symbol("AAPL", "2022-07-11", "2022-07-12")
     print("\n[리팩토링 결과 확인]")
     print("주차별 감성점수:", result.get("weekly_scores"))
     print("주차별 top3 기사:")

@@ -1,20 +1,16 @@
 import pandas as pd
 from transformers import pipeline, AutoTokenizer
 import torch
-import psycopg2
-from app.core.config import settings
+from app.db.connection import check_db_connection
 from pathlib import Path
 
 def summarize_article(stock_symbol: str, start_date: str, end_date: str):
     # 데이터 로딩 (DB에서 불러오기)
     try:
-        conn = psycopg2.connect(
-            host=settings.DB_HOST,
-            port=settings.DB_PORT,
-            dbname=settings.DB_NAME,
-            user=settings.DB_USER,
-            password=settings.DB_PASSWORD,
-        )
+        conn = check_db_connection()
+        if conn is None:
+            print("DB 연결 실패")
+            return []
         query = """
             SELECT date, article
             FROM kb_enterprise_dataset
@@ -115,7 +111,6 @@ def summarize_article(stock_symbol: str, start_date: str, end_date: str):
         summary = summarize_by_length(article)
         results.append({
             "date": row["date"],
-            # "article": article,
             "summary": summary
         })
 
