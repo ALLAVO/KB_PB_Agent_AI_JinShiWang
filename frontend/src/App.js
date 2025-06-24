@@ -263,6 +263,7 @@ function CompanyPipeline({ year, month, weekStr }) {
   }
 
   const handleSearch = () => {
+    setStarted(true); // 버튼 클릭 시 바로 결과물 표시
     if (!startDate || !endDate || !inputSymbol) return;
     setLoading(true);
     setError(null);
@@ -271,7 +272,6 @@ function CompanyPipeline({ year, month, weekStr }) {
       .then(data => setSentiment(data))
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
-    setStarted(true);
   };
 
   return (

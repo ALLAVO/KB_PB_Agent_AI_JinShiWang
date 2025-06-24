@@ -521,7 +521,7 @@
   border: none;
   border-radius: 16px;
   font-weight: 500;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.05);
   cursor: pointer;
   transition: background 0.2s, transform 0.1s;
   letter-spacing: 0.02em;
@@ -544,7 +544,7 @@
   outline: none;
   margin-left: 0;
   transition: border 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 16px rgba(255, 224, 102, 0.08);
+  box-shadow: 0 4px 16px rgba(255, 224, 102, 0.1);
   display: block;
 }
 
