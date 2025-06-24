@@ -3,7 +3,45 @@ from transformers import pipeline, AutoTokenizer
 import torch
 from app.db.connection import check_db_connection
 from pathlib import Path
-from app.services.sentiment import get_top3_articles_closest_to_weekly_score_from_list
+from app.services.sentiment import get_weekly_sentiment_scores_by_stock_symbol
+import openai
+from dotenv import load_dotenv
+import os
+
+# .env에서 OPENAI_API_KEY 불러오기
+load_dotenv()
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+def kor_summary(text: str) -> str:
+    """
+    영어 텍스트(뉴스 요약문)를 받아 한국어로 번역하고 문장을 자연스럽게 다듬어 반환합니다.
+    Args:
+        text (str): 번역할 영어 뉴스 요약문.
+    Returns:
+        str: 한국어로 번역되고 다듬어진 텍스트.
+    """
+    system_msg = (
+        "You are a professional translator and editor specializing in journalism and formal report writing. "
+        "The provided English text is a summary of a news article. "
+        "Translate it into fluent, formal Korean suitable for inclusion in a business report."
+    )
+    user_msg = (
+        f"Translate and polish the following English news summary into formal Korean, "
+        "and present each key point as a bulleted list. "
+        "Use polite declarative endings (예: '…입니다', '…예정입니다').\n\n"
+        f"{text}"
+    )
+    response = openai.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": system_msg},
+            {"role": "user",   "content": user_msg},
+        ],
+        temperature=0.2,
+        max_tokens=1024,
+    )
+    kor_final_summary = response.choices[0].message.content.strip()
+    return kor_final_summary
 
 def summarize_article(stock_symbol: str, start_date: str, end_date: str):
     # 데이터 로딩 (DB에서 불러오기)
@@ -72,39 +110,40 @@ def summarize_article(stock_symbol: str, start_date: str, end_date: str):
         tokens = count_tokens(text)
         cls = classify_length(tokens)
         if cls == "short":
-            return text
-        if cls in ("medium", "long"):
+            eng_summary = text
+        elif cls in ("medium", "long"):
             max_len = max(50, int(tokens * 0.2)) if cls == "medium" else max(75, int(tokens * 0.15))
-            return summarizers[cls](
+            eng_summary = summarizers[cls](
                 text,
                 max_length=max_len,
                 min_length=50,
                 truncation=True
             )[0]["summary_text"]
-        # very_long 처리 (Chunking)
-        token_ids = tokenizer.encode(text, truncation=False)
-        chunk_size = 1000
-        chunks = [
-            tokenizer.decode(token_ids[i:i + chunk_size])
-            for i in range(0, len(token_ids), chunk_size)
-        ]
-        interim_summaries = [
-            summarizers["very_long"](
-                chunk,
+        else:
+            token_ids = tokenizer.encode(text, truncation=False)
+            chunk_size = 1000
+            chunks = [
+                tokenizer.decode(token_ids[i:i + chunk_size])
+                for i in range(0, len(token_ids), chunk_size)
+            ]
+            interim_summaries = [
+                summarizers["very_long"](
+                    chunk,
+                    max_length=200,
+                    min_length=75,
+                    truncation=True
+                )[0]["summary_text"]
+                for chunk in chunks
+            ]
+            combined = " ".join(interim_summaries)
+            eng_summary = summarizers["very_long"](
+                combined,
                 max_length=200,
                 min_length=75,
                 truncation=True
             )[0]["summary_text"]
-            for chunk in chunks
-        ]
-        combined = " ".join(interim_summaries)
-        final_summary = summarizers["very_long"](
-            combined,
-            max_length=200,
-            min_length=75,
-            truncation=True
-        )[0]["summary_text"]
-        return final_summary
+        kor_result = kor_summary(eng_summary)
+        return kor_result
 
     results = []
     for idx, row in kb_ent_sam.iterrows():
@@ -178,39 +217,40 @@ def summarize_top3_articles(top3_articles):
         tokens = count_tokens(text)
         cls = classify_length(tokens)
         if cls == "short":
-            return text
-        if cls in ("medium", "long"):
+            eng_summary = text
+        elif cls in ("medium", "long"):
             max_len = max(50, int(tokens * 0.2)) if cls == "medium" else max(75, int(tokens * 0.15))
-            return summarizers[cls](
+            eng_summary = summarizers[cls](
                 text,
                 max_length=max_len,
                 min_length=50,
                 truncation=True
             )[0]["summary_text"]
-        # very_long 처리 (Chunking)
-        token_ids = tokenizer.encode(text, truncation=False)
-        chunk_size = 1000
-        chunks = [
-            tokenizer.decode(token_ids[i:i + chunk_size])
-            for i in range(0, len(token_ids), chunk_size)
-        ]
-        interim_summaries = [
-            summarizers["very_long"](
-                chunk,
+        else:
+            token_ids = tokenizer.encode(text, truncation=False)
+            chunk_size = 1000
+            chunks = [
+                tokenizer.decode(token_ids[i:i + chunk_size])
+                for i in range(0, len(token_ids), chunk_size)
+            ]
+            interim_summaries = [
+                summarizers["very_long"](
+                    chunk,
+                    max_length=200,
+                    min_length=75,
+                    truncation=True
+                )[0]["summary_text"]
+                for chunk in chunks
+            ]
+            combined = " ".join(interim_summaries)
+            eng_summary = summarizers["very_long"](
+                combined,
                 max_length=200,
                 min_length=75,
                 truncation=True
             )[0]["summary_text"]
-            for chunk in chunks
-        ]
-        combined = " ".join(interim_summaries)
-        final_summary = summarizers["very_long"](
-            combined,
-            max_length=200,
-            min_length=75,
-            truncation=True
-        )[0]["summary_text"]
-        return final_summary
+        kor_result = kor_summary(eng_summary)
+        return kor_result
 
     results = []
     for item in top3_articles:
@@ -228,10 +268,11 @@ def summarize_top3_articles(top3_articles):
         })
     return results
 
+
+
 # 사용 예시 (sentiment.py에서 top3 기사 리스트를 받아 요약)
 if __name__ == "__main__":
     # 예시: sentiment.py에서 top3 기사 리스트를 받아옴 (직접 호출 예시)
-    from app.services.sentiment import get_weekly_sentiment_scores_by_stock_symbol
     stock_symbol = "GS"
     start_date = "2023-12-11"
     end_date = "2023-12-14"
