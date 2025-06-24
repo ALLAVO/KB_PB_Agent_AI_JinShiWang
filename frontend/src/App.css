@@ -420,6 +420,7 @@
 
 .pipeline-title {
   display: flex;
+  padding: 20px 0px 0px 0px;
   color: #302A24;
   align-items: center;
   gap: 12px;
@@ -440,7 +441,7 @@
 .pipeline-graph {
   height: 300px;
   margin-bottom: 24px;
-  background: #f8f8f8;
+  background: #fff;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -457,9 +458,9 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 .pipeline-table th {
-  background: #f8f8f8;
+  background: #E5DFD1;
   padding: 12px 16px;
-  text-align: left;
+  text-align: center;
   font-weight: 600;
   color: #333;
   border-bottom: 1px solid #e0e0e0;
