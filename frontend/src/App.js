@@ -239,29 +239,81 @@ function IndustryPipeline({ year, month, weekStr }) {
 }
 
 function CompanyPipeline({ year, month, weekStr }) {
+  const [started, setStarted] = useState(false);
+  const [inputSymbol, setInputSymbol] = useState("");
+  const [sentiment, setSentiment] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
   const chartData = '기업 차트 예시';
   const tableData = [
     { 기업명: '삼성전자', 시가총액: '500조', PER: 12.3 },
     { 기업명: '네이버', 시가총액: '60조', PER: 35.1 }
   ];
   const textSummary = `${year}년 ${month}월 ${weekStr} 기업 데이터 분석 요약입니다.`;
+
+  // 주차 시작일, 종료일 추출 (예: "06.01 - 06.07 (1주차)")
+  const dateMatch = weekStr.match(/(\d{2})\.(\d{2}) - (\d{2})\.(\d{2})/);
+  let startDate = null;
+  let endDate = null;
+  if (dateMatch) {
+    const y = year;
+    startDate = `${y}-${dateMatch[1]}-${dateMatch[2]}`;
+    endDate = `${y}-${dateMatch[3]}-${dateMatch[4]}`;
+  }
+
+  const handleSearch = () => {
+    if (!startDate || !endDate || !inputSymbol) return;
+    setLoading(true);
+    setError(null);
+    setSentiment(null);
+    fetchWeeklySentiment(inputSymbol, startDate, endDate)
+      .then(data => setSentiment(data))
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false));
+    setStarted(true);
+  };
+
   return (
     <div>
-      <div className="pipeline-title">
-        <img src={titlecloud} alt="cloud" />기업 Pipeline
-      </div>
-      <div className="pipeline-graph">{chartData}</div>
-      <table className="pipeline-table">
-        <thead>
-          <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
-        </thead>
-        <tbody>
-          {tableData.map((row, idx) => (
-            <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="pipeline-text">{textSummary}</div>
+      {!started && (
+        <div className="company-search-form">
+          <label style={{marginBottom: 0}}>
+            <input
+              type="text"
+              value={inputSymbol}
+              onChange={e => setInputSymbol(e.target.value)}
+              className="company-symbol-input center-text"
+              placeholder="종목코드를 입력해주세요..."
+            />
+          </label>
+          <button className="company-search-btn" onClick={handleSearch}>리포트 출력</button>
+        </div>
+      )}
+      {started && (
+        <>
+          <div className="pipeline-title">
+            <img src={titlecloud} alt="cloud" />기업 Pipeline
+          </div>
+          <div className="pipeline-graph">{chartData}</div>
+          <table className="pipeline-table">
+            <thead>
+              <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
+            </thead>
+            <tbody>
+              {tableData.map((row, idx) => (
+                <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="pipeline-text">{textSummary}</div>
+          {/* 감성점수 표시 */}
+          <div style={{marginTop: 32, fontSize: 18}}>
+            <b>감성점수(샘플): </b>
+            {loading ? '로딩 중...' : error ? `오류: ${error}` : sentiment ? JSON.stringify(sentiment) : '데이터 없음'}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -275,9 +327,6 @@ function PipelinePanel({ name, year, month, weekStr }) {
 }
 
 function MainPanel({ year, month, period, selectedMenu, selectedSubMenu }) {
-  // 기업명 상태 추가
-  const [stockSymbol, setStockSymbol] = React.useState("삼성전자");
-  const [inputSymbol, setInputSymbol] = React.useState("삼성전자");
   // 주차 정보 추출 (예: "(1주차)")
   const weekMatch = period.match(/\((\d+주차)\)/);
   const weekStr = weekMatch ? weekMatch[1] : "";
@@ -293,35 +342,6 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu }) {
     endDate = `${y}-${dateMatch[3]}-${dateMatch[4]}`;
   }
 
-  // 감성점수 상태
-  const [sentiment, setSentiment] = React.useState(null);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState(null);
-
-  // 검색 버튼 클릭 시 감성점수 fetch
-  const handleSearch = () => {
-    // 주차 정보 추출 (예: "(1주차)")
-    const weekMatch = period.match(/\((\d+주차)\)/);
-    const weekStr = weekMatch ? weekMatch[1] : "";
-    // 주차 시작일, 종료일 추출 (예: "06.01 - 06.07 (1주차)")
-    const dateMatch = period.match(/(\d{2})\.(\d{2}) - (\d{2})\.(\d{2})/);
-    let startDate = null;
-    let endDate = null;
-    if (dateMatch) {
-      const y = year;
-      startDate = `${y}-${dateMatch[1]}-${dateMatch[2]}`;
-      endDate = `${y}-${dateMatch[3]}-${dateMatch[4]}`;
-    }
-    if (!startDate || !endDate || !inputSymbol) return;
-    setLoading(true);
-    setError(null);
-    setStockSymbol(inputSymbol);
-    fetchWeeklySentiment(inputSymbol, startDate, endDate)
-      .then(data => setSentiment(data))
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false));
-  };
-
   // 메뉴/서브메뉴에 따라 보여줄 pipeline 결정
   let pipelineName = null;
   if (selectedMenu === "고객 관리") {
@@ -335,28 +355,10 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu }) {
   return (
     <div className="main-panel">
       <div className="main-title">[{year}년 {month}월 {(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()}] 시황 리포트</div>
-      <div style={{margin: '16px 0'}}>
-        <label>
-          <b>기업명(심볼): </b>
-          <input
-            type="text"
-            value={inputSymbol}
-            onChange={e => setInputSymbol(e.target.value)}
-            style={{fontSize:16, padding:'4px 8px', marginLeft:8}}
-            placeholder="예: 삼성전자"
-          />
-        </label>
-        <button onClick={handleSearch} style={{marginLeft:12, fontSize:16, padding:'4px 12px'}}>검색하기</button>
-      </div>
       <div className="main-placeholder" style={{marginTop: '32px'}}>
         {pipelineName && (
           <PipelinePanel name={pipelineName} year={year} month={month} weekStr={(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()} />
         )}
-        {/* 감성점수 표시 */}
-        <div style={{marginTop: 32, fontSize: 18}}>
-          <b>감성점수(샘플): </b>
-          {loading ? '로딩 중...' : error ? `오류: ${error}` : sentiment ? JSON.stringify(sentiment) : '데이터 없음'}
-        </div>
       </div>
     </div>
   );
