@@ -143,6 +143,7 @@ function ChatPanel() {
 function CustomerPipeline({ year, month, weekStr }) {
   const [started, setStarted] = useState(false);
   const [inputSymbol, setInputSymbol] = useState("");
+  const [error, setError] = useState("");
   const chartData = '고객 차트 예시';
   const tableData = [
     { 이름: '홍길동', 등급: 'Gold', 최근방문: '2025-06-01' },
@@ -151,6 +152,11 @@ function CustomerPipeline({ year, month, weekStr }) {
   const textSummary = `${year}년 ${month}월 ${weekStr} 고객 데이터 분석 요약입니다.`;
 
   const handleSearch = () => {
+    if (!inputSymbol.trim()) {
+      setError('고객님 성함을 입력해주세요');
+      return;
+    }
+    setError("");
     setStarted(true);
   };
 
@@ -158,11 +164,16 @@ function CustomerPipeline({ year, month, weekStr }) {
     <div>
       {!started && (
         <div className="customer-search-form">
+          {error && (
+            <div style={{ color: 'red', fontWeight: 'bold', marginBottom: 8 }}>
+              {error}
+            </div>
+          )}
           <label style={{marginBottom: 0}}>
             <input
               type="text"
               value={inputSymbol}
-              onChange={e => setInputSymbol(e.target.value)}
+              onChange={e => { setInputSymbol(e.target.value); if (error) setError(""); }}
               className="customer-symbol-input center-text"
               placeholder="고객님 성함을 입력해주세요..."
             />
@@ -238,6 +249,7 @@ function MarketPipeline({ year, month, weekStr }) {
 function IndustryPipeline({ year, month, weekStr }) {
   const [started, setStarted] = useState(false);
   const [inputSymbol, setInputSymbol] = useState("");
+  const [error, setError] = useState("");
   const chartData = '산업 차트 예시';
   const tableData = [
     { 산업: 'IT', 성장률: '5.2%' },
@@ -246,6 +258,11 @@ function IndustryPipeline({ year, month, weekStr }) {
   const textSummary = `${year}년 ${month}월 ${weekStr} 산업 데이터 분석 요약입니다.`;
 
   const handleSearch = () => {
+    if (!inputSymbol.trim()) {
+      setError('산업군 이름을 입력해주세요');
+      return;
+    }
+    setError("");
     setStarted(true);
   };
 
@@ -253,11 +270,16 @@ function IndustryPipeline({ year, month, weekStr }) {
     <div>
       {!started && (
         <div className="industry-search-form">
+          {error && (
+            <div style={{ color: 'red', fontWeight: 'bold', marginBottom: 8 }}>
+              {error}
+            </div>
+          )}
           <label style={{marginBottom: 0}}>
             <input
               type="text"
               value={inputSymbol}
-              onChange={e => setInputSymbol(e.target.value)}
+              onChange={e => { setInputSymbol(e.target.value); if (error) setError(""); }}
               className="industry-symbol-input center-text"
               placeholder="산업군 이름을 입력해주세요..."
             />
@@ -293,7 +315,7 @@ function CompanyPipeline({ year, month, weekStr }) {
   const [inputSymbol, setInputSymbol] = useState("");
   const [sentiment, setSentiment] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
 
   const chartData = '기업 차트 예시';
   const tableData = [
@@ -313,10 +335,14 @@ function CompanyPipeline({ year, month, weekStr }) {
   }
 
   const handleSearch = () => {
+    if (!inputSymbol.trim()) {
+      setError('종목코드를 입력해주세요');
+      return;
+    }
+    setError("");
     setStarted(true); // 버튼 클릭 시 바로 결과물 표시
     if (!startDate || !endDate || !inputSymbol) return;
     setLoading(true);
-    setError(null);
     setSentiment(null);
     fetchWeeklySentiment(inputSymbol, startDate, endDate)
       .then(data => setSentiment(data))
@@ -328,11 +354,16 @@ function CompanyPipeline({ year, month, weekStr }) {
     <div>
       {!started && (
         <div className="company-search-form">
+          {error && (
+            <div style={{ color: 'red', fontWeight: 'bold', marginBottom: 8 }}>
+              {error}
+            </div>
+          )}
           <label style={{marginBottom: 0}}>
             <input
               type="text"
               value={inputSymbol}
-              onChange={e => setInputSymbol(e.target.value)}
+              onChange={e => { setInputSymbol(e.target.value); if (error) setError(""); }}
               className="company-symbol-input center-text"
               placeholder="종목코드를 입력해주세요..."
             />
@@ -360,7 +391,7 @@ function CompanyPipeline({ year, month, weekStr }) {
           {/* 감성점수 표시 */}
           <div style={{marginTop: 32, fontSize: 18}}>
             <b>감성점수(샘플): </b>
-            {loading ? '로딩 중...' : error ? `오류: ${error}` : sentiment ? JSON.stringify(sentiment) : '데이터 없음'}
+            {loading ? '로딩 중...' : error && error !== '종목코드를 입력해주세요' ? `오류: ${error}` : sentiment ? JSON.stringify(sentiment) : '데이터 없음'}
           </div>
         </>
       )}
