@@ -16,7 +16,8 @@ def summarize_article(stock_symbol: str, start_date: str, end_date: str):
             password=settings.DB_PASSWORD,
         )
         query = """
-            SELECT * FROM kb_enterprise_data
+            SELECT date, article
+            FROM kb_enterprise_dataset
             WHERE stock_symbol = %s AND date >= %s AND date <= %s
             ORDER BY date
         """

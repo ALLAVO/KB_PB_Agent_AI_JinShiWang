@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     # API KEY 설정
     ALPHAVANTAGE_API_KEY: str
     FRED_API_KEY: str
+    OPENAI_API_KEY: str
 
     @property
     def DATABASE_URL(self) -> str:
