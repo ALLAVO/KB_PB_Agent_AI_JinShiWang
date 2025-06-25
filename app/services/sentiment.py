@@ -104,22 +104,9 @@ def get_sentiment_score_for_article(article: str, conn=None) -> float:
 
 # 주식 심볼에 대한 주차별 감성 점수 계산 함수
 def get_weekly_sentiment_scores_by_stock_symbol(stock_symbol: str, start_date: str = None, end_date: str = None):
+    # start_date, end_date를 하루씩 추가하지 않고 그대로 사용
     orig_start_date = start_date
     orig_end_date = end_date
-    if start_date:
-        try:
-            start_date_dt = datetime.fromisoformat(start_date)
-        except Exception:
-            start_date_dt = datetime.strptime(start_date, '%Y-%m-%d')
-        start_date_dt += timedelta(days=1)
-        start_date = start_date_dt.strftime('%Y-%m-%d')
-    if end_date:
-        try:
-            end_date_dt = datetime.fromisoformat(end_date)
-        except Exception:
-            end_date_dt = datetime.strptime(end_date, '%Y-%m-%d')
-        end_date_dt += timedelta(days=1)
-        end_date = end_date_dt.strftime('%Y-%m-%d')
     print(f"[DEBUG] 전달받은 값 - stock_symbol: {stock_symbol}, start_date: {start_date}, end_date: {end_date} (원본: {orig_start_date}, {orig_end_date})")
     try:
         conn = check_db_connection()

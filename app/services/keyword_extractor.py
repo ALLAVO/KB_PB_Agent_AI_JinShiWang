@@ -120,30 +120,38 @@ def fetch_articles_from_db(stock_symbol, start_date, end_date):
         return []
 
 def keyword_extract_from_articles(stock_symbol, start_date, end_date):
-    # sentiment.py에서 top3 기사 추출
+    """
+    주어진 종목, 시작일, 종료일에 대해 주차별 top3 기사별 키워드 추출 결과를 반환합니다.
+    반환값 예시: { week1: [ {...}, {...}, {...} ], week2: [ {...}, ... ] }
+    각 기사별로 'keywords' 필드에 키워드 리스트가 포함됩니다.
+    """
     sentiment_result = get_weekly_sentiment_scores_by_stock_symbol(stock_symbol, start_date, end_date)
     weekly_top3 = sentiment_result.get("weekly_top3_articles", {})
     if not weekly_top3:
         print("[오류] 해당 조건에 top3 기사가 없습니다.")
-        return
+        return {}
 
+    weekly_keywords = {}
     for week, top3_articles in weekly_top3.items():
-        print(f"\n[주차: {week}] Top3 기사 키워드 추출 결과:")
-        for i, item in enumerate(top3_articles, 1):
+        article_results = []
+        for item in top3_articles:
             article, date, weekstart, score, pos_cnt, neg_cnt = item
             original_ents, lowered_ents = extract_named_entities(article)
             keywords = extract_keywords(article, kw_model)
             keywords = restore_named_entities(keywords, original_ents, lowered_ents)
-            print(f"{i}. 날짜: {date}, 점수: {score}, pos_cnt: {pos_cnt}, neg_cnt: {neg_cnt}")
-            print("--- 키워드 ---")
-            if keywords:
-                for kw, score in keywords:
-                    print(f"- {kw} (유사도: {score:.4f})")
-            else:
-                print("유사도 기준 이상의 키워드가 없습니다.")
-            print("--- 기사 본문 ---")
-            print(article)
-            print("-" * 40)
+            # 키워드만 리스트로 저장 (score 없이 키워드만 리스트로 저장)
+            keyword_list = [kw for kw, _ in keywords]
+            article_results.append({
+                'article': article,
+                'date': date,
+                'weekstart': weekstart,
+                'score': score,
+                'pos_cnt': pos_cnt,
+                'neg_cnt': neg_cnt,
+                'keywords': keyword_list  # 키워드 리스트만 저장
+            })
+        weekly_keywords[week] = article_results
+    return weekly_keywords
 
 if __name__ == '__main__':
     stock_symbol = "GS"

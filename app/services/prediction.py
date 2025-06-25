@@ -104,6 +104,9 @@ def train_model(X_train, y_train):
     return clf
 
 def explain_shap_week(clf, X_week, y_week, next_start_date, next_end_date, top_n=3):
+    if X_week.empty:
+        return pd.DataFrame()
+
     explainer = shap.TreeExplainer(clf)
     shap_values = explainer.shap_values(X_week)
 
@@ -242,6 +245,50 @@ def get_summary_from_openai(prompt):
         max_tokens=300
     )
     return response.choices[0].message.content.strip()
+
+
+def get_summary_from_openai_by_params(stock_symbol, start_date, end_date):
+    """
+    stock_symbol, start_date, end_date를 받아 AI 요약문을 반환하는 함수
+    """
+    df = load_data(stock_symbol)
+    df = add_features(df)
+    df = select_weekly_rows(df)
+    X_train, y_train, X_week, y_week, next_start_date, next_end_date = prepare_data(df, start_date, end_date)
+    if X_week.empty:
+        return {"result": "예측할 데이터가 없습니다. (해당 기간에 데이터가 부족합니다.)"}
+    clf = train_model(X_train, y_train)
+    shap_df = explain_shap_week(clf, X_week, y_week, next_start_date, next_end_date)
+    prompt_text = generate_prompt(shap_df, ticker=stock_symbol, end_date=end_date)
+    summary = get_summary_from_openai(prompt_text)
+    return {"result": summary}
+
+
+def run_prediction(request, prediction_id):
+    # PredictionRequest: stock_symbol, start_date, end_date 등 포함
+    stock_symbol = request.stock_symbol
+    start_date = request.start_date
+    end_date = request.end_date
+    # 데이터 로드 및 피처 생성
+    df = load_data(stock_symbol)
+    df = add_features(df)
+    df = select_weekly_rows(df)
+    X_train, y_train, X_week, y_week, next_start_date, next_end_date = prepare_data(df, start_date, end_date)
+    # 모델 학습 및 예측
+    clf = train_model(X_train, y_train)
+    shap_df = explain_shap_week(clf, X_week, y_week, next_start_date, next_end_date)
+    prompt_text = generate_prompt(shap_df, ticker=stock_symbol, end_date=end_date)
+    summary = get_summary_from_openai(prompt_text)
+    # 예측 결과
+    prediction = int(clf.predict(X_week)[0]) if not X_week.empty else 0
+    return type('PredictionResult', (), {{
+        'prediction_id': prediction_id,
+        'stock_symbol': stock_symbol,
+        'start_date': start_date,
+        'end_date': end_date,
+        'prediction': prediction,
+        'summary': summary
+    }})()
 
 
 # === 메인 실행 ===

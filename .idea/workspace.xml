@@ -4,7 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f4731fdf-2c87-41fd-9334-627c148cd86e" name="Changes" comment="" />
+    <list default="true" id="f4731fdf-2c87-41fd-9334-627c148cd86e" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/app/api/keyword_extractor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/api/prediction.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/prediction.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/keyword_extractor.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/keyword_extractor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/prediction.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/prediction.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -53,7 +60,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-1d06a55b98c1-0b3e54e931b4-JavaScript-WS-241.17890.13" />
+        <option value="bundled-js-predefined-1d06a55b98c1-91d5c284f522-JavaScript-PY-241.15989.155" />
+        <option value="bundled-python-sdk-babbdf50b680-7c6932dee5e4-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-241.15989.155" />
       </set>
     </attachedChunks>
   </component>
@@ -154,6 +162,29 @@
       <workItem from="1750745728819" duration="8457000" />
       <workItem from="1750754486479" duration="4426000" />
       <workItem from="1750818051348" duration="1000" />
+      <workItem from="1750830606347" duration="1645000" />
+      <workItem from="1750832255409" duration="313000" />
+      <workItem from="1750832575374" duration="45000" />
+      <workItem from="1750832622318" duration="63000" />
+      <workItem from="1750832686925" duration="1027000" />
+      <workItem from="1750833718175" duration="60000" />
+      <workItem from="1750833782575" duration="21000" />
+      <workItem from="1750833806186" duration="287000" />
+      <workItem from="1750834094980" duration="804000" />
+      <workItem from="1750834904261" duration="129000" />
+      <workItem from="1750835037040" duration="31000" />
+      <workItem from="1750835071509" duration="38000" />
+      <workItem from="1750835113528" duration="400000" />
+      <workItem from="1750835518351" duration="936000" />
+      <workItem from="1750837365612" duration="33000" />
+      <workItem from="1750837402420" duration="81000" />
+      <workItem from="1750837485913" duration="613000" />
+      <workItem from="1750838104863" duration="106000" />
+      <workItem from="1750838214842" duration="278000" />
+      <workItem from="1750838496497" duration="95000" />
+      <workItem from="1750838594969" duration="125000" />
+      <workItem from="1750838724348" duration="156000" />
+      <workItem from="1750838883290" duration="25000" />
     </task>
     <servers />
   </component>
