@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.log
+*.pot
+*.mo
+*.env
+.env
+.venv
+venv/
+ENV/
+.env.*
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# VSCode
+.vscode/
+
+# macOS
+.DS_Store
+
+# Tokenizer/Model Cache
+tokenizer_cache/
+
+# Frontend build
+frontend/build/
+
+# Node modules
+frontend/node_modules/
+
+# 기타
+*.bak
+*.swp
+*.tmp
+
+# Ignore secrets
+secrets.*
+
