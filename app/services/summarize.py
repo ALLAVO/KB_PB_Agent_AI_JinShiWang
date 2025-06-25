@@ -268,6 +268,19 @@ def summarize_top3_articles(top3_articles):
         })
     return results
 
+def get_weekly_top3_summaries(stock_symbol: str, start_date: str, end_date: str):
+    """
+    주어진 종목, 시작일, 종료일에 대해 주차별 top3 기사 요약 리스트를 반환합니다.
+    반환값 예시: { week1: [ {...}, {...}, {...} ], week2: [ {...}, ... ] }
+    """
+    sentiment_result = get_weekly_sentiment_scores_by_stock_symbol(stock_symbol, start_date, end_date)
+    weekly_top3 = sentiment_result.get("weekly_top3_articles", {})
+    weekly_summaries = {}
+    for week, top3_articles in weekly_top3.items():
+        summaries = summarize_top3_articles(top3_articles)
+        weekly_summaries[week] = summaries
+    return weekly_summaries
+
 
 
 # 사용 예시 (sentiment.py에서 top3 기사 리스트를 받아 요약)

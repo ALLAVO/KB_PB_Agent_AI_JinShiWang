@@ -5,15 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f4731fdf-2c87-41fd-9334-627c148cd86e" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.name" beforeDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/api/summarize.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/api/prediction.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/app/api/sentiment.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/sentiment.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/prediction.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/prediction.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/sentiment.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/sentiment.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/App.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/api/sentiment.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -174,6 +168,10 @@
       <workItem from="1750833782575" duration="21000" />
       <workItem from="1750833806186" duration="287000" />
       <workItem from="1750834094980" duration="804000" />
+      <workItem from="1750834904261" duration="129000" />
+      <workItem from="1750835037040" duration="31000" />
+      <workItem from="1750835071509" duration="38000" />
+      <workItem from="1750835113528" duration="400000" />
     </task>
     <servers />
   </component>
