@@ -104,6 +104,9 @@ def train_model(X_train, y_train):
     return clf
 
 def explain_shap_week(clf, X_week, y_week, next_start_date, next_end_date, top_n=3):
+    if X_week.empty:
+        return pd.DataFrame()
+
     explainer = shap.TreeExplainer(clf)
     shap_values = explainer.shap_values(X_week)
 
@@ -242,6 +245,23 @@ def get_summary_from_openai(prompt):
         max_tokens=300
     )
     return response.choices[0].message.content.strip()
+
+
+def get_summary_from_openai_by_params(stock_symbol, start_date, end_date):
+    """
+    stock_symbol, start_date, end_date를 받아 AI 요약문을 반환하는 함수
+    """
+    df = load_data(stock_symbol)
+    df = add_features(df)
+    df = select_weekly_rows(df)
+    X_train, y_train, X_week, y_week, next_start_date, next_end_date = prepare_data(df, start_date, end_date)
+    if X_week.empty:
+        return {"result": "예측할 데이터가 없습니다. (해당 기간에 데이터가 부족합니다.)"}
+    clf = train_model(X_train, y_train)
+    shap_df = explain_shap_week(clf, X_week, y_week, next_start_date, next_end_date)
+    prompt_text = generate_prompt(shap_df, ticker=stock_symbol, end_date=end_date)
+    summary = get_summary_from_openai(prompt_text)
+    return {"result": summary}
 
 
 def run_prediction(request, prediction_id):
