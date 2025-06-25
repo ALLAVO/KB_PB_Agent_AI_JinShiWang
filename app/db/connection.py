@@ -1,4 +1,5 @@
 import psycopg2
+from sqlalchemy import create_engine
 from app.core.config import settings
 
 def check_db_connection():
@@ -15,3 +16,6 @@ def check_db_connection():
         print("Error connecting to the database:", e)
         return None
 
+def get_sqlalchemy_engine():
+    db_url = f"postgresql+psycopg2://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
+    return create_engine(db_url)
