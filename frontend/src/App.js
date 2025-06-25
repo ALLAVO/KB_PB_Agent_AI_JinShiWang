@@ -350,21 +350,32 @@ function CompanyPipeline({ year, month, weekStr, onSetReportTitle }) {
   }
 
   const handleSearch = () => {
-    if (!inputSymbol.trim()) {
+    const cleanSymbol = inputSymbol.trim().toUpperCase();
+    if (!cleanSymbol) {
       setError('종목코드를 입력해주세요');
       return;
     }
     setError("");
     setStarted(true); // 버튼 클릭 시 바로 결과물 표시
     if (onSetReportTitle) {
-      onSetReportTitle(`${inputSymbol.trim()} 기업 리포트`);
+      onSetReportTitle(`${cleanSymbol} 기업 리포트`);
     }
-    if (!startDate || !endDate || !inputSymbol) return;
+    if (!startDate || !endDate || !cleanSymbol) return;
     setLoading(true);
     setSentiment(null);
-    fetchWeeklySentiment(inputSymbol, startDate, endDate)
-      .then(data => setSentiment(data))
-      .catch(e => setError(e.message))
+    // 디버깅: 함수 호출 로그
+    console.log('[DEBUG] fetchWeeklySentiment 호출', { cleanSymbol, startDate, endDate });
+    fetchWeeklySentiment(cleanSymbol, startDate, endDate)
+      .then(data => {
+        // 디버깅: 응답 데이터 로그
+        console.log('[DEBUG] fetchWeeklySentiment 응답', data);
+        setSentiment(data);
+      })
+      .catch(e => {
+        // 디버깅: 에러 로그
+        console.error('[DEBUG] fetchWeeklySentiment 에러', e);
+        setError(e.message);
+      })
       .finally(() => setLoading(false));
   };
 

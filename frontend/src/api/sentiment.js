@@ -1,21 +1,23 @@
-// sentiment.js - 감성 분석 관련 API 호출 함수
+// 기업 심볼, 시작일, 종료일을 받아 백엔드로부터 주차별 감성점수 데이터를 받아오는 함수
 
-/**
- * 주차별 감성점수 조회 API 호출
- * @param {string} stockSymbol
- * @param {string} startDate (YYYY-MM-DD)
- * @param {string} endDate (YYYY-MM-DD)
- * @returns {Promise<object>}
- */
-export async function fetchWeeklySentiment(stockSymbol, startDate, endDate) {
-  const params = new URLSearchParams({
-    stock_symbol: stockSymbol,
-    start_date: startDate,
-    end_date: endDate
-  });
-  const response = await fetch(`http://localhost:8000/api/v1/sentiment/weekly?${params.toString()}`);
-  if (!response.ok) throw new Error('감성점수 API 호출 실패');
-  return await response.json();
+export async function fetchWeeklySentiment({ symbol, startDate, endDate }) {
+  const params = new URLSearchParams();
+  params.append('stock_symbol', symbol);
+  if (startDate) params.append('start_date', startDate);
+  if (endDate) params.append('end_date', endDate);
+
+  const url = `/api/v1/sentiment/weekly?${params.toString()}`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('서버 응답 오류');
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('감성 점수 fetch 실패:', error);
+    throw error;
+  }
 }
-
 

@@ -244,6 +244,33 @@ def get_summary_from_openai(prompt):
     return response.choices[0].message.content.strip()
 
 
+def run_prediction(request, prediction_id):
+    # PredictionRequest: stock_symbol, start_date, end_date 등 포함
+    stock_symbol = request.stock_symbol
+    start_date = request.start_date
+    end_date = request.end_date
+    # 데이터 로드 및 피처 생성
+    df = load_data(stock_symbol)
+    df = add_features(df)
+    df = select_weekly_rows(df)
+    X_train, y_train, X_week, y_week, next_start_date, next_end_date = prepare_data(df, start_date, end_date)
+    # 모델 학습 및 예측
+    clf = train_model(X_train, y_train)
+    shap_df = explain_shap_week(clf, X_week, y_week, next_start_date, next_end_date)
+    prompt_text = generate_prompt(shap_df, ticker=stock_symbol, end_date=end_date)
+    summary = get_summary_from_openai(prompt_text)
+    # 예측 결과
+    prediction = int(clf.predict(X_week)[0]) if not X_week.empty else 0
+    return type('PredictionResult', (), {{
+        'prediction_id': prediction_id,
+        'stock_symbol': stock_symbol,
+        'start_date': start_date,
+        'end_date': end_date,
+        'prediction': prediction,
+        'summary': summary
+    }})()
+
+
 # === 메인 실행 ===
 if __name__ == "__main__":
     ticker = 'AAPL'
