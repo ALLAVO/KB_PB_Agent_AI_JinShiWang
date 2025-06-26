@@ -9,3 +9,5 @@ class WeeklySentimentWithSummaryResponse(BaseModel):
     sentiment: Dict[str, int]
     summaries: Optional[Dict[str, List[str]]] = None
 
+class WeeklyTop3ArticlesResponse(BaseModel):
+    weekly_top3_articles: Dict[str, list]
