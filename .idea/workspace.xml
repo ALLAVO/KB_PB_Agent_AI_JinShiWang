@@ -5,11 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f4731fdf-2c87-41fd-9334-627c148cd86e" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/app/api/keyword_extractor.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/api/prediction.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/prediction.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/keyword_extractor.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/keyword_extractor.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/services/prediction.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/prediction.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -185,6 +182,10 @@
       <workItem from="1750838594969" duration="125000" />
       <workItem from="1750838724348" duration="156000" />
       <workItem from="1750838883290" duration="25000" />
+      <workItem from="1750838911139" duration="1088000" />
+      <workItem from="1750901357478" duration="386000" />
+      <workItem from="1750901747985" duration="80000" />
+      <workItem from="1750901834068" duration="1220000" />
     </task>
     <servers />
   </component>

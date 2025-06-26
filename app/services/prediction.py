@@ -247,22 +247,6 @@ def get_summary_from_openai(prompt):
     return response.choices[0].message.content.strip()
 
 
-def get_summary_from_openai_by_params(stock_symbol, start_date, end_date):
-    """
-    stock_symbol, start_date, end_date를 받아 AI 요약문을 반환하는 함수
-    """
-    df = load_data(stock_symbol)
-    df = add_features(df)
-    df = select_weekly_rows(df)
-    X_train, y_train, X_week, y_week, next_start_date, next_end_date = prepare_data(df, start_date, end_date)
-    if X_week.empty:
-        return {"result": "예측할 데이터가 없습니다. (해당 기간에 데이터가 부족합니다.)"}
-    clf = train_model(X_train, y_train)
-    shap_df = explain_shap_week(clf, X_week, y_week, next_start_date, next_end_date)
-    prompt_text = generate_prompt(shap_df, ticker=stock_symbol, end_date=end_date)
-    summary = get_summary_from_openai(prompt_text)
-    return {"result": summary}
-
 
 def run_prediction(request, prediction_id):
     # PredictionRequest: stock_symbol, start_date, end_date 등 포함
@@ -291,11 +275,30 @@ def run_prediction(request, prediction_id):
     }})()
 
 
+def get_prediction_summary(stock_symbol, start_date, end_date):
+    """
+    주어진 stock_symbol, start_date, end_date로 AI 요약 결과를 반환하는 함수
+    """
+    df = load_data(stock_symbol)
+    df = add_features(df)
+    df = select_weekly_rows(df)
+    X_train, y_train, X_week, y_week, next_start_date, next_end_date = prepare_data(df, start_date, end_date)
+    clf = train_model(X_train, y_train)
+    shap_df = explain_shap_week(clf, X_week, y_week, next_start_date, next_end_date)
+    if shap_df.empty:
+        return "해당 기간에 대한 예측 요약을 생성할 수 있는 데이터가 부족합니다. 날짜 범위 또는 종목 코드를 확인해 주세요."
+    prompt_text = generate_prompt(shap_df, ticker=stock_symbol, end_date=end_date)
+    summary = get_summary_from_openai(prompt_text)
+    return summary
+
 # === 메인 실행 ===
 if __name__ == "__main__":
-    ticker = 'AAPL'
-    start_date = '2023-03-05'
-    end_date = '2023-03-11'
+    # ticker = 'AAPL'
+    # start_date = '2023-03-05'
+    # end_date = '2023-03-11'
+    ticker = 'GS'
+    start_date = '2023-12-10'
+    end_date = '2023-12-16'
 
     df = load_data(ticker)  # ticker를 인자로 전달하여 DB에서 데이터 로드
     df = add_features(df)
