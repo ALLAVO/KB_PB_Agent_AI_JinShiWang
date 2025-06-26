@@ -1,26 +1,5 @@
 from app.db.connection import check_db_connection
-from datetime import datetime, timedelta
 import re
-
-
-# DB 연결 테스트 및 샘플 데이터 조회
-def print_sample_data():
-    conn = check_db_connection()
-    if conn is None:
-        return
-    try:
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM kb_enterprise_dataset LIMIT 1")
-        rows = cur.fetchall()
-        print('Sample Data from kb_enterprise_data:')
-        for row in rows:
-            print(row)
-        cur.close()
-        conn.close()
-    except Exception as e:
-        print("Error fetching sample data:", e)
-        if conn:
-            conn.close()
 
 def get_articles_by_stock_symbol(stock_symbol: str, start_date: str = None, end_date: str = None):
     conn = check_db_connection()
@@ -80,27 +59,57 @@ def get_sentiment_score_for_article(article: str, conn=None) -> float:
     words = preprocess_text(article)
     positive_count = 0
     negative_count = 0
-    positive_score_sum = 0.0
-    negative_score_sum = 0.0
+    uncertainty_count = 0
+    litigious_count = 0
+    constraining_count = 0
     for word in words:
-        cur.execute("SELECT positive, negative FROM mcdonald_masterdictionary WHERE word = %s", (word,))
+        cur.execute("SELECT positive, negative, uncertainty, litigious, constraining FROM mcdonald_masterdictionary WHERE word = %s", (word,))
         result = cur.fetchone()
         if result:
-            positive, negative = result
+            positive, negative, uncertainty, litigious, constraining = result
             if positive > 0:
                 positive_count += 1
-                positive_score_sum += positive
             if negative > 0:
                 negative_count += 1
-                negative_score_sum += negative
+            if uncertainty > 0:
+                uncertainty_count += 1
+            if litigious > 0:
+                litigious_count += 1
+            if constraining > 0:
+                constraining_count += 1
     cur.close()
-    total_count = positive_count + negative_count
+    total_count = positive_count + negative_count + uncertainty_count + litigious_count + constraining_count
     if total_count == 0:
         print("[WARNING] 감성 사전에 매칭되는 단어가 없습니다. 기사 감성점수 0 반환.")
         return 0.0
-    sentiment_score = (positive_score_sum - negative_score_sum) / total_count
-    print(f"[DEBUG] 기사 감성점수: {sentiment_score} (pos_sum: {positive_score_sum}, neg_sum: {negative_score_sum}, pos_cnt: {positive_count}, neg_cnt: {negative_count})")
+    # 가중치 적용 (예시)
+    alpha = 0.7
+    beta = 0.7
+    gamma = 0.5
+    sentiment_score = (
+        positive_count - negative_count
+        - alpha * uncertainty_count
+        - beta * litigious_count
+        - gamma * constraining_count
+    ) / total_count
+    sentiment_score = round(sentiment_score, 3)
+    print(f"[DEBUG] 기사 감성점수: {sentiment_score} (pos_cnt: {positive_count}, neg_cnt: {negative_count}, uncertainty_cnt: {uncertainty_count}, litigious_cnt: {litigious_count}, constraining_cnt: {constraining_count})")
     return sentiment_score
+
+def get_top3_articles_closest_to_weekly_score_from_list(articles, weekly_score):
+    """
+    기사 리스트에서 감성점수와 가장 가까운 3개 기사 반환
+    - 감성점수 차이가 가장 적은 순
+    - 동점일 경우 positive+negative count가 더 많은 기사 우선
+    반환값: [(article, date, weekstart_sunday, article_score, pos_cnt, neg_cnt), ...]
+    """
+    scored_articles = []
+    for item in articles:
+        diff = abs(item['score'] - weekly_score)
+        scored_articles.append((item['article'], item['date'], item['weekstart'], item['score'], item['pos_cnt'], item['neg_cnt'], diff))
+    scored_articles.sort(key=lambda x: (x[6], -(x[4]+x[5])))
+    top3 = [x[:6] for x in scored_articles[:3]]
+    return top3
 
 # 주식 심볼에 대한 주차별 감성 점수 계산 함수
 def get_weekly_sentiment_scores_by_stock_symbol(stock_symbol: str, start_date: str = None, end_date: str = None):
@@ -151,8 +160,7 @@ def get_weekly_sentiment_scores_by_stock_symbol(stock_symbol: str, start_date: s
             })
         for week in weekly_scores:
             weekly_scores[week] /= weekly_counts[week]
-        for week in weekly_scores:
-            weekly_scores[week] = int(round(weekly_scores[week]))
+            weekly_scores[week] = round(weekly_scores[week], 3)
         print("주차별 평균 감성점수:", weekly_scores)
 
         # 각 주차별로 감성점수와 가장 가까운 3개 기사 추출 (DB 쿼리 없이)
@@ -170,22 +178,30 @@ def get_weekly_sentiment_scores_by_stock_symbol(stock_symbol: str, start_date: s
         print("Error calculating weekly sentiment scores:", e)
         return {}
 
-def get_top3_articles_closest_to_weekly_score_from_list(articles, weekly_score):
-    """
-    기사 리스트에서 감성점수와 가장 가까운 3개 기사 반환
-    - 감성점수 차이가 가장 적은 순
-    - 동점일 경우 positive+negative count가 더 많은 기사 우선
-    반환값: [(article, date, weekstart_sunday, article_score, pos_cnt, neg_cnt), ...]
-    """
-    scored_articles = []
-    for item in articles:
-        diff = abs(item['score'] - weekly_score)
-        scored_articles.append((item['article'], item['date'], item['weekstart'], item['score'], item['pos_cnt'], item['neg_cnt'], diff))
-    scored_articles.sort(key=lambda x: (x[6], -(x[4]+x[5])))
-    top3 = [x[:6] for x in scored_articles[:3]]
-    return top3
 
-# 기존 get_top3_articles_closest_to_weekly_score 함수는 더 이상 사용하지 않음
+def get_weekly_top3_sentiment_scores(stock_symbol: str, start_date: str = None, end_date: str = None):
+    """
+    주차별 top3 기사 각각의 감성점수만 반환하는 함수
+    Returns:
+        dict: {주차: [기사1 점수, 기사2 점수, 기사3 점수], ...}
+    """
+    result = get_weekly_sentiment_scores_by_stock_symbol(stock_symbol, start_date, end_date)
+    weekly_top3_articles = result.get("weekly_top3_articles", {})
+    weekly_top3_scores = {}
+    for week, articles in weekly_top3_articles.items():
+        # articles: [(article, date, weekstart, score, pos_cnt, neg_cnt), ...]
+        weekly_top3_scores[week] = [art[3] for art in articles]
+    return weekly_top3_scores
+
+def get_weekly_top3_articles_by_stock_symbol(stock_symbol: str, start_date: str = None, end_date: str = None):
+    """
+    주차별 top3 기사를 각 기사의 감성점수와 함꼐 반환하는 함수
+    Returns:
+        dict: {주차: [(article, date, weekstart, score, pos_cnt, neg_cnt), ...], ...}
+    """
+    result = get_weekly_sentiment_scores_by_stock_symbol(stock_symbol, start_date, end_date)
+    return result.get("weekly_top3_articles", {})
+
 
 if __name__ == "__main__":
     # 테스트 실행: 심볼을 원하는 것으로 변경
