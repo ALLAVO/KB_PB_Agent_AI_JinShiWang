@@ -6,12 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="f4731fdf-2c87-41fd-9334-627c148cd86e" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/api/keyword_extractor.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/keyword_extractor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/api/prediction.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/prediction.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/api/sentiment.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/sentiment.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/api/summarize.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/summarize.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/schemas/sentiment.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/schemas/sentiment.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/sentiment.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/sentiment.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/App.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/api/sentiment.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/api/sentiment.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -194,7 +190,14 @@
       <workItem from="1750913153329" duration="108000" />
       <workItem from="1750913268605" duration="1834000" />
       <workItem from="1750921531871" duration="11000" />
-      <workItem from="1750921626911" duration="400000" />
+      <workItem from="1750921626911" duration="1111000" />
+      <workItem from="1750922741719" duration="370000" />
+      <workItem from="1750923115419" duration="1028000" />
+      <workItem from="1750926106443" duration="931000" />
+      <workItem from="1750927041727" duration="75000" />
+      <workItem from="1750927121546" duration="1873000" />
+      <workItem from="1750960978485" duration="195000" />
+      <workItem from="1750961191066" duration="738000" />
     </task>
     <servers />
   </component>

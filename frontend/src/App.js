@@ -7,7 +7,7 @@ import cloud1 from "./assets/cloud1.png";
 import cloud2 from "./assets/cloud2.png";
 import cloud3 from "./assets/cloud3.png";
 import titlecloud from "./assets/titlecloud.png";
-import { fetchWeeklySentiment } from "./api/sentiment";
+import {fetchTop3Articles } from "./api/sentiment";
 
 function StackIconDecoration() {
   return (
@@ -325,12 +325,12 @@ function IndustryPipeline({ year, month, weekStr, onSetReportTitle }) {
   );
 }
 
-function CompanyPipeline({ year, month, weekStr, onSetReportTitle }) {
+function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
   const [started, setStarted] = useState(false);
   const [inputSymbol, setInputSymbol] = useState("");
-  const [sentiment, setSentiment] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [top3Articles, setTop3Articles] = useState(null);
 
   const chartData = '기업 차트 예시';
   const tableData = [
@@ -339,8 +339,8 @@ function CompanyPipeline({ year, month, weekStr, onSetReportTitle }) {
   ];
   const textSummary = `${year}년 ${month}월 ${weekStr} 기업 데이터 분석 요약입니다.`;
 
-  // 주차 시작일, 종료일 추출 (예: "06.01 - 06.07 (1주차)")
-  const dateMatch = weekStr.match(/(\d{2})\.(\d{2}) - (\d{2})\.(\d{2})/);
+  // period에서 주차 시작일, 종료일 추출 (예: "12.10 - 12.16 (1주차)")
+  const dateMatch = period.match(/(\d{2})\.(\d{2}) - (\d{2})\.(\d{2})/);
   let startDate = null;
   let endDate = null;
   if (dateMatch) {
@@ -349,34 +349,26 @@ function CompanyPipeline({ year, month, weekStr, onSetReportTitle }) {
     endDate = `${y}-${dateMatch[3]}-${dateMatch[4]}`;
   }
 
-  const handleSearch = () => {
-    const cleanSymbol = inputSymbol.trim().toUpperCase();
-    if (!cleanSymbol) {
+  const handleSearch = async () => {
+    setStarted(true); // 버튼 클릭 시 바로 started 상태로 전환
+    console.log('handleSearch 클릭됨');
+    if (!inputSymbol) {
       setError('종목코드를 입력해주세요');
       return;
     }
-    setError("");
-    setStarted(true); // 버튼 클릭 시 바로 결과물 표시
-    if (onSetReportTitle) {
-      onSetReportTitle(`${cleanSymbol} 기업 리포트`);
-    }
-    if (!startDate || !endDate || !cleanSymbol) return;
     setLoading(true);
-    setSentiment(null);
-    // 디버깅: 함수 호출 로그
-    console.log('[DEBUG] fetchWeeklySentiment 호출', { cleanSymbol, startDate, endDate });
-    fetchWeeklySentiment(cleanSymbol, startDate, endDate)
-      .then(data => {
-        // 디버깅: 응답 데이터 로그
-        console.log('[DEBUG] fetchWeeklySentiment 응답', data);
-        setSentiment(data);
-      })
-      .catch(e => {
-        // 디버깅: 에러 로그
-        console.error('[DEBUG] fetchWeeklySentiment 에러', e);
-        setError(e.message);
-      })
-      .finally(() => setLoading(false));
+    setError("");
+    setTop3Articles(null);
+    // 실제 API 호출 파라미터 확인
+    console.log('API 호출', { symbol: inputSymbol, startDate, endDate });
+    try {
+      const data = await fetchTop3Articles({ symbol: inputSymbol, startDate, endDate });
+      setTop3Articles(data);
+    } catch (e) {
+      setError('데이터를 불러오지 못했습니다.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -399,9 +391,9 @@ function CompanyPipeline({ year, month, weekStr, onSetReportTitle }) {
             <input
               type="text"
               value={inputSymbol}
-              onChange={e => { setInputSymbol(e.target.value); if (error) setError(""); }}
+              onChange={e => setInputSymbol(e.target.value)}
               className="company-symbol-input center-text"
-              placeholder="종목코드를 입력해주세요..."
+              placeholder="종목코드를 입력해주세요."
             />
           </label>
           <button className="company-search-btn" onClick={handleSearch}>리포트 출력</button>
@@ -424,10 +416,28 @@ function CompanyPipeline({ year, month, weekStr, onSetReportTitle }) {
             </tbody>
           </table>
           <div className="pipeline-text">{textSummary}</div>
-          {/* 감성점수 표시 */}
-          <div className="sentiment-score">
-            <b>감성점수(샘플): </b>
-            {loading ? '로딩 중...' : error && error !== '종목코드를 입력해주세요' ? `오류: ${error}` : sentiment ? JSON.stringify(sentiment) : '데이터 없음'}
+          {/* top3 기사 표시 */}
+          <div className="top3-articles">
+            <b>Top3 기사:</b>
+            {loading ? '로딩 중...'
+              : error && error !== '종목코드를 입력해주세요'
+                ? error
+              : top3Articles && top3Articles.top3_articles && top3Articles.top3_articles.length > 0 ? (
+                <ol style={{marginTop: '8px'}}>
+                  {top3Articles.top3_articles.map((art, idx) => (
+                    <li key={idx} style={{marginBottom: '12px'}}>
+                      <div style={{fontWeight:'bold', fontSize:'16px'}}>
+                        {art.article_title}
+                        <span style={{marginLeft:'10px', color:'#0077cc', fontWeight:'normal', fontSize:'15px'}}>
+                          {art.score > 0 ? '+' : ''}{art.score}
+                        </span>
+                      </div>
+                      <div style={{fontSize:'12px', color:'#888', marginBottom:'2px'}}>{art.date}</div>
+                      <div style={{fontSize:'13px', color:'#444', marginTop:'2px'}}>{art.article}</div>
+                    </li>
+                  ))}
+                </ol>
+              ) : '데이터 없음'}
           </div>
         </>
       )}
@@ -435,11 +445,11 @@ function CompanyPipeline({ year, month, weekStr, onSetReportTitle }) {
   );
 }
 
-function PipelinePanel({ name, year, month, weekStr, onSetReportTitle }) {
+function PipelinePanel({ name, year, month, weekStr, period, onSetReportTitle }) {
   if (name === 'customer') return <CustomerPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} />;
   if (name === 'market') return <MarketPipeline year={year} month={month} weekStr={weekStr} />;
   if (name === 'industry') return <IndustryPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} />;
-  if (name === 'company') return <CompanyPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} />;
+  if (name === 'company') return <CompanyPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} />;
   return null;
 }
 
@@ -454,7 +464,6 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu }) {
   let endDate = null;
   if (dateMatch) {
     const y = year;
-    const m = month;
     startDate = `${y}-${dateMatch[1]}-${dateMatch[2]}`;
     endDate = `${y}-${dateMatch[3]}-${dateMatch[4]}`;
   }
@@ -489,7 +498,7 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu }) {
       <div className="main-title">[{year}년 {month}월 {(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()}] {reportTitle}</div>
       <div className="main-placeholder" style={{marginTop: '32px'}}>
         {pipelineName && (
-          <PipelinePanel name={pipelineName} year={year} month={month} weekStr={(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()} onSetReportTitle={['industry','company','customer'].includes(pipelineName) ? setReportTitle : undefined} />
+          <PipelinePanel name={pipelineName} year={year} month={month} weekStr={(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()} period={period} onSetReportTitle={['industry','company','customer'].includes(pipelineName) ? setReportTitle : undefined} />
         )}
       </div>
     </div>

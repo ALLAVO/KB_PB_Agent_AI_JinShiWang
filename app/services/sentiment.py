@@ -21,7 +21,7 @@ def get_articles_by_stock_symbol(stock_symbol: str, start_date: str = None, end_
         if date_query:
             date_query = " AND " + date_query
         stock_symbol_query = (
-            "SELECT article, date, weekstart_sunday "
+            "SELECT article, date, weekstart_sunday, article_title "
             "FROM kb_enterprise_dataset "
             "WHERE stock_symbol = %s" + date_query + " "
             "ORDER BY weekstart_sunday, date DESC;"
@@ -101,14 +101,43 @@ def get_top3_articles_closest_to_weekly_score_from_list(articles, weekly_score):
     기사 리스트에서 감성점수와 가장 가까운 3개 기사 반환
     - 감성점수 차이가 가장 적은 순
     - 동점일 경우 positive+negative count가 더 많은 기사 우선
-    반환값: [(article, date, weekstart_sunday, article_score, pos_cnt, neg_cnt), ...]
+    반환값: [dict, ...] (각 dict: article, date, weekstart, score, pos_cnt, neg_cnt, article_title)
+    {
+        'article': ...,
+        'date': ...,
+        'weekstart': ...,
+        'score': ...,
+        'pos_cnt': ...,
+        'neg_cnt': ...,
+        'article_title': ...
+    }   
     """
     scored_articles = []
     for item in articles:
         diff = abs(item['score'] - weekly_score)
-        scored_articles.append((item['article'], item['date'], item['weekstart'], item['score'], item['pos_cnt'], item['neg_cnt'], diff))
-    scored_articles.sort(key=lambda x: (x[6], -(x[4]+x[5])))
-    top3 = [x[:6] for x in scored_articles[:3]]
+        scored_articles.append({
+            'article': item['article'],
+            'date': item['date'],
+            'weekstart': item['weekstart'],
+            'score': item['score'],
+            'pos_cnt': item['pos_cnt'],
+            'neg_cnt': item['neg_cnt'],
+            'article_title': item.get('article_title', None),
+            'diff': diff
+        })
+    scored_articles.sort(key=lambda x: (x['diff'], -(x['pos_cnt']+x['neg_cnt'])))
+    top3 = [
+        {
+            'article': x['article'],
+            'date': x['date'].strftime('%Y-%m-%d') if hasattr(x['date'], 'strftime') else str(x['date']),
+            'weekstart': x['weekstart'].strftime('%Y-%m-%d') if hasattr(x['weekstart'], 'strftime') else str(x['weekstart']),
+            'score': x['score'],
+            'pos_cnt': x['pos_cnt'],
+            'neg_cnt': x['neg_cnt'],
+            'article_title': x['article_title']
+        }
+        for x in scored_articles[:3]
+    ]
     return top3
 
 # 주식 심볼에 대한 주차별 감성 점수 계산 함수
@@ -125,7 +154,7 @@ def get_weekly_sentiment_scores_by_stock_symbol(stock_symbol: str, start_date: s
         weekly_scores = {}
         weekly_counts = {}
         weekly_articles = {}  # week별 기사 및 점수 정보 저장
-        for article, date, week_start in articles:
+        for article, date, week_start, article_title in articles:
             # score = 각 기사 별 감성 점수
             score = get_sentiment_score_for_article(article, conn)
             words = preprocess_text(article)
@@ -156,7 +185,8 @@ def get_weekly_sentiment_scores_by_stock_symbol(stock_symbol: str, start_date: s
                 'weekstart': week_start,
                 'score': score,
                 'pos_cnt': pos_cnt,
-                'neg_cnt': neg_cnt
+                'neg_cnt': neg_cnt,
+                'article_title': article_title
             })
         for week in weekly_scores:
             weekly_scores[week] /= weekly_counts[week]
@@ -189,15 +219,15 @@ def get_weekly_top3_sentiment_scores(stock_symbol: str, start_date: str = None, 
     weekly_top3_articles = result.get("weekly_top3_articles", {})
     weekly_top3_scores = {}
     for week, articles in weekly_top3_articles.items():
-        # articles: [(article, date, weekstart, score, pos_cnt, neg_cnt), ...]
-        weekly_top3_scores[week] = [art[3] for art in articles]
+        # articles: list of dicts with keys: article, date, weekstart, score, pos_cnt, neg_cnt, article_title
+        weekly_top3_scores[week] = [art['score'] for art in articles]
     return weekly_top3_scores
 
 def get_weekly_top3_articles_by_stock_symbol(stock_symbol: str, start_date: str = None, end_date: str = None):
     """
     주차별 top3 기사를 각 기사의 감성점수와 함꼐 반환하는 함수
     Returns:
-        dict: {주차: [(article, date, weekstart, score, pos_cnt, neg_cnt), ...], ...}
+        dict: {주차: [dict, ...], ...} (각 dict: article, date, weekstart, score, pos_cnt, neg_cnt, article_title)
     """
     result = get_weekly_sentiment_scores_by_stock_symbol(stock_symbol, start_date, end_date)
     return result.get("weekly_top3_articles", {})
