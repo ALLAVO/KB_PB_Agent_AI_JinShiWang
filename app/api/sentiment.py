@@ -12,6 +12,8 @@ from app.schemas.sentiment import (
     WeeklySentimentResponse,
     WeeklySentimentWithSummaryResponse,
     )
+from app.services.sentiment import preprocess_text, check_db_connection
+
 
 router = APIRouter()
 
@@ -21,7 +23,6 @@ router = APIRouter()
     summary="특정 종목의 전체 기사 중 감성점수 평균에 가장 가까운 top3 기사를 감성점수와 함께 반환",
     description="stock_symbol, start_date, end_date를 받아 전체 기사 중 감성점수 평균에 가장 가까운 top3 기사를 반환합니다.",
     tags=["article analyze"]
-
 )
 def get_top3_articles_api(
     stock_symbol: str = Query(..., description="종목 코드, 예: 'GS'"),
@@ -31,7 +32,6 @@ def get_top3_articles_api(
     rows = get_articles_by_stock_symbol(stock_symbol, start_date, end_date)
     # 각 기사별 감성점수 및 긍/부정 카운트 계산
     articles = []
-    from app.services.sentiment import preprocess_text, check_db_connection
     conn = check_db_connection()
     for row in rows:
         article, date, weekstart, article_title = row

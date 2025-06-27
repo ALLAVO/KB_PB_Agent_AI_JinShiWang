@@ -8,6 +8,7 @@ import cloud2 from "./assets/cloud2.png";
 import cloud3 from "./assets/cloud3.png";
 import titlecloud from "./assets/titlecloud.png";
 import {fetchTop3Articles } from "./api/sentiment";
+import {fetchWeeklySummaries } from "./api/summarize";
 
 function StackIconDecoration() {
   return (
@@ -331,6 +332,9 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [top3Articles, setTop3Articles] = useState(null);
+  const [summaries, setSummaries] = useState(null);
+  const [selectedArticle, setSelectedArticle] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
   const chartData = '기업 차트 예시';
   const tableData = [
@@ -349,6 +353,44 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
     endDate = `${y}-${dateMatch[3]}-${dateMatch[4]}`;
   }
 
+  const handleArticleClick = (article) => {
+    setSelectedArticle(article);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedArticle(null);
+  };
+
+  // 특정 기사의 요약을 찾는 함수
+  const findSummaryForArticle = (article) => {
+    if (!summaries) return null;
+    
+    try {
+      // summaries는 주차별로 구성되어 있음: { "2023-12-10": [summary1, summary2, summary3], ... }
+      for (const weekData of Object.values(summaries)) {
+        if (!Array.isArray(weekData)) continue;
+        
+        const summary = weekData.find(s => {
+          if (!s) return false;
+          // 날짜와 기사 제목으로 매칭 (더 안전함)
+          const dateMatch = s.date === article.date;
+          const titleMatch = s.article_title === article.article_title;
+          return dateMatch && titleMatch;
+        });
+        
+        if (summary && summary.summary) {
+          return summary.summary;
+        }
+      }
+    } catch (error) {
+      console.error('요약 찾기 오류:', error);
+    }
+    
+    return null;
+  };
+
   const handleSearch = async () => {
     setStarted(true); // 버튼 클릭 시 바로 started 상태로 전환
     console.log('handleSearch 클릭됨');
@@ -359,12 +401,22 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
     setLoading(true);
     setError("");
     setTop3Articles(null);
+    setSummaries(null);
     // 실제 API 호출 파라미터 확인
     console.log('API 호출', { symbol: inputSymbol, startDate, endDate });
     try {
-      const data = await fetchTop3Articles({ symbol: inputSymbol, startDate, endDate });
-      setTop3Articles(data);
+      // 두 API를 병렬로 호출
+      const [articlesData, summariesData] = await Promise.all([
+        fetchTop3Articles({ symbol: inputSymbol, startDate, endDate }),
+        fetchWeeklySummaries({ symbol: inputSymbol, startDate, endDate })
+      ]);
+      
+      setTop3Articles(articlesData);
+      setSummaries(summariesData);
+      console.log('기사 데이터:', articlesData);
+      console.log('요약 데이터:', summariesData);
     } catch (e) {
+      console.error('API 호출 오류:', e);
       setError('데이터를 불러오지 못했습니다.');
     } finally {
       setLoading(false);
@@ -432,13 +484,160 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
                           {art.score > 0 ? '+' : ''}{art.score}
                         </span>
                       </div>
+                      {/* 기사 작성 날짜 - 작은 회색 글씨로 표시 */}
                       <div style={{fontSize:'12px', color:'#888', marginBottom:'2px'}}>{art.date}</div>
-                      <div style={{fontSize:'13px', color:'#444', marginTop:'2px'}}>{art.article}</div>
+                      
+                      {/* 기사 요약 내용 */}
+                      {(() => {
+                        const summary = findSummaryForArticle(art);
+                        return summary ? (
+                          <div style={{
+                            fontSize: '13px',
+                            color: '#555',
+                            backgroundColor: '#f8f9fa',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            border: '1px solid #e9ecef',
+                            margin: '6px 0',
+                            lineHeight: '1.4'
+                          }}>
+                            <div style={{fontWeight: 'bold', fontSize: '12px', color: '#6c757d', marginBottom: '4px'}}>
+                              📄 기사 요약
+                            </div>
+                            {summary}
+                          </div>
+                        ) : loading ? (
+                          <div style={{
+                            fontSize: '12px',
+                            color: '#6c757d',
+                            fontStyle: 'italic',
+                            margin: '6px 0'
+                          }}>
+                            요약 생성 중...
+                          </div>
+                        ) : null;
+                      })()}
+                      
+                      {/* 기사 본문 확인 버튼 */}
+                      <button 
+                        onClick={() => handleArticleClick(art)}
+                        style={{
+                          backgroundColor: '#0077cc',
+                          color: 'white',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          marginTop: '4px'
+                        }}
+                      >
+                        기사 본문 자세히 확인하기
+                      </button>
                     </li>
                   ))}
                 </ol>
               ) : '데이터 없음'}
           </div>
+          
+          {/* 기사 상세 모달 */}
+          {showModal && selectedArticle && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 1000
+            }}>
+              <div style={{
+                backgroundColor: 'white',
+                padding: '24px',
+                borderRadius: '8px',
+                maxWidth: '80%',
+                maxHeight: '80%',
+                overflow: 'auto',
+                position: 'relative',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+              }}>
+                {/* 닫기 버튼 */}
+                <button 
+                  onClick={closeModal}
+                  style={{
+                    position: 'absolute',
+                    top: '12px',
+                    right: '12px',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    fontSize: '20px',
+                    cursor: 'pointer',
+                    color: '#666'
+                  }}
+                >
+                  ×
+                </button>
+                
+                {/* 모달 내용 */}
+                <div style={{marginRight: '30px'}}>
+                  <h2 style={{
+                    fontSize: '20px',
+                    fontWeight: 'bold',
+                    marginBottom: '12px',
+                    color: '#333',
+                    lineHeight: '1.4'
+                  }}>
+                    {selectedArticle.article_title}
+                  </h2>
+                  
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    marginBottom: '16px',
+                    gap: '16px'
+                  }}>
+                    <span style={{
+                      fontSize: '14px',
+                      color: '#666',
+                      backgroundColor: '#f5f5f5',
+                      padding: '4px 8px',
+                      borderRadius: '4px'
+                    }}>
+                      {selectedArticle.date}
+                    </span>
+                    <span style={{
+                      fontSize: '16px',
+                      fontWeight: 'bold',
+                      color: selectedArticle.score > 0 ? '#22c55e' : selectedArticle.score < 0 ? '#ef4444' : '#666',
+                      backgroundColor: '#f9f9f9',
+                      padding: '4px 8px',
+                      borderRadius: '4px'
+                    }}>
+                      감성점수: {selectedArticle.score > 0 ? '+' : ''}{selectedArticle.score}
+                    </span>
+                  </div>
+                  
+                  <div style={{
+                    fontSize: '15px',
+                    lineHeight: '1.6',
+                    color: '#444',
+                    textAlign: 'justify',
+                    maxHeight: '400px',
+                    overflowY: 'auto',
+                    padding: '16px',
+                    backgroundColor: '#fafafa',
+                    borderRadius: '6px',
+                    border: '1px solid #e0e0e0'
+                  }}>
+                    {selectedArticle.article}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
