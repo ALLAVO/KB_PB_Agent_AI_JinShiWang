@@ -10,6 +10,7 @@ import titlecloud from "./assets/titlecloud.png";
 import {fetchTop3Articles } from "./api/sentiment";
 import {fetchWeeklySummaries } from "./api/summarize";
 import {fetchWeeklyKeywords } from "./api/keyword";
+import {fetchPredictionSummary } from "./api/prediction";
 
 function StackIconDecoration() {
   return (
@@ -335,6 +336,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
   const [top3Articles, setTop3Articles] = useState(null);
   const [summaries, setSummaries] = useState(null);
   const [keywords, setKeywords] = useState(null);
+  const [prediction, setPrediction] = useState(null);
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -354,6 +356,17 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
     startDate = `${y}-${dateMatch[1]}-${dateMatch[2]}`;
     endDate = `${y}-${dateMatch[3]}-${dateMatch[4]}`;
   }
+
+  // 다음 주차 정보 계산
+  const getNextWeekInfo = () => {
+    const weekMatch = period.match(/\((\d+)주차\)/);
+    if (weekMatch) {
+      const currentWeek = parseInt(weekMatch[1]);
+      const nextWeek = currentWeek + 1;
+      return `${month}월 ${nextWeek}주차`;
+    }
+    return "다음 주차";
+  };
 
   const handleArticleClick = (article) => {
     setSelectedArticle(article);
@@ -433,22 +446,26 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
     setTop3Articles(null);
     setSummaries(null);
     setKeywords(null);
+    setPrediction(null);
     // 실제 API 호출 파라미터 확인
     console.log('API 호출', { symbol: inputSymbol, startDate, endDate });
     try {
-      // 세 API를 병렬로 호출
-      const [articlesData, summariesData, keywordsData] = await Promise.all([
+      // 네 API를 병렬로 호출
+      const [articlesData, summariesData, keywordsData, predictionData] = await Promise.all([
         fetchTop3Articles({ symbol: inputSymbol, startDate, endDate }),
         fetchWeeklySummaries({ symbol: inputSymbol, startDate, endDate }),
-        fetchWeeklyKeywords({ symbol: inputSymbol, startDate, endDate })
+        fetchWeeklyKeywords({ symbol: inputSymbol, startDate, endDate }),
+        fetchPredictionSummary({ symbol: inputSymbol, startDate, endDate })
       ]);
       
       setTop3Articles(articlesData);
       setSummaries(summariesData);
       setKeywords(keywordsData);
+      setPrediction(predictionData);
       console.log('기사 데이터:', articlesData);
       console.log('요약 데이터:', summariesData);
       console.log('키워드 데이터:', keywordsData);
+      console.log('예측 데이터:', predictionData);
     } catch (e) {
       console.error('API 호출 오류:', e);
       setError('데이터를 불러오지 못했습니다.');
@@ -502,6 +519,86 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
             </tbody>
           </table>
           <div className="pipeline-text">{textSummary}</div>
+          
+          {/* 주가 전망 카드 */}
+          {started && (
+            <div style={{
+              marginTop: '24px',
+              marginBottom: '16px',
+              padding: '20px',
+              backgroundColor: '#f8f9fa',
+              borderRadius: '12px',
+              border: '2px solid #e3f2fd',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                marginBottom: '12px',
+                gap: '8px'
+              }}>
+                <img 
+                  src={require('./assets/smile_king.png')} 
+                  alt="smile_king" 
+                  style={{
+                    width: '24px',
+                    height: '24px'
+                  }}
+                />
+                <h3 style={{
+                  margin: 0,
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  color: '#1976d2'
+                }}>
+                  {inputSymbol || '종목'} {getNextWeekInfo()} 주가 전망 한줄평
+                </h3>
+              </div>
+              
+              <div style={{
+                fontSize: '15px',
+                lineHeight: '1.6',
+                color: '#333',
+                backgroundColor: 'white',
+                padding: '16px',
+                borderRadius: '8px',
+                border: '1px solid #e0e0e0',
+                minHeight: '60px',
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                {loading ? (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    color: '#666',
+                    fontStyle: 'italic'
+                  }}>
+                    <span>🔄</span>
+                    AI가 주가 전망을 분석하고 있습니다...
+                  </div>
+                ) : error && error !== '종목코드를 입력해주세요' ? (
+                  <div style={{
+                    color: '#d32f2f',
+                    fontStyle: 'italic'
+                  }}>
+                    주가 전망 데이터를 불러오지 못했습니다.
+                  </div>
+                ) : prediction && prediction.summary ? (
+                  prediction.summary
+                ) : (
+                  <div style={{
+                    color: '#666',
+                    fontStyle: 'italic'
+                  }}>
+                    주가 전망 데이터가 없습니다.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
           {/* top3 기사 표시 */}
           <div className="top3-articles">
             <b>Top3 기사:</b>
