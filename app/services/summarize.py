@@ -95,13 +95,12 @@ def summarize_article(stock_symbol: str, start_date: str, end_date: str):
         ),
         "long": pipeline(
             "summarization",
-            model="google/pegasus-cnn_dailymail",
+            model="facebook/bart-large-cnn",  # Pegasus 대신 BART 사용
             device=device
         ),
         "very_long": pipeline(
             "summarization",
-            model="allenai/led-base-16384",
-            tokenizer="allenai/led-base-16384",
+            model="facebook/bart-large-cnn",  # LED 대신 BART 사용 (호환성 문제 해결)
             device=device
         )
     }
@@ -190,13 +189,12 @@ def summarize_top3_articles(top3_articles):
         ),
         "long": pipeline(
             "summarization",
-            model="google/pegasus-cnn_dailymail",
+            model="facebook/bart-large-cnn",  # Pegasus 대신 BART 사용
             device=device
         ),
         "very_long": pipeline(
             "summarization",
-            model="allenai/led-base-16384",
-            tokenizer="allenai/led-base-16384",
+            model="facebook/bart-large-cnn",  # LED 대신 BART 사용 (호환성 문제 해결)
             device=device
         )
     }
@@ -254,9 +252,16 @@ def summarize_top3_articles(top3_articles):
 
     results = []
     for item in top3_articles:
-        article, date, weekstart, score, pos_cnt, neg_cnt = item
+        # item은 dict 형태: {'article': ..., 'date': ..., 'weekstart': ..., 'score': ..., 'pos_cnt': ..., 'neg_cnt': ..., 'article_title': ...}
+        article = item['article']
+        date = item['date']
+        weekstart = item['weekstart']
+        score = item['score']
+        pos_cnt = item['pos_cnt']
+        neg_cnt = item['neg_cnt']
+        article_title = item.get('article_title', None)
+        
         summary = summarize_by_length(article)
-        #
         results.append({
             'article': article,
             'date': date,
@@ -264,6 +269,7 @@ def summarize_top3_articles(top3_articles):
             'score': score,
             'pos_cnt': pos_cnt,
             'neg_cnt': neg_cnt,
+            'article_title': article_title,
             'summary': summary
         })
     return results
