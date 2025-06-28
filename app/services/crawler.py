@@ -3,9 +3,6 @@ import time
 import os
 import json
 import yfinance as yf
-import pandas_datareader.data as web
-from app.core.config import settings
-import pandas as pd
 from datetime import datetime, timedelta
 from typing import Dict, List
 
