@@ -4,7 +4,7 @@ from app.services.crawler import get_us_indices_6months_chart, get_us_treasury_y
 
 router = APIRouter()
 
-
+# 미국/한국 주요 지수, 금리, 환율, 원자재 가격 관련 API
 @router.get("/market/indices-6months-chart")
 def get_us_indices_6months_chart_api(
     end_date: str = Query(..., description="그래프 마지막 날짜 (YYYY-MM-DD)")
@@ -14,6 +14,7 @@ def get_us_indices_6months_chart_api(
     """
     return get_us_indices_6months_chart(end_date)
 
+# 원자재 가격 6개월치 일별 데이터 API
 @router.get("/market/treasury-yields-6months-chart")
 def get_us_treasury_yields_6months_api(
     end_date: str = Query(..., description="그래프 마지막 날짜 (YYYY-MM-DD)")
@@ -23,6 +24,7 @@ def get_us_treasury_yields_6months_api(
     """
     return get_us_treasury_yields_6months(settings.FRED_API_KEY, end_date)
 
+# 원자재 가격 6개월치 일별 데이터 API
 @router.get("/market/fx-6months-chart")
 def get_kr_fx_rates_6months_api(
     end_date: str = Query(..., description="그래프 마지막 날짜 (YYYY-MM-DD)")

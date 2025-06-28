@@ -72,6 +72,7 @@
   background: #f8f6f2;
   font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
   border-radius: 0 !important;
+  overflow: hidden; /* 전체 레이아웃에서 스크롤 방지 */
 }
 
 .sidebar {
@@ -86,6 +87,12 @@
   border-bottom-left-radius: 0 !important;
   box-shadow: none;
   align-items: center;
+  position: fixed; /* 사이드바를 고정 위치로 설정 */
+  left: 0;
+  top: 0;
+  height: 100vh; /* 전체 높이 */
+  z-index: 100; /* 다른 요소들 위에 표시 */
+  overflow-y: auto; /* 사이드바 내용이 길면 스크롤 */
 }
 
 .sidebar-user {
@@ -263,6 +270,10 @@
   border-top: 1.5px solid #e6dfd3;
   border-bottom: 1.5px solid #e6dfd3;
   position: relative;
+  margin-left: 250px; /* left sidebar를 위한 margin */
+  /* margin-right: 100px;  */
+  overflow-y: auto; /* main-panel만 스크롤 가능 */
+  height: 100vh; /* 전체 높이 */
 }
 
 .main-title {
@@ -293,7 +304,11 @@
 .chat-panel {
   flex: 1.5;
   background: #fff;
-  position: relative;
+  position: fixed; /* 오른쪽 사이드바도 고정 */
+  right: 0;
+  top: 0;
+  width: 400px; /* 고정 너비 */
+  height: 100vh; /* 전체 높이 */
   display: flex;
   flex-direction: column;
   border-top-right-radius: 0 !important;
@@ -302,8 +317,8 @@
   border-bottom: 1.5px solid #e6dfd3;
   padding: 0;
   overflow: hidden;
-  min-width: 350px;
   box-shadow: none;
+  z-index: 100;
 }
 
 .chat-title-row {
@@ -714,6 +729,463 @@
   color: red;
   font-weight: bold;
   margin-bottom: 8px;
+}
+
+/* Stock Chart Styles */
+.stock-chart-container {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.stock-chart-title h3 {
+  margin: 0 0 20px 0;
+  color: #302a24;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+/* 차트 요약 정보 스타일 */
+.chart-summary {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid #dee2e6;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.summary-label {
+  font-weight: 600;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.summary-value {
+  font-weight: 500;
+  color: #212529;
+  font-size: 0.9rem;
+}
+
+.summary-value.positive {
+  color: #28a745;
+}
+
+.summary-value.negative {
+  color: #dc3545;
+}
+
+/* 컨트롤 섹션 스타일 */
+.stock-chart-controls {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.control-section {
+  margin-bottom: 20px;
+}
+
+.control-section:last-child {
+  margin-bottom: 0;
+}
+
+.control-title {
+  margin: 0 0 10px 0;
+  font-weight: 600;
+  color: #302a24;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.control-title:before {
+  content: '';
+  width: 4px;
+  height: 16px;
+  background: #b08d57;
+  margin-right: 8px;
+  border-radius: 2px;
+}
+
+.control-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.control-btn {
+  padding: 8px 16px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  background: #fff;
+  color: #495057;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.control-btn:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(176, 141, 87, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.control-btn:hover {
+  border-color: #b08d57;
+  background: #f8f6f2;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(176, 141, 87, 0.2);
+}
+
+.control-btn:hover:before {
+  left: 100%;
+}
+
+.control-btn.active {
+  background: linear-gradient(135deg, #b08d57 0%, #9a7a4f 100%);
+  border-color: #b08d57;
+  color: #fff;
+  box-shadow: 0 3px 6px rgba(176, 141, 87, 0.3);
+}
+
+.control-btn.active:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(176, 141, 87, 0.4);
+}
+
+/* 특정 버튼 타입별 스타일 */
+.period-btn.active {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border-color: #2563eb;
+}
+
+.chart-type-btn.active {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  border-color: #059669;
+}
+
+.ma-btn.active {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  border-color: #dc2626;
+}
+
+.stock-chart-wrapper {
+  background: #fafafa;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.stock-chart-loading,
+.stock-chart-error {
+  height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 1rem;
+}
+
+.stock-chart-error {
+  color: #d32f2f;
+}
+
+.no-chart-data {
+  height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 1rem;
+}
+
+.stock-chart-tooltip {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.stock-chart-tooltip .tooltip-label {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #302a24;
+}
+
+.stock-chart-tooltip p {
+  margin: 2px 0;
+}
+
+/* Return Analysis Chart Styles */
+.return-chart-container {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.return-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.return-chart-header h3 {
+  margin: 0;
+  color: #302a24;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.view-mode-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.toggle-btn {
+  padding: 8px 16px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  background: #fff;
+  color: #495057;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.toggle-btn:hover {
+  border-color: #6f42c1;
+  background: #f8f6ff;
+}
+
+.toggle-btn.active {
+  background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
+  border-color: #6f42c1;
+  color: #fff;
+  box-shadow: 0 3px 6px rgba(111, 66, 193, 0.3);
+}
+
+/* 수익률 분석 컨트롤 스타일 (주가 차트와 동일) */
+.return-chart-controls {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.return-chart-controls .control-section {
+  margin-bottom: 20px;
+}
+
+.return-chart-controls .control-section:last-child {
+  margin-bottom: 0;
+}
+
+.return-chart-controls .control-title {
+  margin: 0 0 10px 0;
+  font-weight: 600;
+  color: #302a24;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.return-chart-controls .control-title:before {
+  content: '';
+  width: 4px;
+  height: 16px;
+  background: #6f42c1;
+  margin-right: 8px;
+  border-radius: 2px;
+}
+
+.return-chart-controls .control-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.return-chart-controls .control-btn {
+  padding: 8px 16px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  background: #fff;
+  color: #495057;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.return-chart-controls .control-btn:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(111, 66, 193, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.return-chart-controls .control-btn:hover {
+  border-color: #6f42c1;
+  background: #f8f6ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(111, 66, 193, 0.2);
+}
+
+.return-chart-controls .control-btn:hover:before {
+  left: 100%;
+}
+
+.return-chart-controls .control-btn.active {
+  background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
+  border-color: #6f42c1;
+  color: #fff;
+  box-shadow: 0 3px 6px rgba(111, 66, 193, 0.3);
+}
+
+.return-chart-controls .control-btn.active:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(111, 66, 193, 0.4);
+}
+
+/* 수익률 요약 정보 스타일 */
+.return-summary {
+  background: linear-gradient(135deg, #f1f3f4 0%, #e8eaed 100%);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid #dadce0;
+}
+
+.return-chart-wrapper {
+  background: #fafafa;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.return-chart-loading,
+.return-chart-error {
+  height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 1rem;
+}
+
+.return-chart-error {
+  color: #d32f2f;
+}
+
+.no-return-data {
+  height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 1rem;
+}
+
+.return-chart-tooltip {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.return-chart-tooltip .tooltip-label {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #302a24;
+}
+
+.return-chart-tooltip p {
+  margin: 2px 0;
+}
+
+@media (max-width: 768px) {
+  .stock-chart-controls {
+    padding: 0 10px;
+  }
+  
+  .control-buttons {
+    gap: 4px;
+  }
+  
+  .control-btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .summary-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .summary-item {
+    padding: 6px 10px;
+  }
+  
+  .return-chart-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .view-mode-toggle {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .toggle-btn {
+    flex: 1;
+    text-align: center;
+  }
+  
+  .return-chart-controls .control-buttons {
+    gap: 4px;
+  }
+  
+  .return-chart-controls .control-btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
 }
 
 @media (max-width: 1100px) {

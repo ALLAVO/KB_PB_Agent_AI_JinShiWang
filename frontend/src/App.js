@@ -11,6 +11,8 @@ import {fetchTop3Articles } from "./api/sentiment";
 import {fetchWeeklySummaries } from "./api/summarize";
 import {fetchWeeklyKeywords } from "./api/keyword";
 import {fetchPredictionSummary } from "./api/prediction";
+import StockChart from "./components/StockChart";
+import IntroScreen from "./components/IntroScreen";
 
 function StackIconDecoration() {
   return (
@@ -340,11 +342,6 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
-  const chartData = '기업 차트 예시';
-  const tableData = [
-    { 기업명: '삼성전자', 시가총액: '500조', PER: 12.3 },
-    { 기업명: '네이버', 시가총액: '60조', PER: 35.1 }
-  ];
   const textSummary = `${year}년 ${month}월 ${weekStr} 기업 데이터 분석 요약입니다.`;
 
   // period에서 주차 시작일, 종료일 추출 (예: "12.10 - 12.16 (1주차)")
@@ -507,17 +504,16 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
           <div className="pipeline-title">
             <img src={titlecloud} alt="cloud" />기업 Pipeline
           </div>
-          <div className="pipeline-graph">{chartData}</div>
-          <table className="pipeline-table">
-            <thead>
-              <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
-            </thead>
-            <tbody>
-              {tableData.map((row, idx) => (
-                <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
-              ))}
-            </tbody>
-          </table>
+          
+          {/* 주가 차트 컴포넌트 추가 */}
+          {inputSymbol && startDate && endDate && (
+            <StockChart 
+              symbol={inputSymbol}
+              startDate={startDate}
+              endDate={endDate}
+            />
+          )}
+
           <div className="pipeline-text">{textSummary}</div>
           
           {/* 주가 전망 카드 */}
@@ -881,6 +877,15 @@ function App() {
   const [year, setYear] = useState(2025);
   const [month, setMonth] = useState(6);
   const [period, setPeriod] = useState("06.01 - 06.07 (1주차)");
+  const [showIntro, setShowIntro] = useState(true);
+
+  const handleStart = () => {
+    setShowIntro(false);
+  };
+
+  if (showIntro) {
+    return <IntroScreen onStart={handleStart} />;
+  }
 
   return (
     <div className="app-layout">
