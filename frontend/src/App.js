@@ -11,6 +11,7 @@ import {fetchTop3Articles } from "./api/sentiment";
 import {fetchWeeklySummaries } from "./api/summarize";
 import {fetchWeeklyKeywords } from "./api/keyword";
 import {fetchPredictionSummary } from "./api/prediction";
+import StockChart from "./components/StockChart";
 
 function StackIconDecoration() {
   return (
@@ -340,7 +341,6 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
-  const chartData = '기업 차트 예시';
   const tableData = [
     { 기업명: '삼성전자', 시가총액: '500조', PER: 12.3 },
     { 기업명: '네이버', 시가총액: '60조', PER: 35.1 }
@@ -507,7 +507,16 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
           <div className="pipeline-title">
             <img src={titlecloud} alt="cloud" />기업 Pipeline
           </div>
-          <div className="pipeline-graph">{chartData}</div>
+          
+          {/* 주가 차트 컴포넌트 추가 */}
+          {inputSymbol && startDate && endDate && (
+            <StockChart 
+              symbol={inputSymbol}
+              startDate={startDate}
+              endDate={endDate}
+            />
+          )}
+          
           <table className="pipeline-table">
             <thead>
               <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>

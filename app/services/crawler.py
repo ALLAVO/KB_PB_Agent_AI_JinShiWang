@@ -7,9 +7,11 @@ import pandas_datareader.data as web
 from app.core.config import settings
 import pandas as pd
 from datetime import datetime, timedelta
+import pandas as pd
+import pandas_datareader.data as web
 
 # 요청 간 최소 대기시간 (초 단위)
-RATE_LIMIT_SLEEP = 2
+RATE_LIMIT_SLEEP = 10
 
 ##### 01. 제무재표 #####
 # CIK 캐시 파일 경로
@@ -155,6 +157,7 @@ def get_company_profile_from_alphavantage(ticker: str, api_key: str) -> dict:
 
 #### 03 . 주가 + 기술지표 #####
 
+# Stooq에서 주간 주가(종가, 시가, 고가, 저가, 거래량)와 기술지표(주간 변동성 등)를 반환하는 함수
 def get_weekly_stock_indicators_from_stooq(ticker: str, start_date: str, end_date: str) -> dict:
     """
     Stooq에서 주간 주가(종가, 시가, 고가, 저가, 거래량)와 기술지표(주간 변동성 등)를 반환합니다.
@@ -164,8 +167,6 @@ def get_weekly_stock_indicators_from_stooq(ticker: str, start_date: str, end_dat
         'volatility', 'price_change_pct'
     }
     """
-    import pandas as pd
-    import pandas_datareader.data as web
     try:
         if not ticker.endswith('.US'):
             ticker = ticker + '.US'
@@ -218,6 +219,87 @@ def get_moving_averages_from_stooq(ticker: str, end_date: str, windows=[5, 10, 2
 # 기존 Yahoo 함수 대체
 get_weekly_stock_indicators_from_yahoo = get_weekly_stock_indicators_from_stooq
 
+def get_stock_price_chart_data(ticker: str, start_date: str, end_date: str) -> dict:
+    """
+    특정 기업의 주가 차트 데이터를 반환합니다.
+    start_date, end_date: 'YYYY-MM-DD'
+    반환: {
+        'dates': [...],
+        'opens': [...],
+        'highs': [...],
+        'lows': [...],
+        'closes': [...],
+        'volumes': [...]
+    }
+    """
+    try:
+        if not ticker.endswith('.US'):
+            ticker = ticker + '.US'
+        df = web.DataReader(ticker, 'stooq', start=start_date, end=end_date)
+        if df.empty:
+            return {"error": "No price data in given period."}
+        df = df.sort_index()  # 날짜 오름차순
+        
+        return {
+            'dates': [d.strftime('%Y-%m-%d') for d in df.index],
+            'opens': df['Open'].tolist(),
+            'highs': df['High'].tolist(),
+            'lows': df['Low'].tolist(),
+            'closes': df['Close'].tolist(),
+            'volumes': df['Volume'].tolist()
+        }
+    except Exception as e:
+        return {"error": f"Error fetching stock price chart data from Stooq: {e}"}
+
+def get_stock_price_chart_with_ma(ticker: str, start_date: str, end_date: str, ma_periods: list = [5, 20, 60]) -> dict:
+    """
+    특정 기업의 주가 차트 데이터와 이동평균을 함께 반환합니다.
+    start_date, end_date: 'YYYY-MM-DD'
+    ma_periods: 이동평균 기간 리스트 (예: [5, 20, 60])
+    반환: {
+        'dates': [...],
+        'closes': [...],
+        'ma5': [...],
+        'ma20': [...],
+        'ma60': [...],
+        'volumes': [...]
+    }
+    """
+    try:
+        if not ticker.endswith('.US'):
+            ticker = ticker + '.US'
+        
+        # 이동평균 계산을 위해 더 긴 기간의 데이터 필요
+        start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+        extended_start = start_dt - timedelta(days=max(ma_periods) + 30)  # 여유 데이터
+        extended_start_str = extended_start.strftime('%Y-%m-%d')
+        
+        df = web.DataReader(ticker, 'stooq', start=extended_start_str, end=end_date)
+        if df.empty:
+            return {"error": "No price data in given period."}
+        df = df.sort_index()  # 날짜 오름차순
+        
+        # 이동평균 계산
+        for period in ma_periods:
+            df[f'ma{period}'] = df['Close'].rolling(window=period).mean()
+        
+        # 원하는 기간으로 필터링
+        df_filtered = df[df.index >= start_date]
+        
+        result = {
+            'dates': [d.strftime('%Y-%m-%d') for d in df_filtered.index],
+            'closes': df_filtered['Close'].tolist(),
+            'volumes': df_filtered['Volume'].tolist()
+        }
+        
+        # 이동평균 데이터 추가
+        for period in ma_periods:
+            result[f'ma{period}'] = df_filtered[f'ma{period}'].tolist()
+        
+        return result
+    except Exception as e:
+        return {"error": f"Error fetching stock price chart data with MA from Stooq: {e}"}
+    
 
 #### 04 . 시황정보 : 증시, 채권, 환율 #####
 
