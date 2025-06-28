@@ -652,31 +652,3 @@ def get_index_chart_data(symbol: str, start_date: str, end_date: str) -> Dict:
         
     except Exception as e:
         return {"error": f"Error fetching index data for {symbol}: {e}"}
-    
-    Returns:
-        Dict: 지수 데이터
-    """
-    try:
-        ticker = yf.Ticker(symbol)
-        hist = ticker.history(start=start_date, end=end_date)
-        
-        if hist.empty:
-            return {"error": f"No data found for symbol {symbol}"}
-        
-        return {
-            "symbol": symbol,
-            "dates": [date.strftime('%Y-%m-%d') for date in hist.index],
-            "closes": hist['Close'].tolist(),
-            "opens": hist['Open'].tolist(),
-            "highs": hist['High'].tolist(),
-            "lows": hist['Low'].tolist(),
-            "volumes": hist['Volume'].tolist()
-        }
-        
-    except Exception as e:
-        return {"error": f"Error fetching index data for {symbol}: {e}"}
-        }
-        
-    except Exception as e:
-        return {"error": f"Error fetching index data for {symbol}: {e}"}
-
