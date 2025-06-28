@@ -3,12 +3,8 @@ import time
 import os
 import json
 import yfinance as yf
-import pandas_datareader.data as web
-from app.core.config import settings
-import pandas as pd
 from datetime import datetime, timedelta
-import pandas as pd
-import pandas_datareader.data as web
+from typing import Dict, List
 
 # 요청 간 최소 대기시간 (초 단위)
 RATE_LIMIT_SLEEP = 10
@@ -412,8 +408,6 @@ def get_kr_fx_rates_6months(end_date: str) -> dict:
     except Exception as e:
         return {'error': f'Error fetching 6-month KR FX rates: {e}'}
 
-<<<<<<< HEAD
-=======
 def get_commodity_prices_6months(fred_api_key: str, end_date: str) -> dict:
     """
         FRED API를 이용해 WTI(원유)와 금(Gold) 6개월치 일별 가격 데이터를 반환합니다.
@@ -580,21 +574,9 @@ def get_return_analysis_summary(ticker: str, start_date: str, end_date: str) -> 
     except Exception as e:
         return {"error": f"Error generating return analysis summary: {e}"}
 
-import yfinance as yf
-from datetime import datetime
-from typing import Dict, List
-
 def get_stock_price_chart_data(symbol: str, start_date: str, end_date: str) -> Dict:
     """
     주식 가격 차트 데이터를 가져옵니다.
-    
-    Args:
-        symbol: 종목 코드
-        start_date: 시작일 (YYYY-MM-DD)
-        end_date: 종료일 (YYYY-MM-DD)
-    
-    Returns:
-        Dict: 주가 데이터
     """
     try:
         ticker = yf.Ticker(symbol)
@@ -619,15 +601,6 @@ def get_stock_price_chart_data(symbol: str, start_date: str, end_date: str) -> D
 def get_stock_price_chart_with_ma(symbol: str, start_date: str, end_date: str, ma_periods: List[int]) -> Dict:
     """
     이동평균이 포함된 주식 가격 차트 데이터를 가져옵니다.
-    
-    Args:
-        symbol: 종목 코드
-        start_date: 시작일 (YYYY-MM-DD)
-        end_date: 종료일 (YYYY-MM-DD)
-        ma_periods: 이동평균 기간 리스트
-    
-    Returns:
-        Dict: 이동평균이 포함된 주가 데이터
     """
     try:
         ticker = yf.Ticker(symbol)
@@ -656,14 +629,6 @@ def get_stock_price_chart_with_ma(symbol: str, start_date: str, end_date: str, m
 def get_index_chart_data(symbol: str, start_date: str, end_date: str) -> Dict:
     """
     지수 데이터를 가져옵니다 (나스닥, S&P 500 등)
-    
-    Args:
-        symbol: 지수 심볼 (예: "^IXIC" for NASDAQ, "^GSPC" for S&P 500)
-        start_date: 시작일 (YYYY-MM-DD)
-        end_date: 종료일 (YYYY-MM-DD)
-    
-    Returns:
-        Dict: 지수 데이터
     """
     try:
         ticker = yf.Ticker(symbol)
@@ -684,5 +649,3 @@ def get_index_chart_data(symbol: str, start_date: str, end_date: str) -> Dict:
         
     except Exception as e:
         return {"error": f"Error fetching index data for {symbol}: {e}"}
-
->>>>>>> feature_sum
