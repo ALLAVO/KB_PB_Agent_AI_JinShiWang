@@ -578,7 +578,11 @@ def get_return_analysis_summary(ticker: str, start_date: str, end_date: str) -> 
     except Exception as e:
         return {"error": f"Error generating return analysis summary: {e}"}
 
-def get_stock_price_chart_data(symbol: str, start_date: str, end_date: str) -> dict:
+import yfinance as yf
+from datetime import datetime
+from typing import Dict, List
+
+def get_stock_price_chart_data(symbol: str, start_date: str, end_date: str) -> Dict:
     """
     주식 가격 차트 데이터를 가져옵니다.
     
@@ -610,7 +614,7 @@ def get_stock_price_chart_data(symbol: str, start_date: str, end_date: str) -> d
     except Exception as e:
         return {"error": f"Error fetching stock data for {symbol}: {e}"}
 
-def get_stock_price_chart_with_ma(symbol: str, start_date: str, end_date: str, ma_periods: list) -> dict:
+def get_stock_price_chart_with_ma(symbol: str, start_date: str, end_date: str, ma_periods: List[int]) -> Dict:
     """
     이동평균이 포함된 주식 가격 차트 데이터를 가져옵니다.
     
@@ -647,7 +651,7 @@ def get_stock_price_chart_with_ma(symbol: str, start_date: str, end_date: str, m
     except Exception as e:
         return {"error": f"Error fetching MA data for {symbol}: {e}"}
 
-def get_index_chart_data(symbol: str, start_date: str, end_date: str) -> dict:
+def get_index_chart_data(symbol: str, start_date: str, end_date: str) -> Dict:
     """
     지수 데이터를 가져옵니다 (나스닥, S&P 500 등)
     
