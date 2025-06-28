@@ -9,6 +9,7 @@ import cloud3 from "./assets/cloud3.png";
 import titlecloud from "./assets/titlecloud.png";
 import {fetchTop3Articles } from "./api/sentiment";
 import {fetchWeeklySummaries } from "./api/summarize";
+import {fetchWeeklyKeywords } from "./api/keyword";
 
 function StackIconDecoration() {
   return (
@@ -333,6 +334,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
   const [error, setError] = useState("");
   const [top3Articles, setTop3Articles] = useState(null);
   const [summaries, setSummaries] = useState(null);
+  const [keywords, setKeywords] = useState(null);
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -391,6 +393,34 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
     return null;
   };
 
+  // 특정 기사의 키워드를 찾는 함수
+  const findKeywordsForArticle = (article) => {
+    if (!keywords) return null;
+    
+    try {
+      // keywords는 주차별로 구성되어 있음: { "2023-12-10": [keyword1, keyword2, keyword3], ... }
+      for (const weekData of Object.values(keywords)) {
+        if (!Array.isArray(weekData)) continue;
+        
+        const keywordData = weekData.find(k => {
+          if (!k) return false;
+          // 날짜와 기사 제목으로 매칭
+          const dateMatch = k.date === article.date;
+          const titleMatch = k.article_title === article.article_title;
+          return dateMatch && titleMatch;
+        });
+        
+        if (keywordData && keywordData.keywords) {
+          return keywordData.keywords;
+        }
+      }
+    } catch (error) {
+      console.error('키워드 찾기 오류:', error);
+    }
+    
+    return null;
+  };
+
   const handleSearch = async () => {
     setStarted(true); // 버튼 클릭 시 바로 started 상태로 전환
     console.log('handleSearch 클릭됨');
@@ -402,19 +432,23 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
     setError("");
     setTop3Articles(null);
     setSummaries(null);
+    setKeywords(null);
     // 실제 API 호출 파라미터 확인
     console.log('API 호출', { symbol: inputSymbol, startDate, endDate });
     try {
-      // 두 API를 병렬로 호출
-      const [articlesData, summariesData] = await Promise.all([
+      // 세 API를 병렬로 호출
+      const [articlesData, summariesData, keywordsData] = await Promise.all([
         fetchTop3Articles({ symbol: inputSymbol, startDate, endDate }),
-        fetchWeeklySummaries({ symbol: inputSymbol, startDate, endDate })
+        fetchWeeklySummaries({ symbol: inputSymbol, startDate, endDate }),
+        fetchWeeklyKeywords({ symbol: inputSymbol, startDate, endDate })
       ]);
       
       setTop3Articles(articlesData);
       setSummaries(summariesData);
+      setKeywords(keywordsData);
       console.log('기사 데이터:', articlesData);
       console.log('요약 데이터:', summariesData);
+      console.log('키워드 데이터:', keywordsData);
     } catch (e) {
       console.error('API 호출 오류:', e);
       setError('데이터를 불러오지 못했습니다.');
@@ -486,6 +520,46 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
                       </div>
                       {/* 기사 작성 날짜 - 작은 회색 글씨로 표시 */}
                       <div style={{fontSize:'12px', color:'#888', marginBottom:'2px'}}>{art.date}</div>
+                      
+                      {/* 기사 키워드 - 해시태그 형태로 표시 */}
+                      {(() => {
+                        const articleKeywords = findKeywordsForArticle(art);
+                        return articleKeywords && articleKeywords.length > 0 ? (
+                          <div style={{
+                            margin: '6px 0',
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: '4px'
+                          }}>
+                            {articleKeywords.slice(0, 5).map((keyword, idx) => (
+                              <span
+                                key={idx}
+                                style={{
+                                  backgroundColor: '#e3f2fd',
+                                  color: '#1976d2',
+                                  fontSize: '11px',
+                                  padding: '2px 6px',
+                                  borderRadius: '12px',
+                                  border: '1px solid #bbdefb',
+                                  display: 'inline-block',
+                                  fontWeight: '500'
+                                }}
+                              >
+                                #{keyword}
+                              </span>
+                            ))}
+                          </div>
+                        ) : loading ? (
+                          <div style={{
+                            fontSize: '11px',
+                            color: '#9e9e9e',
+                            fontStyle: 'italic',
+                            margin: '6px 0'
+                          }}>
+                            키워드 생성 중...
+                          </div>
+                        ) : null;
+                      })()}
                       
                       {/* 기사 요약 내용 */}
                       {(() => {

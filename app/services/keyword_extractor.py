@@ -135,7 +135,15 @@ def keyword_extract_from_articles(stock_symbol, start_date, end_date):
     for week, top3_articles in weekly_top3.items():
         article_results = []
         for item in top3_articles:
-            article, date, weekstart, score, pos_cnt, neg_cnt = item
+            # item은 dict 형태: {'article': ..., 'date': ..., 'weekstart': ..., 'score': ..., 'pos_cnt': ..., 'neg_cnt': ..., 'article_title': ...}
+            article = item['article']
+            date = item['date']
+            weekstart = item['weekstart']
+            score = item['score']
+            pos_cnt = item['pos_cnt']
+            neg_cnt = item['neg_cnt']
+            article_title = item.get('article_title', None)
+            
             original_ents, lowered_ents = extract_named_entities(article)
             keywords = extract_keywords(article, kw_model)
             keywords = restore_named_entities(keywords, original_ents, lowered_ents)
@@ -143,11 +151,12 @@ def keyword_extract_from_articles(stock_symbol, start_date, end_date):
             keyword_list = [kw for kw, _ in keywords]
             article_results.append({
                 'article': article,
-                'date': date,
-                'weekstart': weekstart,
+                'date': date.strftime('%Y-%m-%d') if hasattr(date, 'strftime') else str(date),
+                'weekstart': weekstart.strftime('%Y-%m-%d') if hasattr(weekstart, 'strftime') else str(weekstart),
                 'score': score,
                 'pos_cnt': pos_cnt,
                 'neg_cnt': neg_cnt,
+                'article_title': article_title,
                 'keywords': keyword_list  # 키워드 리스트만 저장
             })
         weekly_keywords[week] = article_results
