@@ -11,6 +11,7 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 import { fetchCombinedStockChart, fetchStockChartSummary } from '../api/stockChart';
+import ReturnAnalysisChart from './ReturnAnalysisChart';
 
 const StockChart = ({ symbol, startDate, endDate }) => {
   const [chartData, setChartData] = useState([]);
@@ -32,7 +33,8 @@ const StockChart = ({ symbol, startDate, endDate }) => {
   const chartTypeOptions = [
     { value: 'price', label: '주가' },
     { value: 'moving_average', label: '이동평균' },
-    { value: 'volume', label: '거래량' }
+    { value: 'volume', label: '거래량' },
+    { value: 'relative_nasdaq', label: '나스닥 대비 상대지수' }
   ];
 
   const maOptions = [
@@ -122,6 +124,11 @@ const StockChart = ({ symbol, startDate, endDate }) => {
           item.volume = data.data.volume.volumes[index];
         }
         
+        // 나스닥 대비 상대지수 데이터
+        if (selectedChartTypes.includes('relative_nasdaq') && data.data.relative_nasdaq) {
+          item.relative_nasdaq = data.data.relative_nasdaq.values[index];
+        }
+        
         return item;
       });
       
@@ -177,6 +184,11 @@ const StockChart = ({ symbol, startDate, endDate }) => {
     return `$${value}`;
   };
 
+  // 상대지수 포맷터
+  const formatRelativeIndex = (value) => {
+    return `${value.toFixed(1)}pt`;
+  };
+
   // 커스텀 툴팁
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -185,7 +197,7 @@ const StockChart = ({ symbol, startDate, endDate }) => {
           <p className="tooltip-label">{`날짜: ${label}`}</p>
           {payload.map((entry, index) => (
             <p key={index} style={{ color: entry.color }}>
-              {`${entry.name}: ${entry.name === 'volume' ? formatVolume(entry.value) : formatPrice(entry.value)}`}
+              {`${entry.name}: ${entry.name === 'volume' ? formatVolume(entry.value) : `$${entry.value.toFixed(3)}`}`}
             </p>
           ))}
         </div>
@@ -319,14 +331,25 @@ const StockChart = ({ symbol, startDate, endDate }) => {
                 label={{ value: '주가 ($)', angle: -90, position: 'insideLeft' }}
               />
               
-              {/* 거래량용 Y축 (오른쪽) */}
-              {selectedChartTypes.includes('volume') && (
+              {/* 거래량용 Y축 (오른쪽) - 거래량이 선택된 경우 */}
+              {selectedChartTypes.includes('volume') && !selectedChartTypes.includes('relative_nasdaq') && (
                 <YAxis 
                   yAxisId="volume" 
                   orientation="right"
                   tick={{ fontSize: 12 }}
                   tickFormatter={formatVolume}
                   label={{ value: '거래량', angle: 90, position: 'insideRight' }}
+                />
+              )}
+              
+              {/* 상대지수용 Y축 (오른쪽) - 상대지수가 선택된 경우 */}
+              {selectedChartTypes.includes('relative_nasdaq') && (
+                <YAxis 
+                  yAxisId="relative" 
+                  orientation="right"
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={formatRelativeIndex}
+                  label={{ value: '상대지수 (pt)', angle: 90, position: 'insideRight' }}
                 />
               )}
               
@@ -364,8 +387,21 @@ const StockChart = ({ symbol, startDate, endDate }) => {
                 );
               })}
               
-              {/* 거래량 바 차트 (하단에 배치) */}
-              {selectedChartTypes.includes('volume') && (
+              {/* 나스닥 대비 상대지수 라인 */}
+              {selectedChartTypes.includes('relative_nasdaq') && (
+                <Line
+                  yAxisId="relative"
+                  type="monotone"
+                  dataKey="relative_nasdaq"
+                  stroke="#ff6b35"
+                  strokeWidth={2}
+                  dot={false}
+                  name="나스닥 대비 상대지수"
+                />
+              )}
+              
+              {/* 거래량 바 차트 (상대지수가 선택되지 않은 경우에만) */}
+              {selectedChartTypes.includes('volume') && !selectedChartTypes.includes('relative_nasdaq') && (
                 <Bar
                   yAxisId="volume"
                   dataKey="volume"
@@ -380,6 +416,13 @@ const StockChart = ({ symbol, startDate, endDate }) => {
           <div className="no-chart-data">차트 데이터가 없습니다.</div>
         )}
       </div>
+
+      {/* 수익률 분석 차트 - 주가 차트와 독립적으로 동작 */}
+      <ReturnAnalysisChart 
+        symbol={symbol}
+        startDate={startDate}
+        endDate={endDate}
+      />
     </div>
   );
 };

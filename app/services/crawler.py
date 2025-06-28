@@ -32,7 +32,6 @@ def get_cik_for_ticker(ticker: str) -> str:
     return None
 
 # SEC XBRL companyfacts API에서 주요 재무제표(Income Statement, Balance Sheet, Cash Flow Statement)를 추출하는 함수
-
 def get_financial_statements_from_sec(ticker: str, start_date: str = None, end_date: str = None) -> dict:
     """
     SEC XBRL companyfacts API에서 요청한 주요 재무제표 항목(XBRL Tag 기준)만 반환합니다.
@@ -445,4 +444,238 @@ def get_commodity_prices_6months(fred_api_key: str, end_date: str) -> dict:
         }
     except Exception as e:
         return {'error': f'Error fetching 6-month commodity prices from FRED: {e}'}
+
+def get_nasdaq_index_data(start_date: str, end_date: str) -> dict:
+    """
+    나스닥 지수 데이터를 가져옵니다.
+    start_date, end_date: 'YYYY-MM-DD'
+    반환: {
+        'dates': [...],
+        'nasdaq_closes': [...]
+    }
+    """
+    try:
+        df = web.DataReader('^NDQ', 'stooq', start=start_date, end=end_date)
+        if df.empty:
+            return {"error": "No NASDAQ data in given period."}
+        df = df.sort_index()  # 날짜 오름차순
+        
+        return {
+            'dates': [d.strftime('%Y-%m-%d') for d in df.index],
+            'nasdaq_closes': df['Close'].tolist()
+        }
+    except Exception as e:
+        return {"error": f"Error fetching NASDAQ data from Stooq: {e}"}
+
+def calculate_absolute_and_relative_returns(ticker: str, start_date: str, end_date: str) -> dict:
+    """
+    개별 주식의 절대수익률과 나스닥 대비 상대수익률을 계산합니다.
+    start_date, end_date: 'YYYY-MM-DD'
+    반환: {
+        'dates': [...],
+        'stock_prices': [...],
+        'nasdaq_prices': [...],
+        'stock_index': [...],      # 기준일=100으로 정규화
+        'nasdaq_index': [...],     # 기준일=100으로 정규화
+        'relative_index': [...],   # 상대지수
+        'stock_returns': [...],    # 수익률(%)
+        'nasdaq_returns': [...],   # 수익률(%)
+        'relative_returns': [...]  # 상대수익률(%)
+    }
+    """
+    try:
+        # 개별 주식 데이터 가져오기
+        stock_data = get_stock_price_chart_data(ticker, start_date, end_date)
+        if "error" in stock_data:
+            return stock_data
+        
+        # 나스닥 데이터 가져오기
+        nasdaq_data = get_nasdaq_index_data(start_date, end_date)
+        if "error" in nasdaq_data:
+            return nasdaq_data
+        
+        # 날짜 매칭 (두 데이터의 교집합)
+        stock_dates = set(stock_data['dates'])
+        nasdaq_dates = set(nasdaq_data['dates'])
+        common_dates = sorted(list(stock_dates & nasdaq_dates))
+        
+        if not common_dates:
+            return {"error": "No common dates between stock and NASDAQ data"}
+        
+        # 공통 날짜에 해당하는 데이터만 추출
+        stock_prices = []
+        nasdaq_prices = []
+        
+        for date in common_dates:
+            stock_idx = stock_data['dates'].index(date)
+            nasdaq_idx = nasdaq_data['dates'].index(date)
+            stock_prices.append(stock_data['closes'][stock_idx])
+            nasdaq_prices.append(nasdaq_data['nasdaq_closes'][nasdaq_idx])
+        
+        # 지수 계산 (기준일=100)
+        stock_index = [(price / stock_prices[0]) * 100 for price in stock_prices]
+        nasdaq_index = [(price / nasdaq_prices[0]) * 100 for price in nasdaq_prices]
+        
+        # 상대지수 계산
+        relative_index = [(s_idx / n_idx) * 100 for s_idx, n_idx in zip(stock_index, nasdaq_index)]
+        
+        # 수익률 계산 (%)
+        stock_returns = [((price / stock_prices[0]) - 1) * 100 for price in stock_prices]
+        nasdaq_returns = [((price / nasdaq_prices[0]) - 1) * 100 for price in nasdaq_prices]
+        relative_returns = [((rel_idx / 100) - 1) * 100 for rel_idx in relative_index]
+        
+        return {
+            'dates': common_dates,
+            'stock_prices': stock_prices,
+            'nasdaq_prices': nasdaq_prices,
+            'stock_index': stock_index,
+            'nasdaq_index': nasdaq_index,
+            'relative_index': relative_index,
+            'stock_returns': stock_returns,
+            'nasdaq_returns': nasdaq_returns,
+            'relative_returns': relative_returns
+        }
+        
+    except Exception as e:
+        return {"error": f"Error calculating returns: {e}"}
+
+def get_return_analysis_summary(ticker: str, start_date: str, end_date: str) -> dict:
+    """
+    수익률 분석 요약 정보를 반환합니다.
+    """
+    try:
+        data = calculate_absolute_and_relative_returns(ticker, start_date, end_date)
+        if "error" in data:
+            return data
+        
+        if not data['stock_returns']:
+            return {"error": "No return data available"}
+        
+        stock_final_return = data['stock_returns'][-1]
+        nasdaq_final_return = data['nasdaq_returns'][-1]
+        relative_final_return = data['relative_returns'][-1]
+        
+        # 변동성 계산 (일간 수익률의 표준편차 × √252)
+        import numpy as np
+        if len(data['stock_prices']) > 1:
+            daily_stock_returns = [((data['stock_prices'][i] / data['stock_prices'][i-1]) - 1) * 100 
+                                 for i in range(1, len(data['stock_prices']))]
+            stock_volatility = np.std(daily_stock_returns) * (252 ** 0.5)
+        else:
+            stock_volatility = 0
+        
+        return {
+            "ticker": ticker,
+            "period": f"{start_date} ~ {end_date}",
+            "stock_return": round(stock_final_return, 2),
+            "nasdaq_return": round(nasdaq_final_return, 2),
+            "relative_return": round(relative_final_return, 2),
+            "stock_volatility": round(stock_volatility, 2),
+            "outperformance": round(stock_final_return - nasdaq_final_return, 2),
+            "data_points": len(data['dates'])
+        }
+        
+    except Exception as e:
+        return {"error": f"Error generating return analysis summary: {e}"}
+
+def get_stock_price_chart_data(symbol: str, start_date: str, end_date: str) -> dict:
+    """
+    주식 가격 차트 데이터를 가져옵니다.
+    
+    Args:
+        symbol: 종목 코드
+        start_date: 시작일 (YYYY-MM-DD)
+        end_date: 종료일 (YYYY-MM-DD)
+    
+    Returns:
+        Dict: 주가 데이터
+    """
+    try:
+        ticker = yf.Ticker(symbol)
+        hist = ticker.history(start=start_date, end=end_date)
+        
+        if hist.empty:
+            return {"error": f"No data found for symbol {symbol}"}
+        
+        return {
+            "symbol": symbol,
+            "dates": [date.strftime('%Y-%m-%d') for date in hist.index],
+            "closes": hist['Close'].tolist(),
+            "opens": hist['Open'].tolist(),
+            "highs": hist['High'].tolist(),
+            "lows": hist['Low'].tolist(),
+            "volumes": hist['Volume'].tolist()
+        }
+        
+    except Exception as e:
+        return {"error": f"Error fetching stock data for {symbol}: {e}"}
+
+def get_stock_price_chart_with_ma(symbol: str, start_date: str, end_date: str, ma_periods: list) -> dict:
+    """
+    이동평균이 포함된 주식 가격 차트 데이터를 가져옵니다.
+    
+    Args:
+        symbol: 종목 코드
+        start_date: 시작일 (YYYY-MM-DD)
+        end_date: 종료일 (YYYY-MM-DD)
+        ma_periods: 이동평균 기간 리스트
+    
+    Returns:
+        Dict: 이동평균이 포함된 주가 데이터
+    """
+    try:
+        ticker = yf.Ticker(symbol)
+        hist = ticker.history(start=start_date, end=end_date)
+        
+        if hist.empty:
+            return {"error": f"No data found for symbol {symbol}"}
+        
+        result = {
+            "symbol": symbol,
+            "dates": [date.strftime('%Y-%m-%d') for date in hist.index],
+            "closes": hist['Close'].tolist()
+        }
+        
+        # 이동평균 계산
+        for period in ma_periods:
+            ma_key = f"ma{period}"
+            ma_values = hist['Close'].rolling(window=period).mean()
+            result[ma_key] = ma_values.tolist()
+        
+        return result
+        
+    except Exception as e:
+        return {"error": f"Error fetching MA data for {symbol}: {e}"}
+
+def get_index_chart_data(symbol: str, start_date: str, end_date: str) -> dict:
+    """
+    지수 데이터를 가져옵니다 (나스닥, S&P 500 등)
+    
+    Args:
+        symbol: 지수 심볼 (예: "^IXIC" for NASDAQ, "^GSPC" for S&P 500)
+        start_date: 시작일 (YYYY-MM-DD)
+        end_date: 종료일 (YYYY-MM-DD)
+    
+    Returns:
+        Dict: 지수 데이터
+    """
+    try:
+        ticker = yf.Ticker(symbol)
+        hist = ticker.history(start=start_date, end=end_date)
+        
+        if hist.empty:
+            return {"error": f"No data found for symbol {symbol}"}
+        
+        return {
+            "symbol": symbol,
+            "dates": [date.strftime('%Y-%m-%d') for date in hist.index],
+            "closes": hist['Close'].tolist(),
+            "opens": hist['Open'].tolist(),
+            "highs": hist['High'].tolist(),
+            "lows": hist['Low'].tolist(),
+            "volumes": hist['Volume'].tolist()
+        }
+        
+    except Exception as e:
+        return {"error": f"Error fetching index data for {symbol}: {e}"}
 

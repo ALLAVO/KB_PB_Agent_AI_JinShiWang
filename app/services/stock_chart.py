@@ -1,199 +1,10 @@
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
-from app.services.crawler import get_stock_price_chart_data, get_stock_price_chart_with_ma
+from typing import Dict, List
+from app.services.crawler import get_stock_price_chart_data, get_stock_price_chart_with_ma, get_index_chart_data
 
 class StockChartService:
     """주가 차트 관련 서비스"""
     
-    @staticmethod
-    def get_price_chart(ticker: str, start_date: str, end_date: str, chart_type: str = "price") -> Dict:
-        """
-        주가 차트 데이터를 반환합니다.
-        
-        Args:
-            ticker: 종목 코드
-            start_date: 시작일 (YYYY-MM-DD)
-            end_date: 종료일 (YYYY-MM-DD)
-            chart_type: 차트 타입 ("price", "volume", "candlestick")
-        
-        Returns:
-            Dict: 차트 데이터
-        """
-        try:
-            data = get_stock_price_chart_data(ticker, start_date, end_date)
-            if "error" in data:
-                return data
-            
-            if chart_type == "price":
-                return {
-                    "dates": data["dates"],
-                    "closes": data["closes"],
-                    "chart_type": "line"
-                }
-            elif chart_type == "volume":
-                return {
-                    "dates": data["dates"],
-                    "volumes": data["volumes"],
-                    "chart_type": "bar"
-                }
-            elif chart_type == "candlestick":
-                return {
-                    "dates": data["dates"],
-                    "opens": data["opens"],
-                    "highs": data["highs"],
-                    "lows": data["lows"],
-                    "closes": data["closes"],
-                    "chart_type": "candlestick"
-                }
-            else:
-                return {"error": f"Unsupported chart type: {chart_type}"}
-                
-        except Exception as e:
-            return {"error": f"Error generating price chart: {e}"}
-    
-    @staticmethod
-    def get_ma_chart(ticker: str, start_date: str, end_date: str, ma_periods: List[int] = [5, 20, 60]) -> Dict:
-        """
-        이동평균이 포함된 주가 차트 데이터를 반환합니다.
-        
-        Args:
-            ticker: 종목 코드
-            start_date: 시작일 (YYYY-MM-DD)
-            end_date: 종료일 (YYYY-MM-DD)
-            ma_periods: 이동평균 기간 리스트
-        
-        Returns:
-            Dict: 이동평균 차트 데이터
-        """
-        try:
-            data = get_stock_price_chart_with_ma(ticker, start_date, end_date, ma_periods)
-            if "error" in data:
-                return data
-            
-            result = {
-                "dates": data["dates"],
-                "closes": data["closes"],
-                "chart_type": "line_with_ma",
-                "ma_data": {}
-            }
-            
-            # 이동평균 데이터 추가
-            for period in ma_periods:
-                if f'ma{period}' in data:
-                    result["ma_data"][f"ma{period}"] = data[f'ma{period}']
-            
-            return result
-            
-        except Exception as e:
-            return {"error": f"Error generating MA chart: {e}"}
-    
-    @staticmethod
-    def get_period_chart(ticker: str, end_date: str, period: str = "1M") -> Dict:
-        """
-        기간별 주가 차트 데이터를 반환합니다.
-        
-        Args:
-            ticker: 종목 코드
-            end_date: 기준일 (YYYY-MM-DD)
-            period: 기간 ("1W", "1M", "3M", "6M", "1Y")
-        
-        Returns:
-            Dict: 기간별 차트 데이터
-        """
-        try:
-            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
-            
-            # 기간에 따른 시작일 계산
-            period_days = {
-                "1W": 7,
-                "1M": 30,
-                "3M": 90,
-                "6M": 180,
-                "1Y": 365
-            }
-            
-            if period not in period_days:
-                return {"error": f"Unsupported period: {period}"}
-            
-            days = period_days[period]
-            start_dt = end_dt - timedelta(days=days)
-            start_date = start_dt.strftime('%Y-%m-%d')
-            
-            # 기간에 따라 적절한 이동평균 선택
-            if period in ["1W", "1M"]:
-                ma_periods = [5, 10]
-            elif period in ["3M"]:
-                ma_periods = [5, 20]
-            else:  # 6M, 1Y
-                ma_periods = [5, 20, 60]
-            
-            return StockChartService.get_ma_chart(ticker, start_date, end_date, ma_periods)
-            
-        except Exception as e:
-            return {"error": f"Error generating period chart: {e}"}
-    
-    @staticmethod
-    def get_moving_average_only(ticker: str, start_date: str, end_date: str, ma_periods: List[int] = [5, 20, 60]) -> Dict:
-        """
-        이동평균 데이터만을 반환합니다.
-        
-        Args:
-            ticker: 종목 코드
-            start_date: 시작일 (YYYY-MM-DD)
-            end_date: 종료일 (YYYY-MM-DD)
-            ma_periods: 이동평균 기간 리스트
-        
-        Returns:
-            Dict: 이동평균 데이터
-        """
-        try:
-            data = get_stock_price_chart_with_ma(ticker, start_date, end_date, ma_periods)
-            if "error" in data:
-                return data
-            
-            result = {
-                "dates": data["dates"],
-                "chart_type": "moving_average",
-                "ma_data": {}
-            }
-            
-            # 이동평균 데이터만 추가
-            for period in ma_periods:
-                if f'ma{period}' in data:
-                    result["ma_data"][f"ma{period}"] = data[f'ma{period}']
-            
-            return result
-            
-        except Exception as e:
-            return {"error": f"Error generating moving average data: {e}"}
-
-    @staticmethod
-    def get_volume_only(ticker: str, start_date: str, end_date: str) -> Dict:
-        """
-        거래량 데이터만을 반환합니다.
-        
-        Args:
-            ticker: 종목 코드
-            start_date: 시작일 (YYYY-MM-DD)
-            end_date: 종료일 (YYYY-MM-DD)
-        
-        Returns:
-            Dict: 거래량 데이터
-        """
-        try:
-            data = get_stock_price_chart_data(ticker, start_date, end_date)
-            if "error" in data:
-                return data
-            
-            return {
-                "dates": data["dates"],
-                "volumes": data["volumes"],
-                "chart_type": "volume"
-            }
-            
-        except Exception as e:
-            return {"error": f"Error generating volume data: {e}"}
-
     @staticmethod
     def get_combined_chart(ticker: str, start_date: str, end_date: str, chart_types: List[str] = ["price"], ma_periods: List[int] = [5, 20, 60]) -> Dict:
         """
@@ -203,7 +14,7 @@ class StockChartService:
             ticker: 종목 코드
             start_date: 시작일 (YYYY-MM-DD)
             end_date: 종료일 (YYYY-MM-DD)
-            chart_types: 차트 타입 리스트 (["price", "moving_average", "volume"])
+            chart_types: 차트 타입 리스트 (["price", "moving_average", "volume", "relative_nasdaq"])
             ma_periods: 이동평균 기간 리스트
         
         Returns:
@@ -242,6 +53,29 @@ class StockChartService:
                     for period in ma_periods:
                         if f'ma{period}' in ma_data:
                             result["data"]["moving_average"][f"ma{period}"] = ma_data[f'ma{period}']
+            
+            # 나스닥 대비 상대지수 계산
+            if "relative_nasdaq" in chart_types:
+                nasdaq_data = get_index_chart_data("^IXIC", start_date, end_date)
+                if "error" not in nasdaq_data and len(nasdaq_data["closes"]) == len(data["closes"]):
+                    stock_closes = data["closes"]
+                    nasdaq_closes = nasdaq_data["closes"]
+                    
+                    # 첫날 기준으로 정규화하여 상대 성과 계산 (포인트 단위)
+                    if stock_closes and nasdaq_closes:
+                        stock_base = stock_closes[0]
+                        nasdaq_base = nasdaq_closes[0]
+                        
+                        relative_values = []
+                        for i in range(len(stock_closes)):
+                            stock_change = ((stock_closes[i] / stock_base) - 1) * 100
+                            nasdaq_change = ((nasdaq_closes[i] / nasdaq_base) - 1) * 100
+                            relative_performance = stock_change - nasdaq_change
+                            relative_values.append(relative_performance)
+                        
+                        result["data"]["relative_nasdaq"] = {
+                            "values": relative_values
+                        }
             
             return result
             
