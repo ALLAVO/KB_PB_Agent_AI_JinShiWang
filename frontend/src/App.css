@@ -1,3 +1,5 @@
+@import url('//fonts.googleapis.com/earlyaccess/jejuhallasan.css');
+
 .App {
   text-align: center;
 }
@@ -35,4 +37,1159 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+.app-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: #f8f6f2;
+  display: flex;
+  align-items: stretch; /* center -> stretch */
+  justify-content: stretch; /* center -> stretch */
+  border-radius: 0 !important; /* 둥근 모서리 완전 제거 */
+  box-shadow: none; /* 그림자 제거로 완전한 edge-to-edge */
+  overflow: visible; /* 필요시 hidden -> visible */
+}
+
+/* 상단 중앙 notch 효과 */
+.app-container .notch {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 22px;
+  background: #111;
+  border-bottom-left-radius: 22px 12px;
+  border-bottom-right-radius: 22px 12px;
+  z-index: 10;
+}
+
+.app-layout {
+  display: flex;
+  height: 100vh;
+  background: #f8f6f2;
+  font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+  border-radius: 0 !important;
+  overflow: hidden; /* 전체 레이아웃에서 스크롤 방지 */
+}
+
+.sidebar {
+  width: 100%;
+  max-width: 250px;
+  min-width: 120px;
+  background: #e6dfd3;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 0 0 0;
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  box-shadow: none;
+  align-items: center;
+  position: fixed; /* 사이드바를 고정 위치로 설정 */
+  left: 0;
+  top: 0;
+  height: 100vh; /* 전체 높이 */
+  z-index: 100; /* 다른 요소들 위에 표시 */
+  overflow-y: auto; /* 사이드바 내용이 길면 스크롤 */
+}
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-left: 0;
+  justify-content: center;
+  width: 100%;
+}
+
+.sidebar-user-badge {
+  display: flex;
+  align-items: center;
+  background: #6e625a;
+  border-radius: 10px;
+  padding: 5px 12px 5px 12px;
+  width: 75%;
+  max-width: 230px;
+  min-width: 150px;
+  min-height: 0;
+  box-shadow: 0 2px 8px #0002;
+  gap: 12px;
+  justify-content: center;
+}
+
+.sidebar-user-logo {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  margin-right: 0;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sidebar-user-icon {
+  font-size: 1.5rem;
+  margin-right: 8px;
+}
+
+.sidebar-user-name {
+  font-weight: 400;
+  color: #fff;
+  font-size: 1.3rem;
+  background: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+.sidebar-menu {
+  flex: 1;
+  padding-left: 10px;
+  width: 80%;
+  max-width: 250px;
+  min-width: 180px;
+}
+
+.sidebar-menu-item {
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+  cursor: pointer;
+  color: #4d3c2b;
+  font-weight: 500;
+}
+
+.sidebar-menu-item.selected {
+  color: #b08d57;
+  font-weight: bold;
+}
+
+.sidebar-submenu {
+  margin-top: 6px;
+  margin-left: 12px;
+}
+
+.sidebar-submenu-item {
+  font-size: 1rem;
+  color: #7b6a58;
+  margin-bottom: 4px;
+  cursor: pointer;
+}
+
+.sidebar-submenu-item.selected {
+  color: #b08d57;
+  font-weight: bold;
+}
+
+.sidebar-yearmonth {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 24px;
+  margin-bottom: 0;
+}
+
+.sidebar-period {
+  margin: 12px 0 5px 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding-bottom: 20px;
+}
+
+.sidebar-yearmonth select.sidebar-period-select,
+.sidebar-period select.sidebar-period-select {
+  color: #302a24;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.sidebar-period select.sidebar-period-select {
+  width: 210px;
+  max-width: 260px;
+  min-width: 180px;
+  font-size: 1rem;
+  border-radius: 10px;
+  padding: 12px 0 12px 0px;
+  border: none;
+  background: #fff;
+  box-shadow: 0 2px 8px #0001;
+  color: #2d2418;
+  font-weight: 500;
+  appearance: none;
+  text-align: center;
+  transition: none;
+}
+
+.sidebar-period select.sidebar-period-select:focus {
+  border: none;
+  box-shadow: 0 2px 8px #0001;
+}
+
+.sidebar-period select {
+  border-radius: 8px;
+  border: 1px solid #d2c6b2;
+  padding: 12px 24px;
+  background: #f8f6f2;
+  font-size: 0.9rem;
+  width: 83%;
+  max-width: 260px;
+  min-width: 180px;
+  box-shadow: 0 2px 8px #0001;
+  text-align: center;
+}
+
+.sidebar-period-select {
+  width: 100px;
+  font-size: 1rem;
+  border-radius: 10px;
+  padding: 12px 0 12px 0px;
+  margin-bottom: 0;
+  border: none;
+  background: #fff;
+  box-shadow: 0 2px 8px #0001;
+  outline: none;
+  color: #2d2418;
+  font-weight: 500;
+  appearance: none;
+  text-align: center;
+  transition: none;
+}
+
+.sidebar-period-select:focus {
+  border: none;
+  box-shadow: 0 2px 8px #0001;
+}
+
+.main-panel {
+  flex: 2.5;
+  background: #fff;
+  padding: 36px 24px 0 32px;
+  min-width: 600px;
+  border-right: 1.5px solid #e6dfd3;
+  border-top: 1.5px solid #e6dfd3;
+  border-bottom: 1.5px solid #e6dfd3;
+  position: relative;
+  margin-left: 250px; /* left sidebar를 위한 margin */
+  /* margin-right: 100px;  */
+  overflow-y: auto; /* main-panel만 스크롤 가능 */
+  height: 100vh; /* 전체 높이 */
+}
+
+.main-title {
+  font-size: 1.3rem;
+  font-weight: 400;
+  color: #302A24;
+  margin-bottom: 24px;
+  margin-top: 0;
+  letter-spacing: -0.01em;
+  background: none;
+  border: none;
+  text-align: left;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 30px 32px 0 32px;
+  z-index: 11;
+}
+
+.main-placeholder {
+  color: #b8b0a3;
+  font-size: 1.2rem;
+  text-align: center;
+  margin-top: 120px;
+}
+
+.chat-panel {
+  flex: 1.5;
+  background: #fff;
+  position: fixed; /* 오른쪽 사이드바도 고정 */
+  right: 0;
+  top: 0;
+  width: 400px; /* 고정 너비 */
+  height: 100vh; /* 전체 높이 */
+  display: flex;
+  flex-direction: column;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  border-top: 1.5px solid #e6dfd3;
+  border-bottom: 1.5px solid #e6dfd3;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: none;
+  z-index: 100;
+}
+
+.chat-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: left;
+  padding-top: 35px;
+  padding-left: 30px;
+}
+
+.chat-title {
+  font-size: 1.25rem;
+  color: #302A24;
+}
+
+.chat-send-icon {
+  width: 25px;
+  height: 25px;
+  opacity: 0.7;
+}
+
+.chat-title + .chat-messages {
+  margin-top: 0;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  background: none;
+  position: relative;
+  z-index: 1;
+}
+
+.chat-messages img[alt^="cloud"] {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.chat-input-row {
+  position: relative;
+  display: flex;
+  align-items: left; /* flex-end → center로 변경하여 세로 가운데 정렬 */
+  background: #f4efe7;
+  border-radius: 14px;
+  padding: 24px 24px; /* 위아래 32px, 좌우 24px로 내부 여백 부여 */
+  margin: 24px 24px 24px 24px;
+  min-height: 80px;
+  box-shadow: none;
+  border: none;
+}
+
+.chat-input {
+  flex: none;
+  width: 380px;
+  border: none;
+  background: transparent;
+  font-size: 1.12rem !important;
+  outline: none;
+  color: #7b6a58;
+  padding: 0 8px; /* 위아래 padding 제거, 좌우만 약간 */
+  font-family: 'Apple SD Gothic Neo', Arial, sans-serif;
+  resize: none;
+  min-height: 44px;
+  max-height: 72px;
+  line-height: 1.5;
+  overflow-y: auto;
+  box-sizing: border-box;
+  transition: min-height 0.2s;
+  text-align: left; /* placeholder 및 입력 텍스트 가운데 정렬 */
+}
+
+.chat-input::placeholder {
+  color: #b8b0a3;
+  font-size: 1.08rem;
+  font-family: 'Apple SD Gothic Neo', Arial, sans-serif;
+  opacity: 1;
+}
+
+.chat-send-btn {
+  position: absolute;
+  right: 24px;
+  bottom: 25px;
+  background: none;
+  border: none;
+  font-size: 1.12rem;
+  color: #7b6a58;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: flex-end;
+  transition: color 0.2s;
+}
+
+.chat-send-btn:disabled {
+  color: #b8b0a3;
+  cursor: not-allowed;
+}
+
+
+.pipeline-panel {
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  padding: 32px;
+  margin-bottom: 32px;
+  width: 990px;
+  max-width: 100%;
+  box-sizing: border-box;
+  transition: height 0.2s;
+}
+
+.pipeline-title {
+  display: flex;
+  padding: 20px 0px 0px 0px;
+  color: #302A24;
+  align-items: center;
+  gap: 12px;
+  font-size: 2rem;
+  font-family: 'JejuHallasan', 'Jeju Hallasan', cursive, sans-serif !important;
+  font-weight: normal;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.pipeline-title img {
+  height: 38px;
+  width: auto;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.pipeline-graph {
+  height: 300px;
+  margin-bottom: 24px;
+  background: #fff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pipeline-table {
+  margin-bottom: 24px;
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+.pipeline-table th {
+  background: #E5DFD1;
+  padding: 12px 16px;
+  text-align: center;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 1px solid #e0e0e0;
+}
+.pipeline-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #555;
+}
+.pipeline-table tr:last-child td {
+  border-bottom: none;
+}
+.pipeline-table tr:hover {
+  background: #f9f9f9;
+}
+
+.pipeline-text {
+  font-size: 1rem;
+  color: #444;
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.report-start-btn {
+  margin: 350px 0;
+  padding: 16px 48px;
+  font-size: 1.5rem;
+  background: linear-gradient(90deg, #ffe066 0%, #ffd43b 100%);
+  color: #302A24;
+  border: none;
+  border-radius: 16px;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  letter-spacing: 0.02em;
+}
+.report-start-btn:hover {
+  background: linear-gradient(90deg, #fff3bf 0%, #ffe066 100%);
+  transform: translateY(-2px) scale(1.03);
+}
+
+.customer-search-form,
+.industry-search-form,
+.company-search-form {
+  margin: 350px 0px 0px 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0px;
+}
+
+.company-search-btn,
+.company-symbol-input,
+.customer-search-btn,
+.customer-symbol-input,
+.industry-search-btn,
+.industry-symbol-input {
+  width: 250px !important;
+  min-width: 250px !important;
+  max-width: 250px !important;
+  box-sizing: border-box;
+}
+
+.company-search-btn {
+  height: 54px;
+  margin: 10px 0;
+  padding: 0;
+  font-size: 1.5rem;
+  background: linear-gradient(90deg, #ffe066 0%, #ffd43b 100%);
+  color: #302A24;
+  border: none;
+  border-radius: 16px;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  letter-spacing: 0.02em;
+  display: block;
+}
+
+.company-search-btn:hover {
+  background: linear-gradient(90deg, #fff3bf 0%, #ffe066 100%);
+  transform: translateY(-2px) scale(1.03);
+}
+
+.company-symbol-input {
+  height: 54px;
+  font-size: 1.0rem;
+  padding: 0 10px;
+  border: none;
+  border-radius: 16px;
+  background: #fffbe6;
+  color: #302A24;
+  outline: none;
+  margin-left: 0;
+  transition: border 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px rgba(255, 224, 102, 0.1);
+  display: block;
+}
+
+.company-symbol-input.center-text {
+  text-align: center;
+}
+
+.company-symbol-input:focus {
+  border: 1.5px solid #ffd43b;
+  box-shadow: 0 2px 12px rgba(255, 212, 59, 0.18);
+  background: #fffde7;
+}
+
+.customer-search-btn,
+.customer-symbol-input {
+  width: 250px !important;
+  min-width: 250px !important;
+  max-width: 250px !important;
+  box-sizing: border-box;
+}
+.customer-search-btn {
+  height: 54px;
+  margin: 10px 0;
+  padding: 0;
+  font-size: 1.5rem;
+  background: linear-gradient(90deg, #ffe066 0%, #ffd43b 100%);
+  color: #302A24;
+  border: none;
+  border-radius: 16px;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  letter-spacing: 0.02em;
+  display: block;
+  text-align: center;
+  line-height: 54px;
+}
+.customer-search-btn:hover {
+  background: linear-gradient(90deg, #fff3bf 0%, #ffe066 100%);
+  transform: translateY(-2px) scale(1.03);
+}
+.customer-symbol-input {
+  height: 54px;
+  font-size: 1.0rem;
+  padding: 0 10px;
+  border: none;
+  border-radius: 16px;
+  background: #fffbe6;
+  color: #302A24;
+  outline: none;
+  margin-left: 0;
+  transition: border 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px rgba(255, 224, 102, 0.1);
+  display: block;
+}
+.customer-symbol-input.center-text {
+  text-align: center;
+}
+.customer-symbol-input:focus {
+  border: 1.5px solid #ffd43b;
+  box-shadow: 0 2px 12px rgba(255, 212, 59, 0.18);
+  background: #fffde7;
+}
+
+.industry-search-btn,
+.industry-symbol-input {
+  width: 250px !important;
+  min-width: 250px !important;
+  max-width: 250px !important;
+  box-sizing: border-box;
+}
+.industry-search-btn {
+  height: 54px;
+  margin: 10px 0;
+  padding: 0;
+  font-size: 1.5rem;
+  background: linear-gradient(90deg, #ffe066 0%, #ffd43b 100%);
+  color: #302A24;
+  border: none;
+  border-radius: 16px;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  letter-spacing: 0.02em;
+  display: block;
+  text-align: center;
+  line-height: 54px;
+}
+.industry-search-btn:hover {
+  background: linear-gradient(90deg, #fff3bf 0%, #ffe066 100%);
+  transform: translateY(-2px) scale(1.03);
+}
+.industry-symbol-input {
+  height: 54px;
+  font-size: 1.0rem;
+  padding: 0 10px;
+  border: none;
+  border-radius: 16px;
+  background: #fffbe6;
+  color: #302A24;
+  outline: none;
+  margin-left: 0;
+  transition: border 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px rgba(255, 224, 102, 0.1);
+  display: block;
+}
+.industry-symbol-input.center-text {
+  text-align: center;
+}
+.industry-symbol-input:focus {
+  border: 1.5px solid #ffd43b;
+  box-shadow: 0 2px 12px rgba(255, 212, 59, 0.18);
+  background: #fffde7;
+}
+
+.stack-icon-decoration {
+  position: absolute;
+  right: 32px;
+  top: 38px;
+  width: 25px;
+  height: 25px;
+  z-index: 2;
+}
+
+.cloud-decoration {
+  position: absolute;
+  width: 50%;
+  opacity: 1.0;
+  pointer-events: none;
+  z-index: 0;
+}
+.cloud1 {
+  left: 0px;
+  top: 80px;
+}
+.cloud2 {
+  right: 0px;
+  top: 38%;
+}
+.cloud3 {
+  left: 0px;
+  bottom: 60px;
+}
+
+.chat-panel-relative {
+  position: relative;
+}
+
+.error-message {
+  color: red;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+/* Stock Chart Styles */
+.stock-chart-container {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.stock-chart-title h3 {
+  margin: 0 0 20px 0;
+  color: #302a24;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+/* 차트 요약 정보 스타일 */
+.chart-summary {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid #dee2e6;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.summary-label {
+  font-weight: 600;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.summary-value {
+  font-weight: 500;
+  color: #212529;
+  font-size: 0.9rem;
+}
+
+.summary-value.positive {
+  color: #28a745;
+}
+
+.summary-value.negative {
+  color: #dc3545;
+}
+
+/* 컨트롤 섹션 스타일 */
+.stock-chart-controls {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.control-section {
+  margin-bottom: 20px;
+}
+
+.control-section:last-child {
+  margin-bottom: 0;
+}
+
+.control-title {
+  margin: 0 0 10px 0;
+  font-weight: 600;
+  color: #302a24;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.control-title:before {
+  content: '';
+  width: 4px;
+  height: 16px;
+  background: #b08d57;
+  margin-right: 8px;
+  border-radius: 2px;
+}
+
+.control-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.control-btn {
+  padding: 8px 16px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  background: #fff;
+  color: #495057;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.control-btn:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(176, 141, 87, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.control-btn:hover {
+  border-color: #b08d57;
+  background: #f8f6f2;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(176, 141, 87, 0.2);
+}
+
+.control-btn:hover:before {
+  left: 100%;
+}
+
+.control-btn.active {
+  background: linear-gradient(135deg, #b08d57 0%, #9a7a4f 100%);
+  border-color: #b08d57;
+  color: #fff;
+  box-shadow: 0 3px 6px rgba(176, 141, 87, 0.3);
+}
+
+.control-btn.active:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(176, 141, 87, 0.4);
+}
+
+/* 특정 버튼 타입별 스타일 */
+.period-btn.active {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border-color: #2563eb;
+}
+
+.chart-type-btn.active {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  border-color: #059669;
+}
+
+.ma-btn.active {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  border-color: #dc2626;
+}
+
+.stock-chart-wrapper {
+  background: #fafafa;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.stock-chart-loading,
+.stock-chart-error {
+  height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 1rem;
+}
+
+.stock-chart-error {
+  color: #d32f2f;
+}
+
+.no-chart-data {
+  height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 1rem;
+}
+
+.stock-chart-tooltip {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.stock-chart-tooltip .tooltip-label {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #302a24;
+}
+
+.stock-chart-tooltip p {
+  margin: 2px 0;
+}
+
+/* Return Analysis Chart Styles */
+.return-chart-container {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.return-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.return-chart-header h3 {
+  margin: 0;
+  color: #302a24;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.view-mode-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.toggle-btn {
+  padding: 8px 16px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  background: #fff;
+  color: #495057;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.toggle-btn:hover {
+  border-color: #6f42c1;
+  background: #f8f6ff;
+}
+
+.toggle-btn.active {
+  background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
+  border-color: #6f42c1;
+  color: #fff;
+  box-shadow: 0 3px 6px rgba(111, 66, 193, 0.3);
+}
+
+/* 수익률 분석 컨트롤 스타일 (주가 차트와 동일) */
+.return-chart-controls {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.return-chart-controls .control-section {
+  margin-bottom: 20px;
+}
+
+.return-chart-controls .control-section:last-child {
+  margin-bottom: 0;
+}
+
+.return-chart-controls .control-title {
+  margin: 0 0 10px 0;
+  font-weight: 600;
+  color: #302a24;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.return-chart-controls .control-title:before {
+  content: '';
+  width: 4px;
+  height: 16px;
+  background: #6f42c1;
+  margin-right: 8px;
+  border-radius: 2px;
+}
+
+.return-chart-controls .control-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.return-chart-controls .control-btn {
+  padding: 8px 16px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  background: #fff;
+  color: #495057;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.return-chart-controls .control-btn:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(111, 66, 193, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.return-chart-controls .control-btn:hover {
+  border-color: #6f42c1;
+  background: #f8f6ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(111, 66, 193, 0.2);
+}
+
+.return-chart-controls .control-btn:hover:before {
+  left: 100%;
+}
+
+.return-chart-controls .control-btn.active {
+  background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
+  border-color: #6f42c1;
+  color: #fff;
+  box-shadow: 0 3px 6px rgba(111, 66, 193, 0.3);
+}
+
+.return-chart-controls .control-btn.active:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(111, 66, 193, 0.4);
+}
+
+/* 수익률 요약 정보 스타일 */
+.return-summary {
+  background: linear-gradient(135deg, #f1f3f4 0%, #e8eaed 100%);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid #dadce0;
+}
+
+.return-chart-wrapper {
+  background: #fafafa;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.return-chart-loading,
+.return-chart-error {
+  height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 1rem;
+}
+
+.return-chart-error {
+  color: #d32f2f;
+}
+
+.no-return-data {
+  height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 1rem;
+}
+
+.return-chart-tooltip {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.return-chart-tooltip .tooltip-label {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #302a24;
+}
+
+.return-chart-tooltip p {
+  margin: 2px 0;
+}
+
+@media (max-width: 768px) {
+  .stock-chart-controls {
+    padding: 0 10px;
+  }
+  
+  .control-buttons {
+    gap: 4px;
+  }
+  
+  .control-btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .summary-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .summary-item {
+    padding: 6px 10px;
+  }
+  
+  .return-chart-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .view-mode-toggle {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .toggle-btn {
+    flex: 1;
+    text-align: center;
+  }
+  
+  .return-chart-controls .control-buttons {
+    gap: 4px;
+  }
+  
+  .return-chart-controls .control-btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 1100px) {
+  .main-panel { min-width: 400px; padding: 24px 8px 0 8px; }
+  .chat-panel { padding: 24px 8px 0 8px; }
+  .sidebar { padding: 16px 0 0 0; }
 }

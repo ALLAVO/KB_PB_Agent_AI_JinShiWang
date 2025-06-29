@@ -3,11 +3,11 @@ import time
 import os
 import json
 import yfinance as yf
-import pandas_datareader.data as web
-from app.core.config import settings
+from datetime import datetime, timedelta
+from typing import Dict, List
 
 # 요청 간 최소 대기시간 (초 단위)
-RATE_LIMIT_SLEEP = 2
+RATE_LIMIT_SLEEP = 10
 
 ##### 01. 제무재표 #####
 # CIK 캐시 파일 경로
@@ -28,7 +28,6 @@ def get_cik_for_ticker(ticker: str) -> str:
     return None
 
 # SEC XBRL companyfacts API에서 주요 재무제표(Income Statement, Balance Sheet, Cash Flow Statement)를 추출하는 함수
-
 def get_financial_statements_from_sec(ticker: str, start_date: str = None, end_date: str = None) -> dict:
     """
     SEC XBRL companyfacts API에서 요청한 주요 재무제표 항목(XBRL Tag 기준)만 반환합니다.
@@ -153,6 +152,7 @@ def get_company_profile_from_alphavantage(ticker: str, api_key: str) -> dict:
 
 #### 03 . 주가 + 기술지표 #####
 
+# Stooq에서 주간 주가(종가, 시가, 고가, 저가, 거래량)와 기술지표(주간 변동성 등)를 반환하는 함수
 def get_weekly_stock_indicators_from_stooq(ticker: str, start_date: str, end_date: str) -> dict:
     """
     Stooq에서 주간 주가(종가, 시가, 고가, 저가, 거래량)와 기술지표(주간 변동성 등)를 반환합니다.
@@ -162,8 +162,6 @@ def get_weekly_stock_indicators_from_stooq(ticker: str, start_date: str, end_dat
         'volatility', 'price_change_pct'
     }
     """
-    import pandas as pd
-    import pandas_datareader.data as web
     try:
         if not ticker.endswith('.US'):
             ticker = ticker + '.US'
@@ -216,72 +214,438 @@ def get_moving_averages_from_stooq(ticker: str, end_date: str, windows=[5, 10, 2
 # 기존 Yahoo 함수 대체
 get_weekly_stock_indicators_from_yahoo = get_weekly_stock_indicators_from_stooq
 
+def get_stock_price_chart_data(ticker: str, start_date: str, end_date: str) -> dict:
+    """
+    특정 기업의 주가 차트 데이터를 반환합니다.
+    start_date, end_date: 'YYYY-MM-DD'
+    반환: {
+        'dates': [...],
+        'opens': [...],
+        'highs': [...],
+        'lows': [...],
+        'closes': [...],
+        'volumes': [...]
+    }
+    """
+    try:
+        if not ticker.endswith('.US'):
+            ticker = ticker + '.US'
+        df = web.DataReader(ticker, 'stooq', start=start_date, end=end_date)
+        if df.empty:
+            return {"error": "No price data in given period."}
+        df = df.sort_index()  # 날짜 오름차순
+        
+        return {
+            'dates': [d.strftime('%Y-%m-%d') for d in df.index],
+            'opens': df['Open'].tolist(),
+            'highs': df['High'].tolist(),
+            'lows': df['Low'].tolist(),
+            'closes': df['Close'].tolist(),
+            'volumes': df['Volume'].tolist()
+        }
+    except Exception as e:
+        return {"error": f"Error fetching stock price chart data from Stooq: {e}"}
+
+def get_stock_price_chart_with_ma(ticker: str, start_date: str, end_date: str, ma_periods: list = [5, 20, 60]) -> dict:
+    """
+    특정 기업의 주가 차트 데이터와 이동평균을 함께 반환합니다.
+    start_date, end_date: 'YYYY-MM-DD'
+    ma_periods: 이동평균 기간 리스트 (예: [5, 20, 60])
+    반환: {
+        'dates': [...],
+        'closes': [...],
+        'ma5': [...],
+        'ma20': [...],
+        'ma60': [...],
+        'volumes': [...]
+    }
+    """
+    try:
+        if not ticker.endswith('.US'):
+            ticker = ticker + '.US'
+        
+        # 이동평균 계산을 위해 더 긴 기간의 데이터 필요
+        start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+        extended_start = start_dt - timedelta(days=max(ma_periods) + 30)  # 여유 데이터
+        extended_start_str = extended_start.strftime('%Y-%m-%d')
+        
+        df = web.DataReader(ticker, 'stooq', start=extended_start_str, end=end_date)
+        if df.empty:
+            return {"error": "No price data in given period."}
+        df = df.sort_index()  # 날짜 오름차순
+        
+        # 이동평균 계산
+        for period in ma_periods:
+            df[f'ma{period}'] = df['Close'].rolling(window=period).mean()
+        
+        # 원하는 기간으로 필터링
+        df_filtered = df[df.index >= start_date]
+        
+        result = {
+            'dates': [d.strftime('%Y-%m-%d') for d in df_filtered.index],
+            'closes': df_filtered['Close'].tolist(),
+            'volumes': df_filtered['Volume'].tolist()
+        }
+        
+        # 이동평균 데이터 추가
+        for period in ma_periods:
+            result[f'ma{period}'] = df_filtered[f'ma{period}'].tolist()
+        
+        return result
+    except Exception as e:
+        return {"error": f"Error fetching stock price chart data with MA from Stooq: {e}"}
+    
 
 #### 04 . 시황정보 : 증시, 채권, 환율 #####
 
 ## 04-1. 미국 증시 지수
-def get_us_stock_indices_range(start_date: str, end_date: str) -> dict:
+def get_us_indices_6months_chart(end_date: str) -> dict:
     """
-    Stooq를 이용해 미국 증시(Dow, S&P500, Nasdaq) 지수의 기간별(시작~끝) 평균 종가를 반환합니다.
+    DOW, S&P500, NASDAQ 6개월치 일별 종가 데이터를 반환합니다.
+    end_date: 'YYYY-MM-DD' (그래프 마지막 날짜)
+    반환: {
+        'dow': {'dates': [...], 'closes': [...]},
+        'sp500': {'dates': [...], 'closes': [...]},
+        'nasdaq': {'dates': [...], 'closes': [...]}
+    }
     """
+
     try:
-        dow_hist = web.DataReader('^DJI', 'stooq', start=start_date, end=end_date)
-        sp500_hist = web.DataReader('^SPX', 'stooq', start=start_date, end=end_date)
-        nasdaq_hist = web.DataReader('^NDQ', 'stooq', start=start_date, end=end_date)
-        return {
-            'dow_avg': float(dow_hist['Close'].mean()) if not dow_hist.empty else None,
-            'sp500_avg': float(sp500_hist['Close'].mean()) if not sp500_hist.empty else None,
-            'nasdaq_avg': float(nasdaq_hist['Close'].mean()) if not nasdaq_hist.empty else None
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        start_dt = end_dt - timedelta(days=182)  # 약 6개월(182일)
+        start_str = start_dt.strftime('%Y-%m-%d')
+        end_str = end_dt.strftime('%Y-%m-%d')
+
+        indices = {
+            'dow': '^DJI',
+            'sp500': '^SPX',
+            'nasdaq': '^NDQ'
         }
+        result = {}
+        for key, ticker in indices.items():
+            df = web.DataReader(ticker, 'stooq', start=start_str, end=end_str)
+            df = df.sort_index()
+            if df.empty:
+                result[key] = {'dates': [], 'closes': []}
+            else:
+                result[key] = {
+                    'dates': [d.strftime('%Y-%m-%d') for d in df.index],
+                    'closes': df['Close'].tolist()
+                }
+        return result
     except Exception as e:
-        return {"error": f"Error fetching US stock indices (range) from Stooq: {e}"}
+        return {'error': f'Error fetching 6-month US indices data: {e}'}
 
 
 # ## 04-2. 미국 국채 금리
-def get_us_treasury_yields_range(fred_api_key: str, start_date: str, end_date: str) -> dict:
+def get_us_treasury_yields_6months(fred_api_key: str, end_date: str) -> dict:
     """
-    FRED API를 이용해 미국 국채 2년물(DGS2), 10년물(DGS10) 기간별(시작~끝) 평균 금리를 반환합니다.
+    FRED API를 이용해 미국 국채 2년물(DGS2), 10년물(DGS10) 6개월(182일)치 일별 금리 데이터를 반환합니다.
+    end_date: 'YYYY-MM-DD' (마지막 날짜)
+    반환: {
+        'dates': [...],
+        'us_2y': [...],
+        'us_10y': [...]
+    }
     """
-    import pandas as pd
+
     try:
-        url_2y = f"https://api.stlouisfed.org/fred/series/observations?series_id=DGS2&api_key={fred_api_key}&file_type=json&observation_start={start_date}&observation_end={end_date}"
-        url_10y = f"https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key={fred_api_key}&file_type=json&observation_start={start_date}&observation_end={end_date}"
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        start_dt = end_dt - timedelta(days=182)
+        start_str = start_dt.strftime('%Y-%m-%d')
+        end_str = end_dt.strftime('%Y-%m-%d')
+        url_2y = f"https://api.stlouisfed.org/fred/series/observations?series_id=DGS2&api_key={fred_api_key}&file_type=json&observation_start={start_str}&observation_end={end_str}"
+        url_10y = f"https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key={fred_api_key}&file_type=json&observation_start={start_str}&observation_end={end_str}"
         resp_2y = requests.get(url_2y)
         resp_10y = requests.get(url_10y)
         obs_2y = resp_2y.json().get('observations', [])
         obs_10y = resp_10y.json().get('observations', [])
-        vals_2y = [float(o['value']) for o in obs_2y if o['value'] not in ('.', None, '')]
-        vals_10y = [float(o['value']) for o in obs_10y if o['value'] not in ('.', None, '')]
+        dates = [o['date'] for o in obs_2y if o['value'] not in ('.', None, '')]
+        us_2y = [float(o['value']) for o in obs_2y if o['value'] not in ('.', None, '')]
+        us_10y = [float(o['value']) for o in obs_10y if o['value'] not in ('.', None, '')]
         return {
-            'us_2y_avg': float(pd.Series(vals_2y).mean()) if vals_2y else None,
-            'us_10y_avg': float(pd.Series(vals_10y).mean()) if vals_10y else None
+            'dates': dates,
+            'us_2y': us_2y,
+            'us_10y': us_10y
         }
     except Exception as e:
-        return {"error": f"Error fetching US treasury yields (range): {e}"}
+        return {'error': f'Error fetching 6-month US treasury yields: {e}'}
 
 
 # 04-3. 한국 환율
-def get_kr_fx_rates_range(_: str, start_date: str, end_date: str) -> dict:
+
+def get_kr_fx_rates_6months(end_date: str) -> dict:
     """
-    Frankfurter API를 이용해 USD/KRW, EUR/KRW 환율의 기간별(시작~끝) 평균값을 반환합니다.
-    API Key 불필요.
+    Frankfurter API를 이용해 USD/KRW, EUR/KRW 환율의 6개월(182일)치 일별 데이터를 반환합니다.
+    end_date: 'YYYY-MM-DD' (마지막 날짜)
+    반환: {
+        'dates': [...],
+        'usd_krw': [...],
+        'eur_usd': [...]
+    }
     """
-    import pandas as pd
     try:
-        url_usd = f"https://api.frankfurter.app/{start_date}..{end_date}?from=USD&to=KRW"
-        url_eur = f"https://api.frankfurter.app/{start_date}..{end_date}?from=EUR&to=KRW"
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        start_dt = end_dt - timedelta(days=182)
+        start_str = start_dt.strftime('%Y-%m-%d')
+        end_str = end_dt.strftime('%Y-%m-%d')
+        url_usd = f"https://api.frankfurter.app/{start_str}..{end_str}?from=USD&to=KRW"
+        url_eur = f"https://api.frankfurter.app/{start_str}..{end_str}?from=EUR&to=USD"
         resp_usd = requests.get(url_usd)
         resp_usd.raise_for_status()
         data_usd = resp_usd.json().get('rates', {})
-        vals_usd = [v['KRW'] for v in data_usd.values() if v.get('KRW')]
         resp_eur = requests.get(url_eur)
         resp_eur.raise_for_status()
         data_eur = resp_eur.json().get('rates', {})
-        vals_eur = [v['KRW'] for v in data_eur.values() if v.get('KRW')]
+        dates = sorted(list(set(data_usd.keys()) | set(data_eur.keys())))
+        usd_krw = [data_usd.get(date, {}).get('KRW') for date in dates]
+        eur_usd = [data_eur.get(date, {}).get('USD') for date in dates]
         return {
-            'usd_krw_avg': float(pd.Series(vals_usd).mean()) if vals_usd else None,
-            'eur_krw_avg': float(pd.Series(vals_eur).mean()) if vals_eur else None
+            'dates': dates,
+            'usd_krw': usd_krw,
+            'eur_usd': eur_usd
         }
     except Exception as e:
-        return {"error": f"Error fetching KR FX rates from Frankfurter API: {e}"}
+        return {'error': f'Error fetching 6-month KR FX rates: {e}'}
 
+def get_commodity_prices_6months(fred_api_key: str, end_date: str) -> dict:
+    """
+        FRED API를 이용해 WTI(원유)와 금(Gold) 6개월치 일별 가격 데이터를 반환합니다.
+        end_date: 'YYYY-MM-DD' (마지막 날짜)
+        반환: {
+            'dates': [...],
+            'wti': [...],
+            'gold': [...]
+        }
+        """
+    try:
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        start_dt = end_dt - timedelta(days=182)
+        start_str = start_dt.strftime('%Y-%m-%d')
+        end_str = end_dt.strftime('%Y-%m-%d')
+        url_wti = f"https://api.stlouisfed.org/fred/series/observations?series_id=DCOILWTICO&api_key={fred_api_key}&file_type=json&observation_start={start_str}&observation_end={end_str}"
+        url_gold = f"https://api.stlouisfed.org/fred/series/observations?series_id=GOLDAMGBD228NLBM&api_key={fred_api_key}&file_type=json&observation_start={start_str}&observation_end={end_str}"
+        resp_wti = requests.get(url_wti)
+        resp_gold = requests.get(url_gold)
+        obs_wti = resp_wti.json().get('observations', [])
+        obs_gold = resp_gold.json().get('observations', [])
+        # 날짜 교집합만 사용
+        dates = sorted(list(set([o['date'] for o in obs_wti if o['value'] not in ('.', None, '')]) & set([o['date'] for o in obs_gold if o['value'] not in ('.', None, '')])))
+        wti = [float(o['value']) for o in obs_wti if o['value'] not in ('.', None, '') and o['date'] in dates]
+        gold = [float(o['value']) for o in obs_gold if o['value'] not in ('.', None, '') and o['date'] in dates]
+        return {
+            'dates': dates,
+            'wti': wti,
+            'gold': gold
+        }
+    except Exception as e:
+        return {'error': f'Error fetching 6-month commodity prices from FRED: {e}'}
+
+def get_nasdaq_index_data(start_date: str, end_date: str) -> dict:
+    """
+    나스닥 지수 데이터를 가져옵니다.
+    start_date, end_date: 'YYYY-MM-DD'
+    반환: {
+        'dates': [...],
+        'nasdaq_closes': [...]
+    }
+    """
+    try:
+        df = web.DataReader('^NDQ', 'stooq', start=start_date, end=end_date)
+        if df.empty:
+            return {"error": "No NASDAQ data in given period."}
+        df = df.sort_index()  # 날짜 오름차순
+        
+        return {
+            'dates': [d.strftime('%Y-%m-%d') for d in df.index],
+            'nasdaq_closes': df['Close'].tolist()
+        }
+    except Exception as e:
+        return {"error": f"Error fetching NASDAQ data from Stooq: {e}"}
+
+def calculate_absolute_and_relative_returns(ticker: str, start_date: str, end_date: str) -> dict:
+    """
+    개별 주식의 절대수익률과 나스닥 대비 상대수익률을 계산합니다.
+    start_date, end_date: 'YYYY-MM-DD'
+    반환: {
+        'dates': [...],
+        'stock_prices': [...],
+        'nasdaq_prices': [...],
+        'stock_index': [...],      # 기준일=100으로 정규화
+        'nasdaq_index': [...],     # 기준일=100으로 정규화
+        'relative_index': [...],   # 상대지수
+        'stock_returns': [...],    # 수익률(%)
+        'nasdaq_returns': [...],   # 수익률(%)
+        'relative_returns': [...]  # 상대수익률(%)
+    }
+    """
+    try:
+        # 개별 주식 데이터 가져오기
+        stock_data = get_stock_price_chart_data(ticker, start_date, end_date)
+        if "error" in stock_data:
+            return stock_data
+        
+        # 나스닥 데이터 가져오기
+        nasdaq_data = get_nasdaq_index_data(start_date, end_date)
+        if "error" in nasdaq_data:
+            return nasdaq_data
+        
+        # 날짜 매칭 (두 데이터의 교집합)
+        stock_dates = set(stock_data['dates'])
+        nasdaq_dates = set(nasdaq_data['dates'])
+        common_dates = sorted(list(stock_dates & nasdaq_dates))
+        
+        if not common_dates:
+            return {"error": "No common dates between stock and NASDAQ data"}
+        
+        # 공통 날짜에 해당하는 데이터만 추출
+        stock_prices = []
+        nasdaq_prices = []
+        
+        for date in common_dates:
+            stock_idx = stock_data['dates'].index(date)
+            nasdaq_idx = nasdaq_data['dates'].index(date)
+            stock_prices.append(stock_data['closes'][stock_idx])
+            nasdaq_prices.append(nasdaq_data['nasdaq_closes'][nasdaq_idx])
+        
+        # 지수 계산 (기준일=100)
+        stock_index = [(price / stock_prices[0]) * 100 for price in stock_prices]
+        nasdaq_index = [(price / nasdaq_prices[0]) * 100 for price in nasdaq_prices]
+        
+        # 상대지수 계산
+        relative_index = [(s_idx / n_idx) * 100 for s_idx, n_idx in zip(stock_index, nasdaq_index)]
+        
+        # 수익률 계산 (%)
+        stock_returns = [((price / stock_prices[0]) - 1) * 100 for price in stock_prices]
+        nasdaq_returns = [((price / nasdaq_prices[0]) - 1) * 100 for price in nasdaq_prices]
+        relative_returns = [((rel_idx / 100) - 1) * 100 for rel_idx in relative_index]
+        
+        return {
+            'dates': common_dates,
+            'stock_prices': stock_prices,
+            'nasdaq_prices': nasdaq_prices,
+            'stock_index': stock_index,
+            'nasdaq_index': nasdaq_index,
+            'relative_index': relative_index,
+            'stock_returns': stock_returns,
+            'nasdaq_returns': nasdaq_returns,
+            'relative_returns': relative_returns
+        }
+        
+    except Exception as e:
+        return {"error": f"Error calculating returns: {e}"}
+
+def get_return_analysis_summary(ticker: str, start_date: str, end_date: str) -> dict:
+    """
+    수익률 분석 요약 정보를 반환합니다.
+    """
+    try:
+        data = calculate_absolute_and_relative_returns(ticker, start_date, end_date)
+        if "error" in data:
+            return data
+        
+        if not data['stock_returns']:
+            return {"error": "No return data available"}
+        
+        stock_final_return = data['stock_returns'][-1]
+        nasdaq_final_return = data['nasdaq_returns'][-1]
+        relative_final_return = data['relative_returns'][-1]
+        
+        # 변동성 계산 (일간 수익률의 표준편차 × √252)
+        import numpy as np
+        if len(data['stock_prices']) > 1:
+            daily_stock_returns = [((data['stock_prices'][i] / data['stock_prices'][i-1]) - 1) * 100 
+                                 for i in range(1, len(data['stock_prices']))]
+            stock_volatility = np.std(daily_stock_returns) * (252 ** 0.5)
+        else:
+            stock_volatility = 0
+        
+        return {
+            "ticker": ticker,
+            "period": f"{start_date} ~ {end_date}",
+            "stock_return": round(stock_final_return, 2),
+            "nasdaq_return": round(nasdaq_final_return, 2),
+            "relative_return": round(relative_final_return, 2),
+            "stock_volatility": round(stock_volatility, 2),
+            "outperformance": round(stock_final_return - nasdaq_final_return, 2),
+            "data_points": len(data['dates'])
+        }
+        
+    except Exception as e:
+        return {"error": f"Error generating return analysis summary: {e}"}
+
+def get_stock_price_chart_data(symbol: str, start_date: str, end_date: str) -> Dict:
+    """
+    주식 가격 차트 데이터를 가져옵니다.
+    """
+    try:
+        ticker = yf.Ticker(symbol)
+        hist = ticker.history(start=start_date, end=end_date)
+        
+        if hist.empty:
+            return {"error": f"No data found for symbol {symbol}"}
+        
+        return {
+            "symbol": symbol,
+            "dates": [date.strftime('%Y-%m-%d') for date in hist.index],
+            "closes": hist['Close'].tolist(),
+            "opens": hist['Open'].tolist(),
+            "highs": hist['High'].tolist(),
+            "lows": hist['Low'].tolist(),
+            "volumes": hist['Volume'].tolist()
+        }
+        
+    except Exception as e:
+        return {"error": f"Error fetching stock data for {symbol}: {e}"}
+
+def get_stock_price_chart_with_ma(symbol: str, start_date: str, end_date: str, ma_periods: List[int]) -> Dict:
+    """
+    이동평균이 포함된 주식 가격 차트 데이터를 가져옵니다.
+    """
+    try:
+        ticker = yf.Ticker(symbol)
+        hist = ticker.history(start=start_date, end=end_date)
+        
+        if hist.empty:
+            return {"error": f"No data found for symbol {symbol}"}
+        
+        result = {
+            "symbol": symbol,
+            "dates": [date.strftime('%Y-%m-%d') for date in hist.index],
+            "closes": hist['Close'].tolist()
+        }
+        
+        # 이동평균 계산
+        for period in ma_periods:
+            ma_key = f"ma{period}"
+            ma_values = hist['Close'].rolling(window=period).mean()
+            result[ma_key] = ma_values.tolist()
+        
+        return result
+        
+    except Exception as e:
+        return {"error": f"Error fetching MA data for {symbol}: {e}"}
+
+def get_index_chart_data(symbol: str, start_date: str, end_date: str) -> Dict:
+    """
+    지수 데이터를 가져옵니다 (나스닥, S&P 500 등)
+    """
+    try:
+        ticker = yf.Ticker(symbol)
+        hist = ticker.history(start=start_date, end=end_date)
+        
+        if hist.empty:
+            return {"error": f"No data found for symbol {symbol}"}
+        
+        return {
+            "symbol": symbol,
+            "dates": [date.strftime('%Y-%m-%d') for date in hist.index],
+            "closes": hist['Close'].tolist(),
+            "opens": hist['Open'].tolist(),
+            "highs": hist['High'].tolist(),
+            "lows": hist['Low'].tolist(),
+            "volumes": hist['Volume'].tolist()
+        }
+        
+    except Exception as e:
+        return {"error": f"Error fetching index data for {symbol}: {e}"}

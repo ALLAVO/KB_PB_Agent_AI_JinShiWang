@@ -1,15 +1,41 @@
-from keybert import KeyBERT
-import pandas as pd
-import string
-import spacy
+import os
+os.environ["HF_HUB_DOWNLOAD_TIMEOUT"] = "120"
 
-# 유의사항, 아래 spaCy 내부에 필요한 추가 리소스는 별도의 다운로드가 필요함
-# 어디에 적어야 할지 몰라서 여기에 적어둠
-# python -m spacy download en_core_web_sm
+import string
+from app.db.connection import check_db_connection
+from app.services.sentiment import get_weekly_sentiment_scores_by_stock_symbol
+from pathlib import Path
+from sentence_transformers import SentenceTransformer
+import spacy
+from keybert import KeyBERT
+from transformers import AutoTokenizer
+
+'''
+[유의사항]
+아래 spaCy 내부에 필요한 추가 리소스는 별도의 다운로드가 필요함
+`python -m spacy download en_core_web_sm`
+'''
+
+# 모델 및 토크나이저 캐시 경로 지정
+paraphrase_model_dir = Path("./tokenizer_cache/paraphrase-mpnet-base-v2")
+if not paraphrase_model_dir.exists() or not any(paraphrase_model_dir.glob("**/pytorch_model.bin")):
+    # SentenceTransformer 모델 전체를 다운로드 및 저장
+    model = SentenceTransformer("sentence-transformers/paraphrase-mpnet-base-v2", cache_folder=str(paraphrase_model_dir))
+else:
+    model = SentenceTransformer(str(paraphrase_model_dir))
+kw_model = KeyBERT(model)
+
+# bart-large-cnn 토크나이저 캐시 경로 지정 및 불러오기
+bart_tokenizer_dir = Path("./tokenizer_cache/bart-large-cnn")
+if not bart_tokenizer_dir.exists():
+    bart_tokenizer_dir.mkdir(parents=True, exist_ok=True)
+    bart_tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large-cnn")
+    bart_tokenizer.save_pretrained(str(bart_tokenizer_dir))
+else:
+    bart_tokenizer = AutoTokenizer.from_pretrained(str(bart_tokenizer_dir))
 
 # 모델 초기화
 nlp = spacy.load("en_core_web_sm")
-kw_model = KeyBERT('sentence-transformers/paraphrase-mpnet-base-v2')
 
 def remove_last_sentences(text, n=3):
     """마지막 n개의 문장을 제거"""
@@ -17,7 +43,7 @@ def remove_last_sentences(text, n=3):
     return ' '.join(sentences[:-n]) if len(sentences) > n else text
 
 def preprocess(text):
-    """전처리: 소문자화, 불필요한 문장부호 제거, 숫자 및 특수기호 일부 보존, lemmatization"""
+    """전처리: 소문자화, 불필요한 문장��호 제거, lemmatization"""
     keep = {'$', '%', "'", '(', ')', '-'}
     remove = ''.join([p for p in string.punctuation if p not in keep])
     text = text.lower().translate(str.maketrans('', '', remove))
@@ -25,10 +51,8 @@ def preprocess(text):
     doc = nlp(text)
     return ' '.join([
         token.lemma_ for token in doc
-        if not token.is_space and not token.is_punct
-        and (token.is_alpha or token.is_digit or '-' in token.text or token.text in keep)
+        if token.is_alpha or '-' in token.text
     ])
-
 
 def extract_named_entities(text):
     """고유명사 원형 및 소문자 버전 추출"""
@@ -55,7 +79,7 @@ def restore_named_entities(keywords, original_ents, lowered_ents):
     return restored
 
 def extract_keywords(text, model, top_n=10, threshold=0.4):
-    """KeyBERT 기반 키워드 추출"""
+    """KeyBERT 기반 키��드 추출"""
     cleaned = remove_last_sentences(text)
     processed = preprocess(cleaned)
 
@@ -71,43 +95,76 @@ def extract_keywords(text, model, top_n=10, threshold=0.4):
 
     return [(kw, score) for kw, score in keywords if score >= threshold]
 
-def main():
+def fetch_articles_from_db(stock_symbol, start_date, end_date):
+    conn = check_db_connection()
+    if conn is None:
+        print("[오류] DB 연결 실패")
+        return []
     try:
-        df = pd.read_csv("test00.csv")
-    except FileNotFoundError:
-        print("[오류] 'test00.csv' 파일을 찾을 수 없습니다.")
-        return
+        cur = conn.cursor()
+        query = """
+            SELECT article, date, weekstart_sunday
+            FROM kb_enterprise_dataset
+            WHERE stock_symbol = %s AND date >= %s AND date <= %s
+            ORDER BY weekstart_sunday, date DESC;
+        """
+        cur.execute(query, (stock_symbol, start_date, end_date))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        return rows
+    except Exception as e:
+        print("[오류] DB에서 기사 불러오기 실패:", e)
+        if conn:
+            conn.close()
+        return []
 
-    if 'Article' not in df.columns:
-        print("[오류] 'Article' 열이 존재하지 않습니다.")
-        return
+def keyword_extract_from_articles(stock_symbol, start_date, end_date):
+    """
+    주어진 종목, 시작일, 종료일에 대해 주차별 top3 기사별 키워드 추출 결과를 반환합니다.
+    반환값 예시: { week1: [ {...}, {...}, {...} ], week2: [ {...}, ... ] }
+    각 기사별로 'keywords' 필드에 키워드 리스트가 포함됩니다.
+    """
+    sentiment_result = get_weekly_sentiment_scores_by_stock_symbol(stock_symbol, start_date, end_date)
+    weekly_top3 = sentiment_result.get("weekly_top3_articles", {})
+    if not weekly_top3:
+        print("[오류] 해당 조건에 top3 기사가 없습니다.")
+        return {}
 
-    idx_input = input("인덱스를 입력하세요: ").strip()
-    if not idx_input.isdigit():
-        print("[오류] 숫자를 입력해야 합니다.")
-        return
-
-    idx = int(idx_input)
-    if idx < 0 or idx >= len(df):
-        print(f"[오류] 유효한 인덱스 범위는 0 ~ {len(df) - 1} 입니다.")
-        return
-
-    text = df.loc[idx, 'Article']
-
-    original_ents, lowered_ents = extract_named_entities(text)
-    keywords = extract_keywords(text, kw_model)
-    keywords = restore_named_entities(keywords, original_ents, lowered_ents)
-
-    print("\n--- 키워드 추출 결과 ---")
-    if keywords:
-        for kw, score in keywords:
-            print(f"- {kw} (유사도: {score:.4f})")
-    else:
-        print("유사도 기준 이상의 키워드가 없습니다.")
-
-    print("\n--- 본문 ---")
-    print(text)
+    weekly_keywords = {}
+    for week, top3_articles in weekly_top3.items():
+        article_results = []
+        for item in top3_articles:
+            # item은 dict 형태: {'article': ..., 'date': ..., 'weekstart': ..., 'score': ..., 'pos_cnt': ..., 'neg_cnt': ..., 'article_title': ...}
+            article = item['article']
+            date = item['date']
+            weekstart = item['weekstart']
+            score = item['score']
+            pos_cnt = item['pos_cnt']
+            neg_cnt = item['neg_cnt']
+            article_title = item.get('article_title', None)
+            
+            original_ents, lowered_ents = extract_named_entities(article)
+            keywords = extract_keywords(article, kw_model)
+            keywords = restore_named_entities(keywords, original_ents, lowered_ents)
+            # 키워드만 리스트로 저장 (score 없이 키워드만 리스트로 저장)
+            keyword_list = [kw for kw, _ in keywords]
+            article_results.append({
+                'article': article,
+                'date': date.strftime('%Y-%m-%d') if hasattr(date, 'strftime') else str(date),
+                'weekstart': weekstart.strftime('%Y-%m-%d') if hasattr(weekstart, 'strftime') else str(weekstart),
+                'score': score,
+                'pos_cnt': pos_cnt,
+                'neg_cnt': neg_cnt,
+                'article_title': article_title,
+                'keywords': keyword_list  # 키워드 리스트만 저장
+            })
+        weekly_keywords[week] = article_results
+    return weekly_keywords
 
 if __name__ == '__main__':
-    main()
-
+    stock_symbol = "GS"
+    start_date = "2023-12-11"
+    end_date = "2023-12-14"
+    # 예시: 특정 주식 심볼과 날짜 범위로 키워드 추출 실행
+    keyword_extract_from_articles(stock_symbol, start_date, end_date)

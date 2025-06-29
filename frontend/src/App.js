@@ -1,565 +1,1029 @@
-import logo from './logo.svg';
-import './App.css';
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import "./App.css";
+import kblogo from "./kblogo";
 import { getWeeksOfMonth } from "./weekUtils";
+import sendIcon from "./assets/send.png";
+import cloud1 from "./assets/cloud1.png";
+import cloud2 from "./assets/cloud2.png";
+import cloud3 from "./assets/cloud3.png";
+import titlecloud from "./assets/titlecloud.png";
+import {fetchTop3Articles } from "./api/sentiment";
+import {fetchWeeklySummaries } from "./api/summarize";
+import {fetchWeeklyKeywords } from "./api/keyword";
+import {fetchPredictionSummary } from "./api/prediction";
+import StockChart from "./components/StockChart";
+import IntroScreen from "./components/IntroScreen";
 
-function App() {
-  const [customerName, setCustomerName] = useState("");
-  const [pbName, setPbName] = useState("");
-  const [investmentPropensity, setInvestmentPropensity] = useState("");
-  const [createdCustomer, setCreatedCustomer] = useState(null);
-  const [customers, setCustomers] = useState([]);
-  const [companySymbol, setCompanySymbol] = useState("");
-  const [companyInfo, setCompanyInfo] = useState(null);
-  // 포트폴리오 입력 관련 상태
-  const [portfolioList, setPortfolioList] = useState([]);
-  const [stockSymbolInput, setStockSymbolInput] = useState("");
-  const [quantityInput, setQuantityInput] = useState("");
-  const [priceInput, setPriceInput] = useState("");
-  const [predictionResult, setPredictionResult] = useState(null);
-  const [reportResult, setReportResult] = useState(null);
-  // 날짜 입력 상태를 App 전체에서 공통으로 사용
-  const [year, setYear] = useState(new Date().getFullYear());
-  const [month, setMonth] = useState(new Date().getMonth() + 1); // 1~12
-  const weeks = getWeeksOfMonth(year, month);
-  const today = new Date();
-  // 오늘 이후가 포함된 주차는 제외
-  const validWeeks = weeks.filter(w => w.start <= today && w.end <= today || (w.start <= today && w.end >= today));
-  const [selectedWeekIdx, setSelectedWeekIdx] = useState(0);
-  const [startDate, setStartDate] = useState(validWeeks.length > 0 ? validWeeks[0].start.toISOString().slice(0, 10) : "");
-  const [endDate, setEndDate] = useState(validWeeks.length > 0 ? validWeeks[0].end.toISOString().slice(0, 10) : "");
+function StackIconDecoration() {
+  return (
+    <img
+      src={require('./assets/stack.png')}
+      alt="stack"
+      className="stack-icon-decoration"
+    />
+  );
+}
 
-  // 주차 선택 시 startDate, endDate 자동 반영
-  React.useEffect(() => {
-    if (validWeeks.length > 0 && selectedWeekIdx < validWeeks.length) {
-      setStartDate(validWeeks[selectedWeekIdx].start.toISOString().slice(0, 10));
-      setEndDate(validWeeks[selectedWeekIdx].end.toISOString().slice(0, 10));
-    }
-  }, [selectedWeekIdx, year, month]);
+function CloudDecorations() {
+  return (
+    <>
+      <img src={cloud1} alt="cloud1" className="cloud-decoration cloud1" />
+      <img src={cloud2} alt="cloud2" className="cloud-decoration cloud2" />
+      <img src={cloud3} alt="cloud3" className="cloud-decoration cloud3" />
+    </>
+  );
+}
 
-  // 감성점수 조회 관련 상태
-  const [sentimentSymbol, setSentimentSymbol] = useState("");
-  const [sentimentYear, setSentimentYear] = useState(new Date().getFullYear());
-  const [sentimentMonth, setSentimentMonth] = useState(new Date().getMonth() + 1); // 1~12
-  const [sentimentWeek, setSentimentWeek] = useState(1);
-  const [sentimentResult, setSentimentResult] = useState(null);
-  const [sentimentLoading, setSentimentLoading] = useState(false);
-  const [sentimentError, setSentimentError] = useState("");
-
-  // 감성점수+기사요약 조회 관련 상태
-  const [sentimentSummaryResult, setSentimentSummaryResult] = useState(null);
-  const [sentimentSummaryLoading, setSentimentSummaryLoading] = useState(false);
-  const [sentimentSummaryError, setSentimentSummaryError] = useState("");
-
-  // 포트폴리오 항목 추가
-  const addPortfolioItem = () => {
-    if (!stockSymbolInput || !quantityInput || !priceInput) return;
-    setPortfolioList([
-      ...portfolioList,
-      {
-        stock_symbol: stockSymbolInput,
-        quantity: Number(quantityInput),
-        average_purchase_price: Number(priceInput),
-      },
-    ]);
-    setStockSymbolInput("");
-    setQuantityInput("");
-    setPriceInput("");
-  };
-
-  // 포트폴리오 항목 삭제
-  const removePortfolioItem = (idx) => {
-    setPortfolioList(portfolioList.filter((_, i) => i !== idx));
-  };
-
-  // 고객 생성
-  const createCustomer = async () => {
-    const res = await fetch("http://localhost:8000/api/v1/customers/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: customerName,
-        pb_name: pbName,
-        investment_propensity: investmentPropensity,
-        investment_portfolio: portfolioList,
-      }),
-    });
-    setCreatedCustomer(await res.json());
-  };
-
-  // 고객 목록 조회
-  const fetchCustomers = async () => {
-    const res = await fetch("http://localhost:8000/api/v1/customers/");
-    setCustomers(await res.json());
-  };
-
-  // 기업 정보 조회
-  const fetchCompany = async () => {
-    let url = `http://localhost:8000/api/v1/companies/${companySymbol}`;
-    const params = [];
-    if (startDate) params.push(`start_date=${startDate}`);
-    if (endDate) params.push(`end_date=${endDate}`);
-    if (params.length > 0) url += `?${params.join("&")}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    // 196줄까지(재무제표 포함) 보여주기 위해 그대로 저장
-    setCompanyInfo(data);
-  };
-
-  // 예측 요청
-  const createPrediction = async () => {
-    if (!createdCustomer) return alert("먼저 고객을 생성하세요");
-    if (portfolioList.length === 0) return alert("포트폴리오를 1개 이상 입력하세요");
-    const stock_symbol = portfolioList[0].stock_symbol;
-    const res = await fetch("http://localhost:8000/api/v1/predictions/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customer_id: createdCustomer.id,
-        stock_symbol,
-      }),
-    });
-    setPredictionResult(await res.json());
-  };
-
-  // 보고서 생성
-  const createReport = async () => {
-    if (!createdCustomer || !predictionResult) return alert("고객과 예측을 먼저 생성하세요");
-    const res = await fetch("http://localhost:8000/api/v1/reports/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customer_id: createdCustomer.id,
-        stock_symbol: predictionResult.stock_symbol,
-        highlight_news: ["테스트 뉴스1", "테스트 뉴스2"]
-      }),
-    });
-    setReportResult(await res.json());
-  };
-
-  // 감성점수 조회 함수 수정
-  const fetchSentimentScores = async () => {
-    if (!sentimentSymbol || !startDate || !endDate) {
-      setSentimentError("기업명, 시작일, 종료일을 모두 입력하세요.");
-      return;
-    }
-    setSentimentLoading(true);
-    setSentimentError("");
-    setSentimentResult(null);
-    try {
-      const params = new URLSearchParams({
-        stock_symbol: sentimentSymbol,
-        start_date: startDate,
-        end_date: endDate,
-      });
-      const res = await fetch(`http://localhost:8000/api/v1/sentiment/weekly?${params}`);
-      if (!res.ok) throw new Error("API 호출 실패");
-      const data = await res.json();
-      setSentimentResult(data);
-    } catch (e) {
-      setSentimentError("감성점수 조회 중 오류 발생");
-    } finally {
-      setSentimentLoading(false);
-    }
-  };
-
-  // 시황정보 조회 함수 추가
-  const fetchMarketOverview = async () => {
-    if (!startDate || !endDate) return alert("시작일과 종료일을 모두 입력하세요.");
-    const res = await fetch(`http://localhost:8000/api/v1/market/overview?start_date=${startDate}&end_date=${endDate}`);
-    const data = await res.json();
-    setCompanyInfo({ ...companyInfo, market_overview: data });
-  };
-
-  // 연도 선택: 1999년부터 올해까지, 미래 연도는 선택 불가
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
-  const currentDay = new Date().getDate();
-  const yearOptions = [];
-  for (let y = 1999; y <= currentYear; y++) yearOptions.push(y);
-  // 월 옵션: 올해라면 이번 달까지만, 과거라면 1~12월
-  const monthOptions = (year === currentYear)
-    ? Array.from({ length: currentMonth }, (_, i) => i + 1)
-    : Array.from({ length: 12 }, (_, i) => i + 1);
-  // 주차 옵션: 올해&이번달이면 오늘이 속한 주까지만, 그 외는 모두
-  const filteredWeeks = (year === currentYear && month === currentMonth)
-    ? validWeeks.filter(w => w.end <= today)
-    : validWeeks;
-
-  // 감성점수+기사 요약 조회 함수 추가
-  const fetchSentimentWithSummary = async () => {
-    if (!sentimentSymbol || !startDate || !endDate) {
-      setSentimentSummaryError("기업명, 시작일, 종료일을 모두 입력하세요.");
-      return;
-    }
-    setSentimentSummaryLoading(true);
-    setSentimentSummaryError("");
-    setSentimentSummaryResult(null);
-    try {
-      const params = new URLSearchParams({
-        stock_symbol: sentimentSymbol,
-        start_date: startDate,
-        end_date: endDate,
-      });
-      const res = await fetch(`http://localhost:8000/api/v1/sentiment/weekly_with_summary?${params}`);
-      if (!res.ok) throw new Error("API 호출 실패");
-      const data = await res.json();
-      setSentimentSummaryResult(data);
-    } catch (e) {
-      setSentimentSummaryError("감성점수+기사 요약 조회 중 오류 발생");
-    } finally {
-      setSentimentSummaryLoading(false);
-    }
-  };
+function Sidebar({ userName, menu, subMenu, onMenuClick, onSubMenuClick, selectedMenu, selectedSubMenu, year, setYear, month, setMonth, period, onPeriodChange }) {
+  // 연도/월 옵션 생성
+  const yearOptions = Array.from({ length: 2025 - 1990 + 1 }, (_, i) => 1990 + i);
+  const monthOptions = Array.from({ length: 12 }, (_, i) => i + 1);
+  // 주차 옵션 생성 (선택된 연/월 기준)
+  const weekOptions = getWeeksOfMonth(year, month).map(({ week, start, end }) => {
+    const startStr = `${String(start.getMonth() + 1).padStart(2, '0')}.${String(start.getDate()).padStart(2, '0')}`;
+    const endStr = `${String(end.getMonth() + 1).padStart(2, '0')}.${String(end.getDate()).padStart(2, '0')}`;
+    return {
+      value: `${startStr} - ${endStr} (${week}주차)`,
+      label: `${startStr} - ${endStr} (${week}주차)`
+    };
+  });
 
   return (
-    <div className="App">
-      <h2>조회 기간 설정 (주차 단위)</h2>
-      <div style={{ marginBottom: 16 }}>
-        <select value={year} onChange={e => setYear(Number(e.target.value))} style={{ marginRight: 8 }}>
-          {yearOptions.map(y => (
-            <option key={y} value={y}>{y}년</option>
-          ))}
-        </select>
-        <select value={month} onChange={e => setMonth(Number(e.target.value))} style={{ marginRight: 8 }}>
-          {monthOptions.map(m => (
-            <option key={m} value={m}>{m}월</option>
-          ))}
-        </select>
-        <select value={selectedWeekIdx} onChange={e => setSelectedWeekIdx(Number(e.target.value))}>
-          {filteredWeeks.map((w, idx) => (
-            <option key={idx} value={idx}>{`${idx + 1}주차 (${w.start.getMonth() + 1}/${w.start.getDate()}~${w.end.getMonth() + 1}/${w.end.getDate()})`}</option>
-          ))}
-        </select>
-      </div>
-
-      <h2>고객 생성</h2>
-      <input
-        placeholder="고객 이름"
-        value={customerName}
-        onChange={(e) => setCustomerName(e.target.value)}
-      />
-      <input
-        placeholder="PB 이름"
-        value={pbName}
-        onChange={(e) => setPbName(e.target.value)}
-      />
-      <input
-        placeholder="투자 성향"
-        value={investmentPropensity}
-        onChange={(e) => setInvestmentPropensity(e.target.value)}
-      />
-      <div style={{ margin: '16px 0' }}>
-        <b>포트폴리오 입력</b><br />
-        <input
-          placeholder="종목 (예: AAPL)"
-          value={stockSymbolInput}
-          onChange={e => setStockSymbolInput(e.target.value)}
-          style={{ width: 80 }}
-        />
-        <input
-          placeholder="수량"
-          type="number"
-          value={quantityInput}
-          onChange={e => setQuantityInput(e.target.value)}
-          style={{ width: 60 }}
-        />
-        <input
-          placeholder="평균단가"
-          type="number"
-          value={priceInput}
-          onChange={e => setPriceInput(e.target.value)}
-          style={{ width: 100 }}
-        />
-        <button onClick={addPortfolioItem}>추가</button>
-        <ul>
-          {portfolioList.map((item, idx) => (
-            <li key={idx}>
-              {item.stock_symbol} / {item.quantity}주 / {item.average_purchase_price}원
-              <button onClick={() => removePortfolioItem(idx)} style={{ marginLeft: 8 }}>삭제</button>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <button onClick={createCustomer}>고객 생성</button>
-      {createdCustomer && <pre>{JSON.stringify(createdCustomer, null, 2)}</pre>}
-
-      <h2>고객 목록 조회</h2>
-      <button onClick={fetchCustomers}>고객 목록 불러오기</button>
-      <pre>{JSON.stringify(customers, null, 2)}</pre>
-
-      <h2>기업 정보 조회</h2>
-      <input
-        placeholder="예: AAPL"
-        value={companySymbol}
-        onChange={(e) => setCompanySymbol(e.target.value)}
-      />
-      <button onClick={fetchCompany} style={{ marginLeft: 8 }}>기업 정보 조회</button>
-      {companyInfo && (
-        <div style={{textAlign: 'left', maxWidth: 700, margin: '0 auto'}}>
-          <h3>기업 개요</h3>
-          <pre>{JSON.stringify({
-            company_name: companyInfo.company_name,
-            stock_symbol: companyInfo.stock_symbol,
-            industry: companyInfo.industry,
-            sector: companyInfo.sector,
-            business_summary: companyInfo.business_summary,
-            address: companyInfo.address
-          }, null, 2)}</pre>
-          <h3>SEC 재무제표</h3>
-          <pre>{JSON.stringify(companyInfo.income_statements, null, 2)}</pre>
-          <h3>주가/기술지표 (Stooq)</h3>
-          <pre>{JSON.stringify(companyInfo.weekly_indicators, null, 2)}</pre>
-          <h3>이동평균 (MA, Stooq)</h3>
-          <pre>{JSON.stringify(companyInfo.moving_averages, null, 2)}</pre>
+    <div className="sidebar">
+      <div className="sidebar-user">
+        <div className="sidebar-user-badge">
+          <img src={kblogo} alt="KB로고" className="sidebar-user-logo" />
+          <span className="sidebar-user-name">{userName}</span>
         </div>
-      )}
+      </div>
+      <div className="sidebar-menu">
+        {menu.map((m) => (
+          <div key={m} className={`sidebar-menu-item${selectedMenu === m ? " selected" : ""}`} onClick={() => onMenuClick(m)}>
+            {m}
+            {m === "진시황의 혜안" && selectedMenu === m && (
+              <div className="sidebar-submenu">
+                {subMenu.map((s) => (
+                  <div key={s} className={`sidebar-submenu-item${selectedSubMenu === s ? " selected" : ""}`} onClick={() => onSubMenuClick(s)}>
+                    {s}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="sidebar-yearmonth">
+        <select 
+          value={year} 
+          onChange={e => setYear(Number(e.target.value))} 
+          className="sidebar-period-select"
+        >
+          {yearOptions.map(y => <option key={y} value={y}>{y}년</option>)}
+        </select>
+        <select 
+          value={month} 
+          onChange={e => setMonth(Number(e.target.value))} 
+          className="sidebar-period-select"
+        >
+          {monthOptions.map(m => <option key={m} value={m}>{m}월</option>)}
+        </select>
+      </div>
+      <div className="sidebar-period">
+        <select value={period} onChange={e => onPeriodChange(e.target.value)} className="sidebar-period-select">
+          {weekOptions.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
 
-      <h2>주가 예측 (고객 생성 후 클릭)</h2>
-      <button onClick={createPrediction}>예측 요청</button>
-      {predictionResult && <pre>{JSON.stringify(predictionResult, null, 2)}</pre>}
-
-      <h2>보고서 생성 (고객+예측 생성 후 클릭)</h2>
-      <button onClick={createReport}>보고서 생성</button>
-      {reportResult && <pre>{JSON.stringify(reportResult, null, 2)}</pre>}
-
-      <h2>주차별 감성점수 조회</h2>
-      <div style={{ marginBottom: 16 }}>
-        <input
-          type="text"
-          placeholder="기업명(심볼)"
-          value={sentimentSymbol}
-          onChange={e => setSentimentSymbol(e.target.value)}
-          style={{ marginRight: 8 }}
-        />
-        <button onClick={fetchSentimentScores} disabled={sentimentLoading}>
-          {sentimentLoading ? "조회 중..." : "감성점수 조회"}
+function ChatPanel() {
+  const [input, setInput] = useState("");
+  // textarea 높이 자동 조절
+  const textareaRef = React.useRef(null);
+  React.useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
+    }
+  }, [input]);
+  return (
+    <div className="chat-panel chat-panel-relative">
+      <StackIconDecoration />
+      <div className="chat-title-row">
+        <div className="chat-title">진시황과의 상담</div>
+      </div>
+      <div className="chat-messages">
+        <CloudDecorations />
+        {/* 채팅 메시지 영역 */}
+      </div>
+      <div className="chat-input-row">
+        <div className="chat-input-bg">
+          <textarea
+            ref={textareaRef}
+            className="chat-input"
+            placeholder="진시황에게 질문하세요..."
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            rows={1}
+          />
+        </div>
+        <button className="chat-send-btn" disabled>
+          <img src={sendIcon} alt="send" className="chat-send-icon" />
         </button>
       </div>
-      {sentimentError && <div style={{ color: 'red' }}>{sentimentError}</div>}
-      {typeof sentimentResult === 'number' && (
-        <div style={{ fontWeight: 'bold', fontSize: 20, margin: '16px 0' }}>
-          감성점수: {sentimentResult}
+    </div>
+  );
+}
+
+function CustomerPipeline({ year, month, weekStr, onSetReportTitle }) {
+  const [started, setStarted] = useState(false);
+  const [inputSymbol, setInputSymbol] = useState("");
+  const [error, setError] = useState("");
+  const chartData = '고객 차트 예시';
+  const tableData = [
+    { 이름: '홍길동', 등급: 'Gold', 최근방문: '2025-06-01' },
+    { 이름: '김철수', 등급: 'Silver', 최근방문: '2025-06-03' }
+  ];
+  const textSummary = `${year}년 ${month}월 ${weekStr} 고객 데이터 분석 요약입니다.`;
+
+  const handleSearch = () => {
+    if (!inputSymbol.trim()) {
+      setError('고객님 성함을 입력해주세요');
+      return;
+    }
+    setError("");
+    setStarted(true);
+    if (onSetReportTitle) {
+      onSetReportTitle(`${inputSymbol.trim()}님 리포트`);
+    }
+  };
+
+  useEffect(() => {
+    if (!started && onSetReportTitle) {
+      onSetReportTitle('고객 리포트');
+    }
+    // eslint-disable-next-line
+  }, [started]);
+
+  return (
+    <div>
+      {!started && (
+        <div className="customer-search-form">
+          {error && (
+            <div className="error-message">
+              {error}
+            </div>
+          )}
+          <label style={{marginBottom: 0}}>
+            <input
+              type="text"
+              value={inputSymbol}
+              onChange={e => { setInputSymbol(e.target.value); if (error) setError(""); }}
+              className="customer-symbol-input center-text"
+              placeholder="고객님 성함을 입력해주세요..."
+            />
+          </label>
+          <button className="customer-search-btn" onClick={handleSearch}>리포트 출력</button>
         </div>
       )}
-      {sentimentResult && typeof sentimentResult === 'object' && Object.keys(sentimentResult).length > 0 && (
-        <table border="1" style={{ margin: '0 auto', minWidth: 300 }}>
-          <thead>
-            <tr>
-              <th>주차 시작일</th>
-              <th>감성점수</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Array.isArray(sentimentResult)
-              ? sentimentResult.map((item, idx) => (
-                  <tr key={idx}>
-                    <td>{item.week || item.date || ''}</td>
-                    <td>{item.score}</td>
-                  </tr>
-                ))
-              : Object.entries(sentimentResult).map(([week, score]) => {
-                  // score가 객체라면 week, score 필드 추출
-                  if (score && typeof score === 'object' && 'week' in score && 'score' in score) {
-                    return (
-                      <tr key={score.week}>
-                        <td>{score.week}</td>
-                        <td>{score.score}</td>
-                      </tr>
-                    );
-                  } else {
-                    // 기존: week가 날짜, score가 숫자
-                    return (
-                      <tr key={week}>
-                        <td>{week}</td>
-                        <td>{score}</td>
-                      </tr>
-                    );
-                  }
-                })}
-          </tbody>
-        </table>
-      )}
-      {sentimentResult && (typeof sentimentResult !== 'object' || Object.keys(sentimentResult).length === 0) && (
-        <div>감성점수 데이터가 없습니다.</div>
-      )}
-
-      <h2>시황정보 조회</h2>
-      <div style={{ marginBottom: 16 }}>
-        <button onClick={fetchMarketOverview}>시황정보 조회</button>
-      </div>
-      {companyInfo && companyInfo.market_overview && (
-        <div style={{textAlign: 'left', maxWidth: 700, margin: '0 auto'}}>
-          <h3>미국 증시 지수</h3>
-          <pre>{JSON.stringify(companyInfo.market_overview.us_stock_indices, null, 2)}</pre>
-          <h3>미국 국채 금리</h3>
-          <pre>{JSON.stringify(companyInfo.market_overview.us_treasury_yields, null, 2)}</pre>
-          <h3>한국 환율</h3>
-          <pre>{JSON.stringify(companyInfo.market_overview.kr_fx_rates, null, 2)}</pre>
-        </div>
-      )}
-
-      <h2>주차별 감성점수 및 기사 요약 조회</h2>
-      <div style={{ marginBottom: 16 }}>
-        <input
-          type="text"
-          placeholder="기업명(심볼)"
-          value={sentimentSymbol}
-          onChange={e => setSentimentSymbol(e.target.value)}
-          style={{ marginRight: 8 }}
-        />
-        {/* 시작일/종료일은 주차 단위 설정값을 그대로 사용, 별도 입력란 제거 */}
-        <span style={{ marginRight: 8 }}>
-          기간: {startDate} ~ {endDate}
-        </span>
-        <button onClick={fetchSentimentWithSummary} disabled={sentimentSummaryLoading}>
-          {sentimentSummaryLoading ? "조회 중..." : "감성점수+기사 요약 조회"}
-        </button>
-      </div>
-      {sentimentSummaryError && <div style={{ color: 'red' }}>{sentimentSummaryError}</div>}
-      {/* 감성점수와 기사 요약을 분리하여 출력 */}
-      {sentimentSummaryResult && typeof sentimentSummaryResult === 'object' && !Array.isArray(sentimentSummaryResult) && Object.keys(sentimentSummaryResult).length > 0 && (
+      {started && (
         <>
-          {/* 감성점수 표 */}
-          <h3>주차별 감성점수</h3>
-          <table border="1" style={{ margin: '0 auto', minWidth: 300, marginBottom: 24 }}>
+          <div className="pipeline-title">
+            <img src={titlecloud} alt="cloud" />고객 Pipeline
+          </div>
+          <div className="pipeline-graph">{chartData}</div>
+          <table className="pipeline-table">
             <thead>
-              <tr>
-                <th>주차 시작일</th>
-                <th>감성점수</th>
-              </tr>
+              <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
             </thead>
             <tbody>
-              {Object.entries(sentimentSummaryResult).map(([week, data], idx) => (
-                <tr key={week}>
-                  <td>{week}</td>
-                  <td>{data && typeof data === 'object' && data.score !== undefined ? data.score : ''}</td>
-                </tr>
+              {tableData.map((row, idx) => (
+                <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
               ))}
             </tbody>
           </table>
-          {/* 기사 요약 표 */}
-          <h3>주차별 기사 요약</h3>
-          <table border="1" style={{ margin: '0 auto', minWidth: 300 }}>
-            <thead>
-              <tr>
-                <th>주차 시작일</th>
-                <th>기사 요약</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(sentimentSummaryResult).map(([week, data], idx) => {
-                let summaryList = [];
-                if (data && typeof data === 'object') {
-                  // summary/article_summary가 배열(여러 기사 요약)일 경우 모두 리스트로 보여줌
-                  if (Array.isArray(data.summary)) {
-                    summaryList = data.summary;
-                  } else if (typeof data.summary === 'string') {
-                    summaryList = [data.summary];
-                  } else if (Array.isArray(data.article_summary)) {
-                    summaryList = data.article_summary;
-                  } else if (typeof data.article_summary === 'string') {
-                    summaryList = [data.article_summary];
-                  }
-                  // summary가 없고, articles(배열)만 있을 때: 기사 요약 직접 생성
-                  if (summaryList.length === 0 && Array.isArray(data.articles) && data.articles.length > 0) {
-                    summaryList = data.articles.map(a => a.summary || a);
-                  }
-                  if (summaryList.length === 0 && data.summaryList && Array.isArray(data.summaryList)) {
-                    summaryList = data.summaryList;
-                  }
-                  if (summaryList.length === 0 && data.summaries && Array.isArray(data.summaries)) {
-                    summaryList = data.summaries;
-                  }
-                }
-                return (
-                  <tr key={week}>
-                    <td>{week}</td>
-                    <td style={{ whiteSpace: 'pre-line' }}>
-                      {summaryList.length > 0 ? (
-                        <ul style={{ paddingLeft: 16 }}>
-                          {summaryList.map((s, i) => <li key={i}>{s}</li>)}
-                        </ul>
-                      ) : ''}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="pipeline-text">{textSummary}</div>
         </>
       )}
-      {/* 배열 형태도 지원 */}
-      {sentimentSummaryResult && Array.isArray(sentimentSummaryResult) && sentimentSummaryResult.length > 0 && (
+    </div>
+  );
+}
+
+function MarketPipeline({ year, month, weekStr }) {
+  const [started, setStarted] = useState(false);
+  const chartData = '시장 차트 예시';
+  const tableData = [
+    { 지수: 'KOSPI', 값: 2650, 변동: '+1.2%' },
+    { 지수: 'KOSDAQ', 값: 900, 변동: '-0.5%' }
+  ];
+  const textSummary = `${year}년 ${month}월 ${weekStr} 시장 데이터 분석 요약입니다.`;
+
+  return (
+    <div>
+      {!started && (
+        <button
+          className="report-start-btn"
+          onClick={() => setStarted(true)}
+        >
+          리포트 출력
+        </button>
+      )}
+      {started && (
         <>
-          <h3>주차별 감성점수</h3>
-          <table border="1" style={{ margin: '0 auto', minWidth: 300, marginBottom: 24 }}>
+          <div className="pipeline-title">
+            <img src={titlecloud} alt="cloud" />증시 지표
+          </div>
+          <div className="pipeline-graph">{chartData}</div>
+          <table className="pipeline-table">
             <thead>
-              <tr>
-                <th>주차 시작일</th>
-                <th>감성점수</th>
-              </tr>
+              <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
             </thead>
             <tbody>
-              {sentimentSummaryResult.map((item, idx) => (
-                <tr key={idx}>
-                  <td>{item.week || item.date || ''}</td>
-                  <td>{item.score}</td>
-                </tr>
+              {tableData.map((row, idx) => (
+                <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
               ))}
             </tbody>
           </table>
-          <h3>주차별 기사 요약</h3>
-          <table border="1" style={{ margin: '0 auto', minWidth: 300 }}>
-            <thead>
-              <tr>
-                <th>주차 시작일</th>
-                <th>기사 요약</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sentimentSummaryResult.map((item, idx) => {
-                let summaryList = [];
-                if (item) {
-                  if (Array.isArray(item.summary)) {
-                    summaryList = item.summary;
-                  } else if (typeof item.summary === 'string') {
-                    summaryList = [item.summary];
-                  } else if (Array.isArray(item.article_summary)) {
-                    summaryList = item.article_summary;
-                  } else if (typeof item.article_summary === 'string') {
-                    summaryList = [item.article_summary];
-                  }
-                  if (summaryList.length === 0 && Array.isArray(item.articles) && item.articles.length > 0) {
-                    summaryList = item.articles.map(a => a.summary || a);
-                  }
-                  if (summaryList.length === 0 && item.summaryList && Array.isArray(item.summaryList)) {
-                    summaryList = item.summaryList;
-                  }
-                  if (summaryList.length === 0 && item.summaries && Array.isArray(item.summaries)) {
-                    summaryList = item.summaries;
-                  }
-                }
-                return (
-                  <tr key={idx}>
-                    <td>{item.week || item.date || ''}</td>
-                    <td style={{ whiteSpace: 'pre-line' }}>
-                      {summaryList.length > 0 ? (
-                        <ul style={{ paddingLeft: 16 }}>
-                          {summaryList.map((s, i) => <li key={i}>{s}</li>)}
-                        </ul>
-                      ) : ''}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="pipeline-text">{textSummary}</div>
         </>
       )}
-      {sentimentSummaryResult && ((typeof sentimentSummaryResult !== 'object' && !Array.isArray(sentimentSummaryResult)) || Object.keys(sentimentSummaryResult).length === 0) && (
-        <div>감성점수+기사 요약 데이터가 없습니다.</div>
+    </div>
+  );
+}
+
+function IndustryPipeline({ year, month, weekStr, onSetReportTitle }) {
+  const [started, setStarted] = useState(false);
+  const [inputSymbol, setInputSymbol] = useState("");
+  const [error, setError] = useState("");
+  const chartData = '산업 차트 예시';
+  const tableData = [
+    { 산업: 'IT', 성장률: '5.2%' },
+    { 산업: '바이오', 성장률: '3.1%' }
+  ];
+  const textSummary = `${year}년 ${month}월 ${weekStr} 산업 데이터 분석 요약입니다.`;
+
+  const handleSearch = () => {
+    if (!inputSymbol.trim()) {
+      setError('산업군 이름을 입력해주세요');
+      return;
+    }
+    setError("");
+    setStarted(true);
+    if (onSetReportTitle) {
+      onSetReportTitle(`${inputSymbol.trim()} 산업 리포트`);
+    }
+  };
+
+  useEffect(() => {
+    if (!started && onSetReportTitle) {
+      onSetReportTitle('산업 리포트');
+    }
+    // eslint-disable-next-line
+  }, [started]);
+
+  return (
+    <div>
+      {!started && (
+        <div className="industry-search-form">
+          {error && (
+            <div className="error-message">
+              {error}
+            </div>
+          )}
+          <label style={{marginBottom: 0}}>
+            <input
+              type="text"
+              value={inputSymbol}
+              onChange={e => { setInputSymbol(e.target.value); if (error) setError(""); }}
+              className="industry-symbol-input center-text"
+              placeholder="산업군 이름을 입력해주세요..."
+            />
+          </label>
+          <button className="industry-search-btn" onClick={handleSearch}>리포트 출력</button>
+        </div>
       )}
+      {started && (
+        <>
+          <div className="pipeline-title">
+            <img src={titlecloud} alt="cloud" />산업 Pipeline
+          </div>
+          <div className="pipeline-graph">
+            <PipelineGraphSample />
+          </div>
+          <table className="pipeline-table">
+            <thead>
+              <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
+            </thead>
+            <tbody>
+              {tableData.map((row, idx) => (
+                <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="pipeline-text">{textSummary}</div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
+  const [started, setStarted] = useState(false);
+  const [inputSymbol, setInputSymbol] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [top3Articles, setTop3Articles] = useState(null);
+  const [summaries, setSummaries] = useState(null);
+  const [keywords, setKeywords] = useState(null);
+  const [prediction, setPrediction] = useState(null);
+  const [selectedArticle, setSelectedArticle] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+
+  const textSummary = `${year}년 ${month}월 ${weekStr} 기업 데이터 분석 요약입니다.`;
+
+  // period에서 주차 시작일, 종료일 추출 (예: "12.10 - 12.16 (1주차)")
+  const dateMatch = period.match(/(\d{2})\.(\d{2}) - (\d{2})\.(\d{2})/);
+  let startDate = null;
+  let endDate = null;
+  if (dateMatch) {
+    const y = year;
+    startDate = `${y}-${dateMatch[1]}-${dateMatch[2]}`;
+    endDate = `${y}-${dateMatch[3]}-${dateMatch[4]}`;
+  }
+
+  // 다음 주차 정보 계산
+  const getNextWeekInfo = () => {
+    const weekMatch = period.match(/\((\d+)주차\)/);
+    if (weekMatch) {
+      const currentWeek = parseInt(weekMatch[1]);
+      const nextWeek = currentWeek + 1;
+      return `${month}월 ${nextWeek}주차`;
+    }
+    return "다음 주차";
+  };
+
+  const handleArticleClick = (article) => {
+    setSelectedArticle(article);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedArticle(null);
+  };
+
+  // 특정 기사의 요약을 찾는 함수
+  const findSummaryForArticle = (article) => {
+    if (!summaries) return null;
+    
+    try {
+      // summaries는 주차별로 구성되어 있음: { "2023-12-10": [summary1, summary2, summary3], ... }
+      for (const weekData of Object.values(summaries)) {
+        if (!Array.isArray(weekData)) continue;
+        
+        const summary = weekData.find(s => {
+          if (!s) return false;
+          // 날짜와 기사 제목으로 매칭 (더 안전함)
+          const dateMatch = s.date === article.date;
+          const titleMatch = s.article_title === article.article_title;
+          return dateMatch && titleMatch;
+        });
+        
+        if (summary && summary.summary) {
+          return summary.summary;
+        }
+      }
+    } catch (error) {
+      console.error('요약 찾기 오류:', error);
+    }
+    
+    return null;
+  };
+
+  // 특정 기사의 키워드를 찾는 함수
+  const findKeywordsForArticle = (article) => {
+    if (!keywords) return null;
+    
+    try {
+      // keywords는 주차별로 구성되어 있음: { "2023-12-10": [keyword1, keyword2, keyword3], ... }
+      for (const weekData of Object.values(keywords)) {
+        if (!Array.isArray(weekData)) continue;
+        
+        const keywordData = weekData.find(k => {
+          if (!k) return false;
+          // 날짜와 기사 제목으로 매칭
+          const dateMatch = k.date === article.date;
+          const titleMatch = k.article_title === article.article_title;
+          return dateMatch && titleMatch;
+        });
+        
+        if (keywordData && keywordData.keywords) {
+          return keywordData.keywords;
+        }
+      }
+    } catch (error) {
+      console.error('키워드 찾기 오류:', error);
+    }
+    
+    return null;
+  };
+
+  const handleSearch = async () => {
+    setStarted(true); // 버튼 클릭 시 바로 started 상태로 전환
+    console.log('handleSearch 클릭됨');
+    if (!inputSymbol) {
+      setError('종목코드를 입력해주세요');
+      return;
+    }
+    setLoading(true);
+    setError("");
+    setTop3Articles(null);
+    setSummaries(null);
+    setKeywords(null);
+    setPrediction(null);
+    // 실제 API 호출 파라미터 확인
+    console.log('API 호출', { symbol: inputSymbol, startDate, endDate });
+    try {
+      // 네 API를 병렬로 호출
+      const [articlesData, summariesData, keywordsData, predictionData] = await Promise.all([
+        fetchTop3Articles({ symbol: inputSymbol, startDate, endDate }),
+        fetchWeeklySummaries({ symbol: inputSymbol, startDate, endDate }),
+        fetchWeeklyKeywords({ symbol: inputSymbol, startDate, endDate }),
+        fetchPredictionSummary({ symbol: inputSymbol, startDate, endDate })
+      ]);
+      
+      setTop3Articles(articlesData);
+      setSummaries(summariesData);
+      setKeywords(keywordsData);
+      setPrediction(predictionData);
+      console.log('기사 데이터:', articlesData);
+      console.log('요약 데이터:', summariesData);
+      console.log('키워드 데이터:', keywordsData);
+      console.log('예측 데이터:', predictionData);
+    } catch (e) {
+      console.error('API 호출 오류:', e);
+      setError('데이터를 불러오지 못했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!started && onSetReportTitle) {
+      onSetReportTitle('기업 리포트');
+    }
+    // eslint-disable-next-line
+  }, [started]);
+
+  return (
+    <div>
+      {!started && (
+        <div className="company-search-form">
+          {error && (
+            <div className="error-message">
+              {error}
+            </div>
+          )}
+          <label style={{marginBottom: 0}}>
+            <input
+              type="text"
+              value={inputSymbol}
+              onChange={e => setInputSymbol(e.target.value)}
+              className="company-symbol-input center-text"
+              placeholder="종목코드를 입력해주세요."
+            />
+          </label>
+          <button className="company-search-btn" onClick={handleSearch}>리포트 출력</button>
+        </div>
+      )}
+      {started && (
+        <>
+          <div className="pipeline-title">
+            <img src={titlecloud} alt="cloud" />기업 Pipeline
+          </div>
+          
+          {/* 주가 차트 컴포넌트 추가 */}
+          {inputSymbol && startDate && endDate && (
+            <StockChart 
+              symbol={inputSymbol}
+              startDate={startDate}
+              endDate={endDate}
+            />
+          )}
+
+          <div className="pipeline-text">{textSummary}</div>
+          
+          {/* 주가 전망 카드 */}
+          {started && (
+            <div style={{
+              marginTop: '24px',
+              marginBottom: '16px',
+              padding: '20px',
+              backgroundColor: '#f8f9fa',
+              borderRadius: '12px',
+              border: '2px solid #e3f2fd',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                marginBottom: '12px',
+                gap: '8px'
+              }}>
+                <img 
+                  src={require('./assets/smile_king.png')} 
+                  alt="smile_king" 
+                  style={{
+                    width: '24px',
+                    height: '24px'
+                  }}
+                />
+                <h3 style={{
+                  margin: 0,
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  color: '#1976d2'
+                }}>
+                  {inputSymbol || '종목'} {getNextWeekInfo()} 주가 전망 한줄평
+                </h3>
+              </div>
+              
+              <div style={{
+                fontSize: '15px',
+                lineHeight: '1.6',
+                color: '#333',
+                backgroundColor: 'white',
+                padding: '16px',
+                borderRadius: '8px',
+                border: '1px solid #e0e0e0',
+                minHeight: '60px',
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                {loading ? (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    color: '#666',
+                    fontStyle: 'italic'
+                  }}>
+                    <span>🔄</span>
+                    AI가 주가 전망을 분석하고 있습니다...
+                  </div>
+                ) : error && error !== '종목코드를 입력해주세요' ? (
+                  <div style={{
+                    color: '#d32f2f',
+                    fontStyle: 'italic'
+                  }}>
+                    주가 전망 데이터를 불러오지 못했습니다.
+                  </div>
+                ) : prediction && prediction.summary ? (
+                  prediction.summary
+                ) : (
+                  <div style={{
+                    color: '#666',
+                    fontStyle: 'italic'
+                  }}>
+                    주가 전망 데이터가 없습니다.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {/* top3 기사 표시 */}
+          <div className="top3-articles">
+            <b>Top3 기사:</b>
+            {loading ? '로딩 중...'
+              : error && error !== '종목코드를 입력해주세요'
+                ? error
+              : top3Articles && top3Articles.top3_articles && top3Articles.top3_articles.length > 0 ? (
+                <ol style={{marginTop: '8px'}}>
+                  {top3Articles.top3_articles.map((art, idx) => (
+                    <li key={idx} style={{marginBottom: '12px'}}>
+                      <div style={{fontWeight:'bold', fontSize:'16px'}}>
+                        {art.article_title}
+                        <span style={{marginLeft:'10px', color:'#0077cc', fontWeight:'normal', fontSize:'15px'}}>
+                          {art.score > 0 ? '+' : ''}{art.score}
+                        </span>
+                      </div>
+                      {/* 기사 작성 날짜 - 작은 회색 글씨로 표시 */}
+                      <div style={{fontSize:'12px', color:'#888', marginBottom:'2px'}}>{art.date}</div>
+                      
+                      {/* 기사 키워드 - 해시태그 형태로 표시 */}
+                      {(() => {
+                        const articleKeywords = findKeywordsForArticle(art);
+                        return articleKeywords && articleKeywords.length > 0 ? (
+                          <div style={{
+                            margin: '6px 0',
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: '4px'
+                          }}>
+                            {articleKeywords.slice(0, 5).map((keyword, idx) => (
+                              <span
+                                key={idx}
+                                style={{
+                                  backgroundColor: '#e3f2fd',
+                                  color: '#1976d2',
+                                  fontSize: '11px',
+                                  padding: '2px 6px',
+                                  borderRadius: '12px',
+                                  border: '1px solid #bbdefb',
+                                  display: 'inline-block',
+                                  fontWeight: '500'
+                                }}
+                              >
+                                #{keyword}
+                              </span>
+                            ))}
+                          </div>
+                        ) : loading ? (
+                          <div style={{
+                            fontSize: '11px',
+                            color: '#9e9e9e',
+                            fontStyle: 'italic',
+                            margin: '6px 0'
+                          }}>
+                            키워드 생성 중...
+                          </div>
+                        ) : null;
+                      })()}
+                      
+                      {/* 기사 요약 내용 */}
+                      {(() => {
+                        const summary = findSummaryForArticle(art);
+                        return summary ? (
+                          <div style={{
+                            fontSize: '13px',
+                            color: '#555',
+                            backgroundColor: '#f8f9fa',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            border: '1px solid #e9ecef',
+                            margin: '6px 0',
+                            lineHeight: '1.4'
+                          }}>
+                            <div style={{fontWeight: 'bold', fontSize: '12px', color: '#6c757d', marginBottom: '4px'}}>
+                              📄 기사 요약
+                            </div>
+                            {summary}
+                          </div>
+                        ) : loading ? (
+                          <div style={{
+                            fontSize: '12px',
+                            color: '#6c757d',
+                            fontStyle: 'italic',
+                            margin: '6px 0'
+                          }}>
+                            요약 생성 중...
+                          </div>
+                        ) : null;
+                      })()}
+                      
+                      {/* 기사 본문 확인 버튼 */}
+                      <button 
+                        onClick={() => handleArticleClick(art)}
+                        style={{
+                          backgroundColor: '#0077cc',
+                          color: 'white',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          marginTop: '4px'
+                        }}
+                      >
+                        기사 본문 자세히 확인하기
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              ) : '데이터 없음'}
+          </div>
+          
+          {/* 기사 상세 모달 */}
+          {showModal && selectedArticle && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 1000
+            }}>
+              <div style={{
+                backgroundColor: 'white',
+                padding: '24px',
+                borderRadius: '8px',
+                maxWidth: '80%',
+                maxHeight: '80%',
+                overflow: 'auto',
+                position: 'relative',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+              }}>
+                {/* 닫기 버튼 */}
+                <button 
+                  onClick={closeModal}
+                  style={{
+                    position: 'absolute',
+                    top: '12px',
+                    right: '12px',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    fontSize: '20px',
+                    cursor: 'pointer',
+                    color: '#666'
+                  }}
+                >
+                  ×
+                </button>
+                
+                {/* 모달 내용 */}
+                <div style={{marginRight: '30px'}}>
+                  <h2 style={{
+                    fontSize: '20px',
+                    fontWeight: 'bold',
+                    marginBottom: '12px',
+                    color: '#333',
+                    lineHeight: '1.4'
+                  }}>
+                    {selectedArticle.article_title}
+                  </h2>
+                  
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    marginBottom: '16px',
+                    gap: '16px'
+                  }}>
+                    <span style={{
+                      fontSize: '14px',
+                      color: '#666',
+                      backgroundColor: '#f5f5f5',
+                      padding: '4px 8px',
+                      borderRadius: '4px'
+                    }}>
+                      {selectedArticle.date}
+                    </span>
+                    <span style={{
+                      fontSize: '16px',
+                      fontWeight: 'bold',
+                      color: selectedArticle.score > 0 ? '#22c55e' : selectedArticle.score < 0 ? '#ef4444' : '#666',
+                      backgroundColor: '#f9f9f9',
+                      padding: '4px 8px',
+                      borderRadius: '4px'
+                    }}>
+                      감성점수: {selectedArticle.score > 0 ? '+' : ''}{selectedArticle.score}
+                    </span>
+                  </div>
+                  
+                  <div style={{
+                    fontSize: '15px',
+                    lineHeight: '1.6',
+                    color: '#444',
+                    textAlign: 'justify',
+                    maxHeight: '400px',
+                    overflowY: 'auto',
+                    padding: '16px',
+                    backgroundColor: '#fafafa',
+                    borderRadius: '6px',
+                    border: '1px solid #e0e0e0'
+                  }}>
+                    {selectedArticle.article}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function PipelinePanel({ name, year, month, weekStr, period, onSetReportTitle }) {
+  if (name === 'customer') return <CustomerPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} />;
+  if (name === 'market') return <MarketPipeline year={year} month={month} weekStr={weekStr} />;
+  if (name === 'industry') return <IndustryPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} />;
+  if (name === 'company') return <CompanyPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} />;
+  return null;
+}
+
+function MainPanel({ year, month, period, selectedMenu, selectedSubMenu }) {
+  // 주차 정보 추출 (예: "(1주차)")
+  const weekMatch = period.match(/\((\d+주차)\)/);
+  const weekStr = weekMatch ? weekMatch[1] : "";
+
+  // 주차 시작일, 종료일 추출 (예: "06.01 - 06.07 (1주차)")
+  const dateMatch = period.match(/(\d{2})\.(\d{2}) - (\d{2})\.(\d{2})/);
+  let startDate = null;
+  let endDate = null;
+  if (dateMatch) {
+    const y = year;
+    startDate = `${y}-${dateMatch[1]}-${dateMatch[2]}`;
+    endDate = `${y}-${dateMatch[3]}-${dateMatch[4]}`;
+  }
+
+  // 메뉴/서브메뉴에 따라 보여줄 pipeline 결정
+  let pipelineName = null;
+  let defaultReportTitle = '';
+  if (selectedMenu === "고객 관리") {
+    pipelineName = "customer";
+    defaultReportTitle = "고객 리포트";
+  } else if (selectedMenu === "진시황의 혜안") {
+    if (selectedSubMenu === "시황") {
+      pipelineName = "market";
+      defaultReportTitle = "시황 리포트";
+    } else if (selectedSubMenu === "산업") {
+      pipelineName = "industry";
+      defaultReportTitle = "산업 리포트";
+    } else if (selectedSubMenu === "기업") {
+      pipelineName = "company";
+      defaultReportTitle = "기업 리포트";
+    }
+  }
+
+  const [reportTitle, setReportTitle] = useState(defaultReportTitle);
+  useEffect(() => {
+    setReportTitle(defaultReportTitle);
+    // eslint-disable-next-line
+  }, [selectedMenu, selectedSubMenu, year, month, period]);
+
+  return (
+    <div className="main-panel">
+      <div className="main-title">[{year}년 {month}월 {(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()}] {reportTitle}</div>
+      <div className="main-placeholder" style={{marginTop: '32px'}}>
+        {pipelineName && (
+          <PipelinePanel name={pipelineName} year={year} month={month} weekStr={(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()} period={period} onSetReportTitle={['industry','company','customer'].includes(pipelineName) ? setReportTitle : undefined} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [selectedMenu, setSelectedMenu] = useState("진시황의 혜안");
+  const [selectedSubMenu, setSelectedSubMenu] = useState("시황");
+  const [year, setYear] = useState(2025);
+  const [month, setMonth] = useState(6);
+  const [period, setPeriod] = useState("06.01 - 06.07 (1주차)");
+  const [showIntro, setShowIntro] = useState(true);
+
+  const handleStart = () => {
+    setShowIntro(false);
+  };
+
+  if (showIntro) {
+    return <IntroScreen onStart={handleStart} />;
+  }
+
+  return (
+    <div className="app-layout">
+      <Sidebar
+        userName="김PB"
+        menu={["진시황의 혜안", "고객 관리"]}
+        subMenu={["시황", "산업", "기업"]}
+        selectedMenu={selectedMenu}
+        selectedSubMenu={selectedSubMenu}
+        onMenuClick={setSelectedMenu}
+        onSubMenuClick={setSelectedSubMenu}
+        year={year}
+        setYear={setYear}
+        month={month}
+        setMonth={setMonth}
+        period={period}
+        onPeriodChange={setPeriod}
+      />
+      <MainPanel year={year} month={month} period={period} selectedMenu={selectedMenu} selectedSubMenu={selectedSubMenu} />
+      <ChatPanel />
+    </div>
+  );
+}
+
+function PipelineGraphSample() {
+  // 6개월치 Apple 주가 임의 데이터 (월별 종가)
+  const data = [
+    { month: '1월', price: 185 },
+    { month: '2월', price: 192 },
+    { month: '3월', price: 188 },
+    { month: '4월', price: 200 },
+    { month: '5월', price: 210 },
+    { month: '6월', price: 205 }
+  ];
+  const maxValue = Math.max(...data.map(d => d.price));
+  const minValue = Math.min(...data.map(d => d.price));
+  const avgValue = data.reduce((sum, d) => sum + d.price, 0) / data.length;
+  const width = 320;
+  const height = 120;
+  const padding = 32;
+  const yAxisWidth = 32;
+  const pointRadius = 4;
+  const xStep = (width - 2 * padding - yAxisWidth) / (data.length - 1);
+  const yScale = price => padding + ((maxValue - price) / (maxValue - minValue || 1)) * (height - 2 * padding);
+
+  // 평균선 y좌표
+  const avgY = yScale(avgValue);
+
+  // 구간별로 평균보다 높은 구간(빨간색), 낮은 구간(파란색)으로 선분 분리
+  const segments = [];
+  for (let i = 0; i < data.length - 1; i++) {
+    const x1 = padding + yAxisWidth + i * xStep;
+    const y1 = yScale(data[i].price);
+    const x2 = padding + yAxisWidth + (i + 1) * xStep;
+    const y2 = yScale(data[i + 1].price);
+    const above1 = data[i].price >= avgValue;
+    const above2 = data[i + 1].price >= avgValue;
+    if (above1 === above2) {
+      segments.push({ x1, y1, x2, y2, color: above1 ? '#ef4444' : '#3b82f6' });
+    } else {
+      // 평균선과의 교점 계산
+      const t = (avgValue - data[i].price) / (data[i + 1].price - data[i].price);
+      const crossX = x1 + t * (x2 - x1);
+      const crossY = avgY;
+      segments.push({ x1, y1, x2: crossX, y2: crossY, color: above1 ? '#ef4444' : '#3b82f6' });
+      segments.push({ x1: crossX, y1: crossY, x2, y2, color: above2 ? '#ef4444' : '#3b82f6' });
+    }
+  }
+
+  // Y축 눈금 (5 단위)
+  const yTicks = [];
+  const tickStep = 5;
+  for (let v = Math.ceil(minValue / tickStep) * tickStep; v <= maxValue; v += tickStep) {
+    yTicks.push(v);
+  }
+
+  return (
+    <div className="pipeline-graph-sample">
+      <svg width={width} height={height} className="line-graph-svg">
+        {/* Y축 */}
+        <line x1={padding + yAxisWidth} y1={padding} x2={padding + yAxisWidth} y2={height - padding} stroke="#bbb" strokeWidth="1" />
+        {/* X축 */}
+        <line x1={padding + yAxisWidth} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#bbb" strokeWidth="1" />
+        {/* Y축 눈금 및 라벨, 얇은 실선 */}
+        {yTicks.map((v, i) => {
+          const y = yScale(v);
+          return (
+            <g key={v}>
+              <line
+                x1={padding + yAxisWidth}
+                y1={y}
+                x2={width - padding}
+                y2={y}
+                stroke="#ddd"
+                strokeWidth="1"
+                strokeDasharray="2 2"
+              />
+              <text
+                x={padding + yAxisWidth - 6}
+                y={y + 4}
+                textAnchor="end"
+                fontSize="11"
+                fill="#888"
+              >
+                {v}
+              </text>
+            </g>
+          );
+        })}
+        {/* 평균선 */}
+        <line x1={padding + yAxisWidth} y1={avgY} x2={width - padding} y2={avgY} stroke="#888" strokeDasharray="4 2" strokeWidth="1.5" />
+        <text x={width - padding + 4} y={avgY + 4} fontSize="12" fill="#888">평균 {avgValue.toFixed(1)}</text>
+        {/* 데이터 라인 (구간별 색상) */}
+        {segments.map((seg, i) => (
+          <line
+            key={i}
+            x1={seg.x1}
+            y1={seg.y1}
+            x2={seg.x2}
+            y2={seg.y2}
+            stroke={seg.color}
+            strokeWidth="2.5"
+          />
+        ))}
+        {/* 월 라벨 */}
+        {data.map((d, i) => (
+          <text
+            key={d.month}
+            x={padding + yAxisWidth + i * xStep}
+            y={height - padding + 18}
+            textAnchor="middle"
+            fontSize="12"
+            fill="#555"
+          >
+            {d.month}
+          </text>
+        ))}
+      </svg>
     </div>
   );
 }
