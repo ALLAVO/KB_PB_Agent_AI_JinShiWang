@@ -3,6 +3,9 @@ import time
 import os
 import json
 import yfinance as yf
+import pandas_datareader.data as web
+from app.core.config import settings
+import pandas as pd
 from datetime import datetime, timedelta
 from typing import Dict, List
 
@@ -214,232 +217,92 @@ def get_moving_averages_from_stooq(ticker: str, end_date: str, windows=[5, 10, 2
 # 기존 Yahoo 함수 대체
 get_weekly_stock_indicators_from_yahoo = get_weekly_stock_indicators_from_stooq
 
-def get_stock_price_chart_data(ticker: str, start_date: str, end_date: str) -> dict:
+def get_stock_price_chart_data(ticker: str, start_date: str, end_date: str) -> Dict:
     """
-    특정 기업의 주가 차트 데이터를 반환합니다.
-    start_date, end_date: 'YYYY-MM-DD'
-    반환: {
-        'dates': [...],
-        'opens': [...],
-        'highs': [...],
-        'lows': [...],
-        'closes': [...],
-        'volumes': [...]
-    }
+    주식 가격 차트 데이터를 가져옵니다.
     """
     try:
-        if not ticker.endswith('.US'):
-            ticker = ticker + '.US'
-        df = web.DataReader(ticker, 'stooq', start=start_date, end=end_date)
-        if df.empty:
-            return {"error": "No price data in given period."}
-        df = df.sort_index()  # 날짜 오름차순
+        ticker_obj = yf.Ticker(ticker)
+        hist = ticker_obj.history(start=start_date, end=end_date)
+        
+        if hist.empty:
+            return {"error": f"No data found for symbol {ticker}"}
         
         return {
-            'dates': [d.strftime('%Y-%m-%d') for d in df.index],
-            'opens': df['Open'].tolist(),
-            'highs': df['High'].tolist(),
-            'lows': df['Low'].tolist(),
-            'closes': df['Close'].tolist(),
-            'volumes': df['Volume'].tolist()
+            "dates": [date.strftime('%Y-%m-%d') for date in hist.index],
+            "closes": hist['Close'].tolist(),
+            "opens": hist['Open'].tolist(),
+            "highs": hist['High'].tolist(),
+            "lows": hist['Low'].tolist(),
+            "volumes": hist['Volume'].tolist()
         }
+        
     except Exception as e:
-        return {"error": f"Error fetching stock price chart data from Stooq: {e}"}
+        return {"error": f"Error fetching stock data for {ticker}: {e}"}
 
-def get_stock_price_chart_with_ma(ticker: str, start_date: str, end_date: str, ma_periods: list = [5, 20, 60]) -> dict:
+def get_stock_price_chart_with_ma(ticker: str, start_date: str, end_date: str, ma_periods: List[int]) -> Dict:
     """
-    특정 기업의 주가 차트 데이터와 이동평균을 함께 반환합니다.
-    start_date, end_date: 'YYYY-MM-DD'
-    ma_periods: 이동평균 기간 리스트 (예: [5, 20, 60])
-    반환: {
-        'dates': [...],
-        'closes': [...],
-        'ma5': [...],
-        'ma20': [...],
-        'ma60': [...],
-        'volumes': [...]
-    }
+    이동평균이 포함된 주식 가격 차트 데이터를 가져옵니다.
     """
     try:
-        if not ticker.endswith('.US'):
-            ticker = ticker + '.US'
+        ticker_obj = yf.Ticker(ticker)
         
         # 이동평균 계산을 위해 더 긴 기간의 데이터 필요
         start_dt = datetime.strptime(start_date, '%Y-%m-%d')
-        extended_start = start_dt - timedelta(days=max(ma_periods) + 30)  # 여유 데이터
-        extended_start_str = extended_start.strftime('%Y-%m-%d')
+        extended_start = start_dt - timedelta(days=max(ma_periods) + 30)
         
-        df = web.DataReader(ticker, 'stooq', start=extended_start_str, end=end_date)
-        if df.empty:
-            return {"error": "No price data in given period."}
-        df = df.sort_index()  # 날짜 오름차순
+        hist = ticker_obj.history(start=extended_start.strftime('%Y-%m-%d'), end=end_date)
+        
+        if hist.empty:
+            return {"error": f"No data found for symbol {ticker}"}
         
         # 이동평균 계산
         for period in ma_periods:
-            df[f'ma{period}'] = df['Close'].rolling(window=period).mean()
+            hist[f'ma{period}'] = hist['Close'].rolling(window=period).mean()
         
         # 원하는 기간으로 필터링
-        df_filtered = df[df.index >= start_date]
+        filtered_hist = hist[hist.index >= start_date]
+        
+        if filtered_hist.empty:
+            return {"error": f"No data in specified date range for {ticker}"}
         
         result = {
-            'dates': [d.strftime('%Y-%m-%d') for d in df_filtered.index],
-            'closes': df_filtered['Close'].tolist(),
-            'volumes': df_filtered['Volume'].tolist()
+            "dates": [date.strftime('%Y-%m-%d') for date in filtered_hist.index],
+            "closes": filtered_hist['Close'].tolist()
         }
         
         # 이동평균 데이터 추가
         for period in ma_periods:
-            result[f'ma{period}'] = df_filtered[f'ma{period}'].tolist()
+            ma_key = f"ma{period}"
+            result[ma_key] = filtered_hist[f'ma{period}'].tolist()
         
         return result
+        
     except Exception as e:
-        return {"error": f"Error fetching stock price chart data with MA from Stooq: {e}"}
-    
+        return {"error": f"Error fetching MA data for {ticker}: {e}"}
 
-#### 04 . 시황정보 : 증시, 채권, 환율 #####
-
-## 04-1. 미국 증시 지수
-def get_us_indices_6months_chart(end_date: str) -> dict:
+def get_index_chart_data(symbol: str, start_date: str, end_date: str) -> Dict:
     """
-    DOW, S&P500, NASDAQ 6개월치 일별 종가 데이터를 반환합니다.
-    end_date: 'YYYY-MM-DD' (그래프 마지막 날짜)
-    반환: {
-        'dow': {'dates': [...], 'closes': [...]},
-        'sp500': {'dates': [...], 'closes': [...]},
-        'nasdaq': {'dates': [...], 'closes': [...]}
-    }
+    지수 데이터를 가져옵니다 (나스닥, S&P 500 등)
     """
-
     try:
-        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
-        start_dt = end_dt - timedelta(days=182)  # 약 6개월(182일)
-        start_str = start_dt.strftime('%Y-%m-%d')
-        end_str = end_dt.strftime('%Y-%m-%d')
-
-        indices = {
-            'dow': '^DJI',
-            'sp500': '^SPX',
-            'nasdaq': '^NDQ'
-        }
-        result = {}
-        for key, ticker in indices.items():
-            df = web.DataReader(ticker, 'stooq', start=start_str, end=end_str)
-            df = df.sort_index()
-            if df.empty:
-                result[key] = {'dates': [], 'closes': []}
-            else:
-                result[key] = {
-                    'dates': [d.strftime('%Y-%m-%d') for d in df.index],
-                    'closes': df['Close'].tolist()
-                }
-        return result
-    except Exception as e:
-        return {'error': f'Error fetching 6-month US indices data: {e}'}
-
-
-# ## 04-2. 미국 국채 금리
-def get_us_treasury_yields_6months(fred_api_key: str, end_date: str) -> dict:
-    """
-    FRED API를 이용해 미국 국채 2년물(DGS2), 10년물(DGS10) 6개월(182일)치 일별 금리 데이터를 반환합니다.
-    end_date: 'YYYY-MM-DD' (마지막 날짜)
-    반환: {
-        'dates': [...],
-        'us_2y': [...],
-        'us_10y': [...]
-    }
-    """
-
-    try:
-        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
-        start_dt = end_dt - timedelta(days=182)
-        start_str = start_dt.strftime('%Y-%m-%d')
-        end_str = end_dt.strftime('%Y-%m-%d')
-        url_2y = f"https://api.stlouisfed.org/fred/series/observations?series_id=DGS2&api_key={fred_api_key}&file_type=json&observation_start={start_str}&observation_end={end_str}"
-        url_10y = f"https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key={fred_api_key}&file_type=json&observation_start={start_str}&observation_end={end_str}"
-        resp_2y = requests.get(url_2y)
-        resp_10y = requests.get(url_10y)
-        obs_2y = resp_2y.json().get('observations', [])
-        obs_10y = resp_10y.json().get('observations', [])
-        dates = [o['date'] for o in obs_2y if o['value'] not in ('.', None, '')]
-        us_2y = [float(o['value']) for o in obs_2y if o['value'] not in ('.', None, '')]
-        us_10y = [float(o['value']) for o in obs_10y if o['value'] not in ('.', None, '')]
+        ticker = yf.Ticker(symbol)
+        hist = ticker.history(start=start_date, end=end_date)
+        
+        if hist.empty:
+            return {"error": f"No data found for symbol {symbol}"}
+        
         return {
-            'dates': dates,
-            'us_2y': us_2y,
-            'us_10y': us_10y
+            "dates": [date.strftime('%Y-%m-%d') for date in hist.index],
+            "closes": hist['Close'].tolist(),
+            "opens": hist['Open'].tolist(),
+            "highs": hist['High'].tolist(),
+            "lows": hist['Low'].tolist(),
+            "volumes": hist['Volume'].tolist()
         }
+        
     except Exception as e:
-        return {'error': f'Error fetching 6-month US treasury yields: {e}'}
-
-
-# 04-3. 한국 환율
-
-def get_kr_fx_rates_6months(end_date: str) -> dict:
-    """
-    Frankfurter API를 이용해 USD/KRW, EUR/KRW 환율의 6개월(182일)치 일별 데이터를 반환합니다.
-    end_date: 'YYYY-MM-DD' (마지막 날짜)
-    반환: {
-        'dates': [...],
-        'usd_krw': [...],
-        'eur_usd': [...]
-    }
-    """
-    try:
-        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
-        start_dt = end_dt - timedelta(days=182)
-        start_str = start_dt.strftime('%Y-%m-%d')
-        end_str = end_dt.strftime('%Y-%m-%d')
-        url_usd = f"https://api.frankfurter.app/{start_str}..{end_str}?from=USD&to=KRW"
-        url_eur = f"https://api.frankfurter.app/{start_str}..{end_str}?from=EUR&to=USD"
-        resp_usd = requests.get(url_usd)
-        resp_usd.raise_for_status()
-        data_usd = resp_usd.json().get('rates', {})
-        resp_eur = requests.get(url_eur)
-        resp_eur.raise_for_status()
-        data_eur = resp_eur.json().get('rates', {})
-        dates = sorted(list(set(data_usd.keys()) | set(data_eur.keys())))
-        usd_krw = [data_usd.get(date, {}).get('KRW') for date in dates]
-        eur_usd = [data_eur.get(date, {}).get('USD') for date in dates]
-        return {
-            'dates': dates,
-            'usd_krw': usd_krw,
-            'eur_usd': eur_usd
-        }
-    except Exception as e:
-        return {'error': f'Error fetching 6-month KR FX rates: {e}'}
-
-def get_commodity_prices_6months(fred_api_key: str, end_date: str) -> dict:
-    """
-        FRED API를 이용해 WTI(원유)와 금(Gold) 6개월치 일별 가격 데이터를 반환합니다.
-        end_date: 'YYYY-MM-DD' (마지막 날짜)
-        반환: {
-            'dates': [...],
-            'wti': [...],
-            'gold': [...]
-        }
-        """
-    try:
-        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
-        start_dt = end_dt - timedelta(days=182)
-        start_str = start_dt.strftime('%Y-%m-%d')
-        end_str = end_dt.strftime('%Y-%m-%d')
-        url_wti = f"https://api.stlouisfed.org/fred/series/observations?series_id=DCOILWTICO&api_key={fred_api_key}&file_type=json&observation_start={start_str}&observation_end={end_str}"
-        url_gold = f"https://api.stlouisfed.org/fred/series/observations?series_id=GOLDAMGBD228NLBM&api_key={fred_api_key}&file_type=json&observation_start={start_str}&observation_end={end_str}"
-        resp_wti = requests.get(url_wti)
-        resp_gold = requests.get(url_gold)
-        obs_wti = resp_wti.json().get('observations', [])
-        obs_gold = resp_gold.json().get('observations', [])
-        # 날짜 교집합만 사용
-        dates = sorted(list(set([o['date'] for o in obs_wti if o['value'] not in ('.', None, '')]) & set([o['date'] for o in obs_gold if o['value'] not in ('.', None, '')])))
-        wti = [float(o['value']) for o in obs_wti if o['value'] not in ('.', None, '') and o['date'] in dates]
-        gold = [float(o['value']) for o in obs_gold if o['value'] not in ('.', None, '') and o['date'] in dates]
-        return {
-            'dates': dates,
-            'wti': wti,
-            'gold': gold
-        }
-    except Exception as e:
-        return {'error': f'Error fetching 6-month commodity prices from FRED: {e}'}
+        return {"error": f"Error fetching index data for {symbol}: {e}"}
 
 def get_nasdaq_index_data(start_date: str, end_date: str) -> dict:
     """
@@ -574,78 +437,143 @@ def get_return_analysis_summary(ticker: str, start_date: str, end_date: str) -> 
     except Exception as e:
         return {"error": f"Error generating return analysis summary: {e}"}
 
-def get_stock_price_chart_data(symbol: str, start_date: str, end_date: str) -> Dict:
-    """
-    주식 가격 차트 데이터를 가져옵니다.
-    """
-    try:
-        ticker = yf.Ticker(symbol)
-        hist = ticker.history(start=start_date, end=end_date)
-        
-        if hist.empty:
-            return {"error": f"No data found for symbol {symbol}"}
-        
-        return {
-            "symbol": symbol,
-            "dates": [date.strftime('%Y-%m-%d') for date in hist.index],
-            "closes": hist['Close'].tolist(),
-            "opens": hist['Open'].tolist(),
-            "highs": hist['High'].tolist(),
-            "lows": hist['Low'].tolist(),
-            "volumes": hist['Volume'].tolist()
-        }
-        
-    except Exception as e:
-        return {"error": f"Error fetching stock data for {symbol}: {e}"}
 
-def get_stock_price_chart_with_ma(symbol: str, start_date: str, end_date: str, ma_periods: List[int]) -> Dict:
+#### 04 . 시황정보 : 증시, 채권, 환율 #####
+
+## 04-1. 미국 증시 지수
+def get_us_indices_6months_chart(end_date: str) -> dict:
     """
-    이동평균이 포함된 주식 가격 차트 데이터를 가져옵니다.
+    DOW, S&P500, NASDAQ 6개월치 일별 종가 데이터를 반환합니다.
+    end_date: 'YYYY-MM-DD' (그래프 마지막 날짜)
+    반환: {
+        'dow': {'dates': [...], 'closes': [...]},
+        'sp500': {'dates': [...], 'closes': [...]},
+        'nasdaq': {'dates': [...], 'closes': [...]}
+    }
     """
     try:
-        ticker = yf.Ticker(symbol)
-        hist = ticker.history(start=start_date, end=end_date)
-        
-        if hist.empty:
-            return {"error": f"No data found for symbol {symbol}"}
-        
-        result = {
-            "symbol": symbol,
-            "dates": [date.strftime('%Y-%m-%d') for date in hist.index],
-            "closes": hist['Close'].tolist()
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        start_dt = end_dt - timedelta(days=182)  # 약 6개월(182일)
+        start_str = start_dt.strftime('%Y-%m-%d')
+        end_str = end_dt.strftime('%Y-%m-%d')
+
+        indices = {
+            'dow': '^DJI',
+            'sp500': '^SPX',
+            'nasdaq': '^NDQ'
         }
-        
-        # 이동평균 계산
-        for period in ma_periods:
-            ma_key = f"ma{period}"
-            ma_values = hist['Close'].rolling(window=period).mean()
-            result[ma_key] = ma_values.tolist()
-        
+        result = {}
+        for key, ticker in indices.items():
+            df = web.DataReader(ticker, 'stooq', start=start_str, end=end_str)
+            df = df.sort_index()
+            if df.empty:
+                result[key] = {'dates': [], 'closes': []}
+            else:
+                result[key] = {
+                    'dates': [d.strftime('%Y-%m-%d') for d in df.index],
+                    'closes': df['Close'].tolist()
+                }
         return result
-        
     except Exception as e:
-        return {"error": f"Error fetching MA data for {symbol}: {e}"}
+        return {'error': f'Error fetching 6-month US indices data: {e}'}
 
-def get_index_chart_data(symbol: str, start_date: str, end_date: str) -> Dict:
+## 04-2. 미국 국채 금리
+def get_us_treasury_yields_6months(fred_api_key: str, end_date: str) -> dict:
     """
-    지수 데이터를 가져옵니다 (나스닥, S&P 500 등)
+    FRED API를 이용해 미국 국채 2년물(DGS2), 10년물(DGS10) 6개월(182일)치 일별 금리 데이터를 반환합니다.
+    end_date: 'YYYY-MM-DD' (마지막 날짜)
+    반환: {
+        'dates': [...],
+        'us_2y': [...],
+        'us_10y': [...]
+    }
     """
     try:
-        ticker = yf.Ticker(symbol)
-        hist = ticker.history(start=start_date, end=end_date)
-        
-        if hist.empty:
-            return {"error": f"No data found for symbol {symbol}"}
-        
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        start_dt = end_dt - timedelta(days=182)
+        start_str = start_dt.strftime('%Y-%m-%d')
+        end_str = end_dt.strftime('%Y-%m-%d')
+        url_2y = f"https://api.stlouisfed.org/fred/series/observations?series_id=DGS2&api_key={fred_api_key}&file_type=json&observation_start={start_str}&observation_end={end_str}"
+        url_10y = f"https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key={fred_api_key}&file_type=json&observation_start={start_str}&observation_end={end_str}"
+        resp_2y = requests.get(url_2y)
+        resp_10y = requests.get(url_10y)
+        obs_2y = resp_2y.json().get('observations', [])
+        obs_10y = resp_10y.json().get('observations', [])
+        dates = [o['date'] for o in obs_2y if o['value'] not in ('.', None, '')]
+        us_2y = [float(o['value']) for o in obs_2y if o['value'] not in ('.', None, '')]
+        us_10y = [float(o['value']) for o in obs_10y if o['value'] not in ('.', None, '')]
         return {
-            "symbol": symbol,
-            "dates": [date.strftime('%Y-%m-%d') for date in hist.index],
-            "closes": hist['Close'].tolist(),
-            "opens": hist['Open'].tolist(),
-            "highs": hist['High'].tolist(),
-            "lows": hist['Low'].tolist(),
-            "volumes": hist['Volume'].tolist()
+            'dates': dates,
+            'us_2y': us_2y,
+            'us_10y': us_10y
         }
-        
     except Exception as e:
-        return {"error": f"Error fetching index data for {symbol}: {e}"}
+        return {'error': f'Error fetching 6-month US treasury yields: {e}'}
+
+# 04-3. 한국 환율
+def get_kr_fx_rates_6months(end_date: str) -> dict:
+    """
+    Frankfurter API를 이용해 USD/KRW, EUR/KRW 환율의 6개월(182일)치 일별 데이터를 반환합니다.
+    end_date: 'YYYY-MM-DD' (마지막 날짜)
+    반환: {
+        'dates': [...],
+        'usd_krw': [...],
+        'eur_usd': [...]
+    }
+    """
+    try:
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        start_dt = end_dt - timedelta(days=182)
+        start_str = start_dt.strftime('%Y-%m-%d')
+        end_str = end_dt.strftime('%Y-%m-%d')
+        url_usd = f"https://api.frankfurter.app/{start_str}..{end_str}?from=USD&to=KRW"
+        url_eur = f"https://api.frankfurter.app/{start_str}..{end_str}?from=EUR&to=USD"
+        resp_usd = requests.get(url_usd)
+        resp_usd.raise_for_status()
+        data_usd = resp_usd.json().get('rates', {})
+        resp_eur = requests.get(url_eur)
+        resp_eur.raise_for_status()
+        data_eur = resp_eur.json().get('rates', {})
+        dates = sorted(list(set(data_usd.keys()) | set(data_eur.keys())))
+        usd_krw = [data_usd.get(date, {}).get('KRW') for date in dates]
+        eur_usd = [data_eur.get(date, {}).get('USD') for date in dates]
+        return {
+            'dates': dates,
+            'usd_krw': usd_krw,
+            'eur_usd': eur_usd
+        }
+    except Exception as e:
+        return {'error': f'Error fetching 6-month KR FX rates: {e}'}
+
+def get_commodity_prices_6months(fred_api_key: str, end_date: str) -> dict:
+    """
+    FRED API를 이용해 WTI(원유)와 금(Gold) 6개월치 일별 가격 데이터를 반환합니다.
+    end_date: 'YYYY-MM-DD' (마지막 날짜)
+    반환: {
+        'dates': [...],
+        'wti': [...],
+        'gold': [...]
+    }
+    """
+    try:
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        start_dt = end_dt - timedelta(days=182)
+        start_str = start_dt.strftime('%Y-%m-%d')
+        end_str = end_dt.strftime('%Y-%m-%d')
+        url_wti = f"https://api.stlouisfed.org/fred/series/observations?series_id=DCOILWTICO&api_key={fred_api_key}&file_type=json&observation_start={start_str}&observation_end={end_str}"
+        url_gold = f"https://api.stlouisfed.org/fred/series/observations?series_id=GOLDAMGBD228NLBM&api_key={fred_api_key}&file_type=json&observation_start={start_str}&observation_end={end_str}"
+        resp_wti = requests.get(url_wti)
+        resp_gold = requests.get(url_gold)
+        obs_wti = resp_wti.json().get('observations', [])
+        obs_gold = resp_gold.json().get('observations', [])
+        # 날짜 교집합만 사용
+        dates = sorted(list(set([o['date'] for o in obs_wti if o['value'] not in ('.', None, '')]) & set([o['date'] for o in obs_gold if o['value'] not in ('.', None, '')])))
+        wti = [float(o['value']) for o in obs_wti if o['value'] not in ('.', None, '') and o['date'] in dates]
+        gold = [float(o['value']) for o in obs_gold if o['value'] not in ('.', None, '') and o['date'] in dates]
+        return {
+            'dates': dates,
+            'wti': wti,
+            'gold': gold
+        }
+    except Exception as e:
+        return {'error': f'Error fetching 6-month commodity prices from FRED: {e}'}
