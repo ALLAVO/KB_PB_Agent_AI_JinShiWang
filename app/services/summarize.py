@@ -50,9 +50,21 @@ def summarize_article(stock_symbol: str, start_date: str, end_date: str):
         if conn is None:
             print("DB 연결 실패")
             return []
-        query = """
+        
+        # stock_symbol에 따른 테이블 선택
+        first_char = stock_symbol[0].upper()
+        if 'A' <= first_char <= 'D':
+            table = 'fnspid_stock_price_a'
+        elif 'E' <= first_char <= 'M':
+            table = 'fnspid_stock_price_b'
+        elif 'N' <= first_char <= 'Z':
+            table = 'fnspid_stock_price_c'
+        else:
+            raise Exception("유효하지 않은 stock_symbol입니다.")
+        
+        query = f"""
             SELECT date, article
-            FROM kb_enterprise_dataset
+            FROM {table}
             WHERE stock_symbol = %s AND date >= %s AND date <= %s
             ORDER BY date
         """
