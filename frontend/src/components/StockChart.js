@@ -85,6 +85,13 @@ const StockChart = ({ symbol, startDate, endDate }) => {
     try {
       const { startDate: calcStartDate, endDate: calcEndDate } = calculateDateRange(selectedPeriod, endDate);
       
+      console.log('🚀 Loading chart data:', { 
+        symbol, 
+        period: selectedPeriod,
+        types: selectedChartTypes, 
+        maPeriods 
+      });
+      
       // 차트 데이터와 요약 정보를 동시에 가져오기
       const [data, summaryData] = await Promise.all([
         fetchCombinedStockChart(
@@ -96,6 +103,8 @@ const StockChart = ({ symbol, startDate, endDate }) => {
         ),
         fetchStockChartSummary(symbol, calcStartDate, calcEndDate)
       ]);
+      
+      console.log('📦 Received chart data:', data);
       
       // 차트 데이터 변환
       const transformedData = data.dates.map((date, index) => {
@@ -111,15 +120,24 @@ const StockChart = ({ symbol, startDate, endDate }) => {
         
         // 이동평균 데이터
         if (selectedChartTypes.includes('moving_average') && data.data.moving_average) {
+          console.log('📈 Processing MA data at index', index, ':', data.data.moving_average);
           maPeriods.forEach(period => {
             const maKey = `ma${period}`;
             if (data.data.moving_average[maKey]) {
-              item[maKey] = data.data.moving_average[maKey][index];
+              const maValue = data.data.moving_average[maKey][index];
+              if (maValue !== null && maValue !== undefined && !isNaN(maValue)) {
+                item[maKey] = Number(maValue);
+                console.log(`✅ Set ${maKey}[${index}] = ${maValue}`);
+              } else {
+                console.log(`⚠️ Invalid ${maKey}[${index}] = ${maValue}`);
+              }
+            } else {
+              console.log(`❌ No ${maKey} data available`);
             }
           });
         }
         
-        // 거래량 데이터 (하단에 표시하기 위해 별도 처리)
+        // 거래량 데이터
         if (selectedChartTypes.includes('volume') && data.data.volume) {
           item.volume = data.data.volume.volumes[index];
         }
@@ -130,6 +148,13 @@ const StockChart = ({ symbol, startDate, endDate }) => {
         }
         
         return item;
+      });
+      
+      console.log('🎯 Transformed data sample:', transformedData.slice(0, 3));
+      console.log('📊 MA data in first item:', {
+        ma5: transformedData[0]?.ma5,
+        ma20: transformedData[0]?.ma20,
+        ma60: transformedData[0]?.ma60
       });
       
       setChartData(transformedData);
@@ -372,17 +397,21 @@ const StockChart = ({ symbol, startDate, endDate }) => {
               {/* 이동평균 라인들 */}
               {selectedChartTypes.includes('moving_average') && maPeriods.map((period, index) => {
                 const colors = ['#ef4444', '#f97316', '#8b5cf6', '#10b981'];
+                const dataKey = `ma${period}`;
+                console.log(`🎨 Rendering MA line for ${dataKey}`);
+                
                 return (
                   <Line
-                    key={`ma${period}`}
+                    key={dataKey}
                     yAxisId="price"
                     type="monotone"
-                    dataKey={`ma${period}`}
+                    dataKey={dataKey}
                     stroke={colors[index % colors.length]}
-                    strokeWidth={1.5}
-                    strokeDasharray="5 5"
+                    strokeWidth={2}
+                    strokeDasharray="3 3"
                     dot={false}
                     name={`${period}일 이동평균`}
+                    connectNulls={false}
                   />
                 );
               })}

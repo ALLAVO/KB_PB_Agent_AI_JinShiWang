@@ -47,12 +47,26 @@ class StockChartService:
                 }
             
             if "moving_average" in chart_types:
+                print(f"🔍 Requesting MA data for {ticker} with periods {ma_periods}")
                 ma_data = get_stock_price_chart_with_ma(ticker, start_date, end_date, ma_periods)
+                print(f"📊 MA API response: {list(ma_data.keys()) if isinstance(ma_data, dict) else 'Error'}")
+                
                 if "error" not in ma_data:
                     result["data"]["moving_average"] = {}
+                    print(f"📈 Available MA data keys: {[k for k in ma_data.keys() if k.startswith('ma')]}")
+                    
                     for period in ma_periods:
-                        if f'ma{period}' in ma_data:
-                            result["data"]["moving_average"][f"ma{period}"] = ma_data[f'ma{period}']
+                        ma_key = f'ma{period}'
+                        if ma_key in ma_data and ma_data[ma_key]:
+                            # NaN 값 제거
+                            ma_values = [v if v == v else None for v in ma_data[ma_key]]  # NaN은 자기 자신과 같지 않음
+                            result["data"]["moving_average"][ma_key] = ma_values
+                            print(f"✅ Added {ma_key}: {len(ma_values)} points, first few: {ma_values[:3]}")
+                        else:
+                            print(f"❌ Missing {ma_key} in MA data")
+                            result["data"]["moving_average"][ma_key] = [None] * len(data["dates"])
+                else:
+                    print(f"❌ MA data error: {ma_data.get('error')}")
             
             # 나스닥 대비 상대지수 계산
             if "relative_nasdaq" in chart_types:
