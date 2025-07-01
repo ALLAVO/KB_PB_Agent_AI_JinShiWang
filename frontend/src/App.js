@@ -13,6 +13,8 @@ import {fetchWeeklyKeywords } from "./api/keyword";
 import {fetchPredictionSummary } from "./api/prediction";
 import StockChart from "./components/StockChart";
 import IntroScreen from "./components/IntroScreen";
+import IntentionForm from "./components/IntentionForm";
+import { fetchIntention } from "./api/intention";
 
 function StackIconDecoration() {
   return (
@@ -101,6 +103,8 @@ function Sidebar({ userName, menu, subMenu, onMenuClick, onSubMenuClick, selecte
 
 function ChatPanel() {
   const [input, setInput] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
   // textarea 높이 자동 조절
   const textareaRef = React.useRef(null);
   React.useEffect(() => {
@@ -109,6 +113,30 @@ function ChatPanel() {
       textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
     }
   }, [input]);
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+    const userMsg = { role: "user", content: input };
+    setMessages(msgs => [...msgs, userMsg]);
+    setLoading(true);
+    try {
+      const result = await fetchIntention(input);
+      setMessages(msgs => [...msgs, { role: "bot", content: JSON.stringify(result, null, 2) }]);
+    } catch (e) {
+      setMessages(msgs => [...msgs, { role: "bot", content: "오류가 발생했습니다." }]);
+    } finally {
+      setLoading(false);
+      setInput("");
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   return (
     <div className="chat-panel chat-panel-relative">
       <StackIconDecoration />
@@ -118,6 +146,17 @@ function ChatPanel() {
       <div className="chat-messages">
         <CloudDecorations />
         {/* 채팅 메시지 영역 */}
+        <div className="chat-message-list">
+          {messages.map((msg, idx) => (
+            <div key={idx} className={`chat-message chat-message-${msg.role}`}>
+              {msg.role === "user" ? "🙋‍♂️ " : "🤖 "}
+              <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>
+            </div>
+          ))}
+          {loading && (
+            <div className="chat-message chat-message-bot">🤖 <span>답변 생성 중...</span></div>
+          )}
+        </div>
       </div>
       <div className="chat-input-row">
         <div className="chat-input-bg">
@@ -127,10 +166,12 @@ function ChatPanel() {
             placeholder="진시황에게 질문하세요..."
             value={input}
             onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
             rows={1}
+            disabled={loading}
           />
         </div>
-        <button className="chat-send-btn" disabled>
+        <button className="chat-send-btn" onClick={handleSend} disabled={!input.trim() || loading}>
           <img src={sendIcon} alt="send" className="chat-send-icon" />
         </button>
       </div>
