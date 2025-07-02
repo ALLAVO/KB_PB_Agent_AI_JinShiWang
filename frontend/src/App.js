@@ -16,16 +16,6 @@ import IntroScreen from "./components/IntroScreen";
 import IntentionForm from "./components/IntentionForm";
 import { fetchIntention } from "./api/intention";
 
-function StackIconDecoration() {
-  return (
-    <img
-      src={require('./assets/stack.png')}
-      alt="stack"
-      className="stack-icon-decoration"
-    />
-  );
-}
-
 function CloudDecorations() {
   return (
     <>
@@ -167,9 +157,16 @@ function ChatPanel({ onPersonalIntent, onEnterpriseIntent, onIndustryIntent, onM
 
   return (
     <div className="chat-panel chat-panel-relative">
-      <StackIconDecoration />
       <div className="chat-title-row">
         <div className="chat-title">진시황과의 상담</div>
+        <div className="chat-title-buttons">
+          <button className="chat-title-btn">
+            <img src={require("./assets/plus.png")} alt="plus" style={{ width: 24, height: 24 }} />
+          </button>
+          <button className="chat-title-btn">
+            <img src={require("./assets/stack.png")} alt="stack" style={{ width: 24, height: 24 }} />
+          </button>
+        </div>
       </div>
       <div className="chat-messages">
         <CloudDecorations />
