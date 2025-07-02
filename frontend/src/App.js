@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
+import "./components/IndustryPipeline.css";
 import kblogo from "./kblogo";
 import { getWeeksOfMonth } from "./weekUtils";
 import sendIcon from "./assets/send.png";
@@ -346,6 +347,23 @@ function IndustryPipeline({ year, month, weekStr, onSetReportTitle, autoIndustry
   const [started, setStarted] = useState(false);
   const [inputSymbol, setInputSymbol] = useState("");
   const [error, setError] = useState("");
+  
+  // 산업 섹터 목록
+  const sectors = [
+    'Basic Materials',
+    'Consumer Discretionary', 
+    'Consumer Staples',
+    'Energy',
+    'Finance',
+    'Health Care',
+    'Industrials',
+    'Miscellaneous',
+    'Real Estate',
+    'Technology',
+    'Telecommunications',
+    'Utilities'
+  ];
+  
   const chartData = '산업 차트 예시';
   const tableData = [
     { 산업: 'IT', 성장률: '5.2%' },
@@ -380,6 +398,12 @@ function IndustryPipeline({ year, month, weekStr, onSetReportTitle, autoIndustry
     }
   };
 
+  // 섹터 버튼 클릭 핸들러
+  const handleSectorClick = (sector) => {
+    setInputSymbol(sector);
+    if (error) setError("");
+  };
+
   useEffect(() => {
     if (!started && onSetReportTitle) {
       onSetReportTitle('산업 리포트');
@@ -396,6 +420,25 @@ function IndustryPipeline({ year, month, weekStr, onSetReportTitle, autoIndustry
               {error}
             </div>
           )}
+          
+          {/* 산업 섹터 버튼들 */}
+          <div className="sector-selection-container">
+            <h4 className="sector-selection-title">
+              산업 섹터 선택
+            </h4>
+            <div className="sector-buttons-grid">
+              {sectors.map((sector) => (
+                <button
+                  key={sector}
+                  onClick={() => handleSectorClick(sector)}
+                  className={`sector-button ${inputSymbol === sector ? 'selected' : ''}`}
+                >
+                  {sector}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <label style={{marginBottom: 0}}>
             <input
               type="text"
