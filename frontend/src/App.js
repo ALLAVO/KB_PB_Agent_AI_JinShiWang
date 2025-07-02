@@ -299,7 +299,7 @@ function CustomerPipeline({ year, month, weekStr, onSetReportTitle, autoCustomer
   );
 }
 
-function MarketPipeline({ year, month, weekStr, autoStart }) {
+function MarketPipeline({ year, month, weekStr, period, autoStart }) {
   const [started, setStarted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [indicesData, setIndicesData] = useState(null);
@@ -311,7 +311,18 @@ function MarketPipeline({ year, month, weekStr, autoStart }) {
     if (autoStart) {
       handleStartReport();
     }
-  }, [autoStart]);
+  }, [autoStart, year, month, period]);
+
+  // 연/월/주차가 변경될 때 기존 데이터 초기화
+  useEffect(() => {
+    if (started && !autoStart) {
+      // 자동 시작이 아닌 경우에만 데이터 초기화
+      setIndicesData(null);
+      setTreasuryData(null);
+      setFxData(null);
+      setError("");
+    }
+  }, [year, month, period]);
 
   const handleStartReport = async () => {
     setStarted(true);
@@ -321,8 +332,16 @@ function MarketPipeline({ year, month, weekStr, autoStart }) {
     setTreasuryData(null);
     setFxData(null);
 
-    // 현재 날짜를 endDate로 사용 (API는 6개월 전부터 계산)
-    const endDate = new Date().toISOString().split('T')[0];
+    // period에서 종료일 추출하여 endDate로 사용
+    const dateMatch = period.match(/(\d{2})\.(\d{2}) - (\d{2})\.(\d{2})/);
+    let endDate;
+    if (dateMatch) {
+      // 주차의 종료일을 endDate로 사용
+      endDate = `${year}-${dateMatch[3]}-${dateMatch[4]}`;
+    } else {
+      // period 파싱에 실패하면 현재 날짜 사용
+      endDate = new Date().toISOString().split('T')[0];
+    }
 
     try {
       // 3개 API를 병렬로 호출
@@ -350,7 +369,7 @@ function MarketPipeline({ year, month, weekStr, autoStart }) {
     { 지수: 'KOSPI', 값: 2650, 변동: '+1.2%' },
     { 지수: 'KOSDAQ', 값: 900, 변동: '-0.5%' }
   ];
-  const textSummary = `${year}년 ${month}월 ${weekStr} 시장 데이터 분석 요약입니다.`;
+  const textSummary = `${year}년 ${month}월 ${weekStr} (${period}) 시장 데이터 분석 요약입니다.`;
 
   return (
     <div>
@@ -1450,7 +1469,7 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCus
 
 function PipelinePanel({ name, year, month, weekStr, period, onSetReportTitle, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone, autoStartMarket }) {
   if (name === 'customer') return <CustomerPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} autoCustomerName={autoCustomerName} autoCustomerTrigger={autoCustomerTrigger} onAutoCustomerDone={onAutoCustomerDone} />;
-  if (name === 'market') return <MarketPipeline year={year} month={month} weekStr={weekStr} autoStart={autoStartMarket} />;
+  if (name === 'market') return <MarketPipeline year={year} month={month} weekStr={weekStr} period={period} autoStart={autoStartMarket} />;
   if (name === 'industry') return <IndustryPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} autoIndustryCategory={autoIndustryCategory} autoIndustryTrigger={autoIndustryTrigger} onAutoIndustryDone={onAutoIndustryDone} />;
   if (name === 'company') return <CompanyPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} autoCompanySymbol={autoCompanySymbol} autoCompanyTrigger={autoCompanyTrigger} onAutoCompanyDone={onAutoCompanyDone} />;
   return null;
