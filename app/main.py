@@ -2,6 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import customer, company, prediction, report, sentiment, market, summarize, keyword_extractor, stock_chart, return_analysis
+from app.api.intention import router as intention_router
 
 app = FastAPI(
     docs_url="/api/v1/docs",
@@ -31,6 +32,7 @@ app.include_router(summarize.router, prefix="/api/v1")  # summarize 라우터 pr
 app.include_router(keyword_extractor.router, prefix="/api/v1")  # keyword_extractor 라우터 prefix 추가
 app.include_router(stock_chart.router, prefix="/api/v1")  # stock_chart 라우터 prefix 추가
 app.include_router(return_analysis.router, prefix="/api/v1", tags=["return-analysis"])
+app.include_router(intention_router, prefix="/api/v1")  # intention_api 라우터 prefix 추가
 
 @app.get("/")
 def read_root():

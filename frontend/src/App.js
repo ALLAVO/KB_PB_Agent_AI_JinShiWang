@@ -13,6 +13,8 @@ import {fetchWeeklyKeywords } from "./api/keyword";
 import {fetchPredictionSummary } from "./api/prediction";
 import StockChart from "./components/StockChart";
 import IntroScreen from "./components/IntroScreen";
+import IntentionForm from "./components/IntentionForm";
+import { fetchIntention } from "./api/intention";
 
 function StackIconDecoration() {
   return (
@@ -99,8 +101,10 @@ function Sidebar({ userName, menu, subMenu, onMenuClick, onSubMenuClick, selecte
   );
 }
 
-function ChatPanel() {
+function ChatPanel({ onPersonalIntent, onEnterpriseIntent, onIndustryIntent, onMarketIntent }) {
   const [input, setInput] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
   // textarea 높이 자동 조절
   const textareaRef = React.useRef(null);
   React.useEffect(() => {
@@ -109,6 +113,58 @@ function ChatPanel() {
       textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
     }
   }, [input]);
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+    const userMsg = { role: "user", content: input };
+    setMessages(msgs => [...msgs, userMsg]);
+    setLoading(true);
+    try {
+      const result = await fetchIntention(input);
+      let botMsg = "";
+      if (result && result.intent) {
+        if (result.intent === "market") {
+          botMsg = "진시황이 증시정보에 대해 조사 중입니다...";
+          if (onMarketIntent) onMarketIntent();
+        } else if (result.intent === "industry") {
+          botMsg = `진시황이 ${result.industry_keyword || ''} 산업에 대해 조사 중입니다...`;
+          if (result.category && onIndustryIntent) {
+            onIndustryIntent(result.category);
+          }
+        } else if (result.intent === "enterprise") {
+          botMsg = `진시황이 ${result.company_name || ''}에 대해서 조사 중입니다...`;
+          if (result.symbol && onEnterpriseIntent) {
+            onEnterpriseIntent(result.symbol);
+          }
+        } else if (result.intent === "personal") {
+          botMsg = `진시황이 ${result.customer_name || ''} 고객님에 대해 조사 중입니다...`;
+          if (result.customer_name && onPersonalIntent) {
+            onPersonalIntent(result.customer_name);
+          }
+        } else if (result.intent === "fallback" && result.answer) {
+          botMsg = result.answer;
+        } else {
+          botMsg = JSON.stringify(result, null, 2);
+        }
+      } else {
+        botMsg = JSON.stringify(result, null, 2);
+      }
+      setMessages(msgs => [...msgs, { role: "bot", content: botMsg }]);
+    } catch (e) {
+      setMessages(msgs => [...msgs, { role: "bot", content: "오류가 발생했습니다." }]);
+    } finally {
+      setLoading(false);
+      setInput("");
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   return (
     <div className="chat-panel chat-panel-relative">
       <StackIconDecoration />
@@ -118,6 +174,17 @@ function ChatPanel() {
       <div className="chat-messages">
         <CloudDecorations />
         {/* 채팅 메시지 영역 */}
+        <div className="chat-message-list">
+          {messages.map((msg, idx) => (
+            <div key={idx} className={`chat-message chat-message-${msg.role}`}>
+              {/* {msg.role === "user" ? "🙋‍♂️ " : "🤖 "} */}
+              <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>
+            </div>
+          ))}
+          {loading && (
+            <div className="chat-message chat-message-bot"> <span>답변 생성 중...</span></div>
+          )}
+        </div>
       </div>
       <div className="chat-input-row">
         <div className="chat-input-bg">
@@ -127,10 +194,12 @@ function ChatPanel() {
             placeholder="진시황에게 질문하세요..."
             value={input}
             onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
             rows={1}
+            disabled={loading}
           />
         </div>
-        <button className="chat-send-btn" disabled>
+        <button className="chat-send-btn" onClick={handleSend} disabled={!input.trim() || loading}>
           <img src={sendIcon} alt="send" className="chat-send-icon" />
         </button>
       </div>
@@ -138,7 +207,7 @@ function ChatPanel() {
   );
 }
 
-function CustomerPipeline({ year, month, weekStr, onSetReportTitle }) {
+function CustomerPipeline({ year, month, weekStr, onSetReportTitle, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone }) {
   const [started, setStarted] = useState(false);
   const [inputSymbol, setInputSymbol] = useState("");
   const [error, setError] = useState("");
@@ -149,15 +218,30 @@ function CustomerPipeline({ year, month, weekStr, onSetReportTitle }) {
   ];
   const textSummary = `${year}년 ${month}월 ${weekStr} 고객 데이터 분석 요약입니다.`;
 
-  const handleSearch = () => {
-    if (!inputSymbol.trim()) {
+  // 자동 입력 및 자동 검색 트리거
+  useEffect(() => {
+    if (autoCustomerTrigger && autoCustomerName) {
+      setInputSymbol(autoCustomerName);
+      setTimeout(() => {
+        handleSearch(autoCustomerName, true);
+      }, 200); // 약간의 딜레이로 렌더링 보장
+    }
+    // eslint-disable-next-line
+  }, [autoCustomerTrigger, autoCustomerName]);
+
+  const handleSearch = (overrideName, isAuto) => {
+    const nameToUse = overrideName !== undefined ? overrideName : inputSymbol;
+    if (!nameToUse.trim()) {
       setError('고객님 성함을 입력해주세요');
       return;
     }
     setError("");
     setStarted(true);
     if (onSetReportTitle) {
-      onSetReportTitle(`${inputSymbol.trim()}님 리포트`);
+      onSetReportTitle(`${nameToUse.trim()}님 리포트`);
+    }
+    if (isAuto && onAutoCustomerDone) {
+      onAutoCustomerDone();
     }
   };
 
@@ -186,7 +270,7 @@ function CustomerPipeline({ year, month, weekStr, onSetReportTitle }) {
               placeholder="고객님 성함을 입력해주세요..."
             />
           </label>
-          <button className="customer-search-btn" onClick={handleSearch}>리포트 출력</button>
+          <button className="customer-search-btn" onClick={() => handleSearch()}>리포트 출력</button>
         </div>
       )}
       {started && (
@@ -212,8 +296,12 @@ function CustomerPipeline({ year, month, weekStr, onSetReportTitle }) {
   );
 }
 
-function MarketPipeline({ year, month, weekStr }) {
+function MarketPipeline({ year, month, weekStr, autoStart }) {
   const [started, setStarted] = useState(false);
+  useEffect(() => {
+    if (autoStart) setStarted(true);
+  }, [autoStart]);
+
   const chartData = '시장 차트 예시';
   const tableData = [
     { 지수: 'KOSPI', 값: 2650, 변동: '+1.2%' },
@@ -254,7 +342,7 @@ function MarketPipeline({ year, month, weekStr }) {
   );
 }
 
-function IndustryPipeline({ year, month, weekStr, onSetReportTitle }) {
+function IndustryPipeline({ year, month, weekStr, onSetReportTitle, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone }) {
   const [started, setStarted] = useState(false);
   const [inputSymbol, setInputSymbol] = useState("");
   const [error, setError] = useState("");
@@ -265,15 +353,30 @@ function IndustryPipeline({ year, month, weekStr, onSetReportTitle }) {
   ];
   const textSummary = `${year}년 ${month}월 ${weekStr} 산업 데이터 분석 요약입니다.`;
 
-  const handleSearch = () => {
-    if (!inputSymbol.trim()) {
+  // 자동 입력 및 자동 검색 트리거
+  useEffect(() => {
+    if (autoIndustryTrigger && autoIndustryCategory) {
+      setInputSymbol(autoIndustryCategory);
+      setTimeout(() => {
+        handleSearch(autoIndustryCategory, true);
+      }, 200);
+    }
+    // eslint-disable-next-line
+  }, [autoIndustryTrigger, autoIndustryCategory]);
+
+  const handleSearch = (overrideCategory, isAuto) => {
+    const categoryToUse = overrideCategory !== undefined ? overrideCategory : inputSymbol;
+    if (!categoryToUse.trim()) {
       setError('산업군 이름을 입력해주세요');
       return;
     }
     setError("");
     setStarted(true);
     if (onSetReportTitle) {
-      onSetReportTitle(`${inputSymbol.trim()} 산업 리포트`);
+      onSetReportTitle(`${categoryToUse.trim()} 산업 리포트`);
+    }
+    if (isAuto && onAutoIndustryDone) {
+      onAutoIndustryDone();
     }
   };
 
@@ -302,7 +405,7 @@ function IndustryPipeline({ year, month, weekStr, onSetReportTitle }) {
               placeholder="산업군 이름을 입력해주세요..."
             />
           </label>
-          <button className="industry-search-btn" onClick={handleSearch}>리포트 출력</button>
+          <button className="industry-search-btn" onClick={() => handleSearch()}>리포트 출력</button>
         </div>
       )}
       {started && (
@@ -330,7 +433,7 @@ function IndustryPipeline({ year, month, weekStr, onSetReportTitle }) {
   );
 }
 
-function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
+function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone }) {
   const [started, setStarted] = useState(false);
   const [inputSymbol, setInputSymbol] = useState("");
   const [loading, setLoading] = useState(false);
@@ -431,10 +534,10 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
     return null;
   };
 
-  const handleSearch = async () => {
+  const handleSearch = async (overrideSymbol, isAuto) => {
     setStarted(true); // 버튼 클릭 시 바로 started 상태로 전환
-    console.log('handleSearch 클릭됨');
-    if (!inputSymbol) {
+    const symbolToUse = overrideSymbol !== undefined ? overrideSymbol : inputSymbol;
+    if (!symbolToUse) {
       setError('종목코드를 입력해주세요');
       return;
     }
@@ -445,16 +548,15 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
     setKeywords(null);
     setPrediction(null);
     // 실제 API 호출 파라미터 확인
-    console.log('API 호출', { symbol: inputSymbol, startDate, endDate });
+    console.log('API 호출', { symbol: symbolToUse, startDate, endDate });
     try {
       // 네 API를 병렬로 호출
       const [articlesData, summariesData, keywordsData, predictionData] = await Promise.all([
-        fetchTop3Articles({ symbol: inputSymbol, startDate, endDate }),
-        fetchWeeklySummaries({ symbol: inputSymbol, startDate, endDate }),
-        fetchWeeklyKeywords({ symbol: inputSymbol, startDate, endDate }),
-        fetchPredictionSummary({ symbol: inputSymbol, startDate, endDate })
+        fetchTop3Articles({ symbol: symbolToUse, startDate, endDate }),
+        fetchWeeklySummaries({ symbol: symbolToUse, startDate, endDate }),
+        fetchWeeklyKeywords({ symbol: symbolToUse, startDate, endDate }),
+        fetchPredictionSummary({ symbol: symbolToUse, startDate, endDate })
       ]);
-      
       setTop3Articles(articlesData);
       setSummaries(summariesData);
       setKeywords(keywordsData);
@@ -468,8 +570,22 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
       setError('데이터를 불러오지 못했습니다.');
     } finally {
       setLoading(false);
+      if (isAuto && onAutoCompanyDone) {
+        onAutoCompanyDone();
+      }
     }
   };
+
+  // 자동 입력 및 자동 검색 트리거
+  useEffect(() => {
+    if (autoCompanyTrigger && autoCompanySymbol) {
+      setInputSymbol(autoCompanySymbol);
+      setTimeout(() => {
+        handleSearch(autoCompanySymbol, true);
+      }, 200);
+    }
+    // eslint-disable-next-line
+  }, [autoCompanyTrigger, autoCompanySymbol]);
 
   useEffect(() => {
     if (!started && onSetReportTitle) {
@@ -811,15 +927,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
   );
 }
 
-function PipelinePanel({ name, year, month, weekStr, period, onSetReportTitle }) {
-  if (name === 'customer') return <CustomerPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} />;
-  if (name === 'market') return <MarketPipeline year={year} month={month} weekStr={weekStr} />;
-  if (name === 'industry') return <IndustryPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} />;
-  if (name === 'company') return <CompanyPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} />;
-  return null;
-}
-
-function MainPanel({ year, month, period, selectedMenu, selectedSubMenu }) {
+function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone, setSelectedMenu, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, setSelectedSubMenu, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone, autoMarketTrigger }) {
   // 주차 정보 추출 (예: "(1주차)")
   const weekMatch = period.match(/\((\d+주차)\)/);
   const weekStr = weekMatch ? weekMatch[1] : "";
@@ -837,6 +945,7 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu }) {
   // 메뉴/서브메뉴에 따라 보여줄 pipeline 결정
   let pipelineName = null;
   let defaultReportTitle = '';
+  let autoStartMarket = false;
   if (selectedMenu === "고객 관리") {
     pipelineName = "customer";
     defaultReportTitle = "고객 리포트";
@@ -844,6 +953,7 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu }) {
     if (selectedSubMenu === "시황") {
       pipelineName = "market";
       defaultReportTitle = "시황 리포트";
+      if (autoMarketTrigger) autoStartMarket = true;
     } else if (selectedSubMenu === "산업") {
       pipelineName = "industry";
       defaultReportTitle = "산업 리포트";
@@ -859,16 +969,60 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu }) {
     // eslint-disable-next-line
   }, [selectedMenu, selectedSubMenu, year, month, period]);
 
+  // 자동 고객 리포트 트리거 감지
+  useEffect(() => {
+    if (autoCustomerTrigger && autoCustomerName && selectedMenu !== "고객 관리") {
+      setSelectedMenu("고객 관리");
+    }
+  }, [autoCustomerTrigger, autoCustomerName, selectedMenu, setSelectedMenu]);
+  useEffect(() => {
+    if (autoCompanyTrigger && autoCompanySymbol && (selectedMenu !== "진시황의 혜안" || selectedSubMenu !== "기업")) {
+      setSelectedMenu("진시황의 혜안");
+      setSelectedSubMenu("기업");
+    }
+  }, [autoCompanyTrigger, autoCompanySymbol, selectedMenu, selectedSubMenu, setSelectedMenu, setSelectedSubMenu]);
+  useEffect(() => {
+    if (autoIndustryTrigger && autoIndustryCategory && (selectedMenu !== "진시황의 혜안" || selectedSubMenu !== "산업")) {
+      setSelectedMenu("진시황의 혜안");
+      setSelectedSubMenu("산업");
+    }
+  }, [autoIndustryTrigger, autoIndustryCategory, selectedMenu, selectedSubMenu, setSelectedMenu, setSelectedSubMenu]);
+
   return (
     <div className="main-panel">
       <div className="main-title">[{year}년 {month}월 {(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()}] {reportTitle}</div>
       <div className="main-placeholder" style={{marginTop: '32px'}}>
         {pipelineName && (
-          <PipelinePanel name={pipelineName} year={year} month={month} weekStr={(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()} period={period} onSetReportTitle={['industry','company','customer'].includes(pipelineName) ? setReportTitle : undefined} />
+          <PipelinePanel
+            name={pipelineName}
+            year={year}
+            month={month}
+            weekStr={(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()}
+            period={period}
+            onSetReportTitle={['industry','company','customer'].includes(pipelineName) ? setReportTitle : undefined}
+            autoCustomerName={pipelineName === 'customer' ? autoCustomerName : undefined}
+            autoCustomerTrigger={pipelineName === 'customer' ? autoCustomerTrigger : undefined}
+            onAutoCustomerDone={pipelineName === 'customer' ? onAutoCustomerDone : undefined}
+            autoCompanySymbol={pipelineName === 'company' ? autoCompanySymbol : undefined}
+            autoCompanyTrigger={pipelineName === 'company' ? autoCompanyTrigger : undefined}
+            onAutoCompanyDone={pipelineName === 'company' ? onAutoCompanyDone : undefined}
+            autoIndustryCategory={pipelineName === 'industry' ? autoIndustryCategory : undefined}
+            autoIndustryTrigger={pipelineName === 'industry' ? autoIndustryTrigger : undefined}
+            onAutoIndustryDone={pipelineName === 'industry' ? onAutoIndustryDone : undefined}
+            autoStartMarket={pipelineName === 'market' ? autoStartMarket : undefined}
+          />
         )}
       </div>
     </div>
   );
+}
+
+function PipelinePanel({ name, year, month, weekStr, period, onSetReportTitle, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone, autoStartMarket }) {
+  if (name === 'customer') return <CustomerPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} autoCustomerName={autoCustomerName} autoCustomerTrigger={autoCustomerTrigger} onAutoCustomerDone={onAutoCustomerDone} />;
+  if (name === 'market') return <MarketPipeline year={year} month={month} weekStr={weekStr} autoStart={autoStartMarket} />;
+  if (name === 'industry') return <IndustryPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} autoIndustryCategory={autoIndustryCategory} autoIndustryTrigger={autoIndustryTrigger} onAutoIndustryDone={onAutoIndustryDone} />;
+  if (name === 'company') return <CompanyPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} autoCompanySymbol={autoCompanySymbol} autoCompanyTrigger={autoCompanyTrigger} onAutoCompanyDone={onAutoCompanyDone} />;
+  return null;
 }
 
 function App() {
@@ -878,9 +1032,31 @@ function App() {
   const [month, setMonth] = useState(6);
   const [period, setPeriod] = useState("06.01 - 06.07 (1주차)");
   const [showIntro, setShowIntro] = useState(true);
+  // 자동 고객/기업/산업 리포트 트리거 상태 추가
+  const [autoCustomerName, setAutoCustomerName] = useState("");
+  const [autoCustomerTrigger, setAutoCustomerTrigger] = useState(false);
+  const [autoCompanySymbol, setAutoCompanySymbol] = useState("");
+  const [autoCompanyTrigger, setAutoCompanyTrigger] = useState(false);
+  const [autoIndustryCategory, setAutoIndustryCategory] = useState("");
+  const [autoIndustryTrigger, setAutoIndustryTrigger] = useState(false);
+  const [autoMarketTrigger, setAutoMarketTrigger] = useState(false);
 
   const handleStart = () => {
     setShowIntro(false);
+  };
+
+  // 자동 트리거 후 상태 초기화
+  const handleAutoCustomerDone = () => {
+    setAutoCustomerName("");
+    setAutoCustomerTrigger(false);
+  };
+  const handleAutoCompanyDone = () => {
+    setAutoCompanySymbol("");
+    setAutoCompanyTrigger(false);
+  };
+  const handleAutoIndustryDone = () => {
+    setAutoIndustryCategory("");
+    setAutoIndustryTrigger(false);
   };
 
   if (showIntro) {
@@ -904,8 +1080,50 @@ function App() {
         period={period}
         onPeriodChange={setPeriod}
       />
-      <MainPanel year={year} month={month} period={period} selectedMenu={selectedMenu} selectedSubMenu={selectedSubMenu} />
-      <ChatPanel />
+      <MainPanel
+        year={year}
+        month={month}
+        period={period}
+        selectedMenu={selectedMenu}
+        selectedSubMenu={selectedSubMenu}
+        autoCustomerName={autoCustomerName}
+        autoCustomerTrigger={autoCustomerTrigger}
+        onAutoCustomerDone={handleAutoCustomerDone}
+        setSelectedMenu={setSelectedMenu}
+        autoCompanySymbol={autoCompanySymbol}
+        autoCompanyTrigger={autoCompanyTrigger}
+        onAutoCompanyDone={handleAutoCompanyDone}
+        setSelectedSubMenu={setSelectedSubMenu}
+        autoIndustryCategory={autoIndustryCategory}
+        autoIndustryTrigger={autoIndustryTrigger}
+        onAutoIndustryDone={handleAutoIndustryDone}
+        autoMarketTrigger={autoMarketTrigger}
+      />
+      <ChatPanel
+        onPersonalIntent={(customerName) => {
+          setSelectedMenu("고객 관리");
+          setAutoCustomerName(customerName);
+          setAutoCustomerTrigger(true);
+        }}
+        onEnterpriseIntent={(symbol) => {
+          setSelectedMenu("진시황의 혜안");
+          setSelectedSubMenu("기업");
+          setAutoCompanySymbol(symbol);
+          setAutoCompanyTrigger(true);
+        }}
+        onIndustryIntent={(category) => {
+          setSelectedMenu("진시황의 혜안");
+          setSelectedSubMenu("산업");
+          setAutoIndustryCategory(category);
+          setAutoIndustryTrigger(true);
+        }}
+        onMarketIntent={() => {
+          setSelectedMenu("진시황의 혜안");
+          setSelectedSubMenu("시황");
+          setAutoMarketTrigger(true);
+          setTimeout(() => setAutoMarketTrigger(false), 1000);
+        }}
+      />
     </div>
   );
 }
