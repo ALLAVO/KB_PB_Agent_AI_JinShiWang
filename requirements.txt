@@ -34,5 +34,7 @@ sentence-transformers==2.6.1
 spacy==3.7.4
 shap
 ta
+# Clustering dependencies
+hdbscan>=0.8.29
 # 기타
 numpy
