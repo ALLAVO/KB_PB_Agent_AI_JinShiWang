@@ -90,6 +90,17 @@ def extract_details(text: str) -> dict:
     except json.JSONDecodeError:
         return {"intent": "fallback"}
 
+def generate_fallback_answer(text: str) -> str:
+    prompt = f"""아래 질문에 대해 친절하게 답변해줘.
+
+질문: "{text}"
+→ 답변:"""
+    resp = openai.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0
+    )
+    return resp.choices[0].message.content.strip()
 
 def classify_and_extract(text: str) -> dict:
     intent = classify_intent(text)
@@ -97,6 +108,9 @@ def classify_and_extract(text: str) -> dict:
         details = extract_details(text)
         if details.get("intent") == intent:
             return details
+    if intent == "fallback":
+        answer = generate_fallback_answer(text)
+        return {"intent": "fallback", "answer": answer}
     return {"intent": intent}
 
 if __name__ == "__main__":

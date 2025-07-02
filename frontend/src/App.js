@@ -140,6 +140,8 @@ function ChatPanel({ onPersonalIntent, onEnterpriseIntent, onIndustryIntent }) {
           if (result.customer_name && onPersonalIntent) {
             onPersonalIntent(result.customer_name);
           }
+        } else if (result.intent === "fallback" && result.answer) {
+          botMsg = result.answer;
         } else {
           botMsg = JSON.stringify(result, null, 2);
         }
