@@ -149,12 +149,12 @@ function ChatPanel() {
         <div className="chat-message-list">
           {messages.map((msg, idx) => (
             <div key={idx} className={`chat-message chat-message-${msg.role}`}>
-              {msg.role === "user" ? "🙋‍♂️ " : "🤖 "}
+              {/* {msg.role === "user" ? "🙋‍♂️ " : "🤖 "} */}
               <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>
             </div>
           ))}
           {loading && (
-            <div className="chat-message chat-message-bot">🤖 <span>답변 생성 중...</span></div>
+            <div className="chat-message chat-message-bot"> <span>답변 생성 중...</span></div>
           )}
         </div>
       </div>
