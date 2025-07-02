@@ -384,7 +384,7 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
       {started && (
         <>
           <div className="pipeline-title">
-            <img src={titlecloud} alt="cloud" />증시 지표
+            <img src={titlecloud} alt="cloud" /> 미국 증시 동향
           </div>
 
           {/* 로딩 또는 에러 표시 */}
