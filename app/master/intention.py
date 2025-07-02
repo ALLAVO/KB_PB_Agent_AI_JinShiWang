@@ -64,16 +64,17 @@ def classify_intent(text: str) -> str:
 EXTRACTION_PROMPT = """아래 문장을 분석해서 JSON으로 결과만 내려줘.
 
 - intent: market, enterprise, industry, personal, fallback 중 하나
-- intent가 "enterprise"면:
+- intent가 \"enterprise\"면:
     • company_name: (예: 엔비디아)
     • symbol: 미국 주식 티커 (예: NVDA)
-- intent가 "industry"면:
+    • 만약 티커(symbol)만 입력된 경우에도 해당 티커의 기업명을 추출해서 company_name에 넣어줘 (예: \"GS 기업 주가 어때?\" → {{ \"intent\": \"enterprise\", \"company_name\": \"goldman sachs\", \"symbol\": \"GS\" }})
+- intent가 \"industry\"면:
     • industry_keyword: (예: 반도체)
     • category: 다음 중 하나 → Technology, Consumer Discretionary, Finance, Health Care, Industrials, Energy, Real Estate, Utilities, Consumer Staples, Telecommunications, Basic Materials, Miscellaneous
-- intent가 "personal"이면:
+- intent가 \"personal\"이면:
     • customer_name: 문장에서 추출한 고객 이름 (예: 김철수)
 
-문장: "{text}"
+문장: \"{text}\"
 →
 """
 
