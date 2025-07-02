@@ -121,7 +121,23 @@ function ChatPanel() {
     setLoading(true);
     try {
       const result = await fetchIntention(input);
-      setMessages(msgs => [...msgs, { role: "bot", content: JSON.stringify(result, null, 2) }]);
+      let botMsg = "";
+      if (result && result.intent) {
+        if (result.intent === "market") {
+          botMsg = "진시황이 증시정보에 대해 조사 중입니다...";
+        } else if (result.intent === "industry") {
+          botMsg = `진시황이 ${result.industry_keyword || ''} 산업에 대해 조사 중입니다...`;
+        } else if (result.intent === "enterprise") {
+          botMsg = `진시황이 ${result.company_name || ''}에 대해서 조사 중입니다...`;
+        } else if (result.intent === "personal") {
+          botMsg = `진시황이 ${result.customer_name || ''} 고객님에 대해 조사 중입니다...`;
+        } else {
+          botMsg = JSON.stringify(result, null, 2);
+        }
+      } else {
+        botMsg = JSON.stringify(result, null, 2);
+      }
+      setMessages(msgs => [...msgs, { role: "bot", content: botMsg }]);
     } catch (e) {
       setMessages(msgs => [...msgs, { role: "bot", content: "오류가 발생했습니다." }]);
     } finally {
