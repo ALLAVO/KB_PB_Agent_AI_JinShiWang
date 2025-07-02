@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Query
 from typing import Optional
 from app.services.crawler import get_us_indices_6months_chart, get_us_treasury_yields_6months, get_kr_fx_rates_6months
+from app.core.config import settings
 
 router = APIRouter()
 

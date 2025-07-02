@@ -13,10 +13,14 @@ import {fetchWeeklySummaries } from "./api/summarize";
 import {fetchWeeklyKeywords } from "./api/keyword";
 import {fetchPredictionSummary } from "./api/prediction";
 import {fetchIndustryTop3Articles } from "./api/industry";
+import {fetchIndices6MonthsChart, fetchTreasuryYields6MonthsChart, fetchFx6MonthsChart} from "./api/market";
+import {fetchIntention} from "./api/intention";
 import StockChart from "./components/StockChart";
+import MarketIndicesChart from "./components/MarketIndicesChart";
+import TreasuryYieldsChart from "./components/TreasuryYieldsChart";
+import FxRatesChart from "./components/FxRatesChart";
 import IntroScreen from "./components/IntroScreen";
 import IntentionForm from "./components/IntentionForm";
-import { fetchIntention } from "./api/intention";
 
 function CloudDecorations() {
   return (
@@ -297,9 +301,49 @@ function CustomerPipeline({ year, month, weekStr, onSetReportTitle, autoCustomer
 
 function MarketPipeline({ year, month, weekStr, autoStart }) {
   const [started, setStarted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [indicesData, setIndicesData] = useState(null);
+  const [treasuryData, setTreasuryData] = useState(null);
+  const [fxData, setFxData] = useState(null);
+  const [error, setError] = useState("");
+
   useEffect(() => {
-    if (autoStart) setStarted(true);
+    if (autoStart) {
+      handleStartReport();
+    }
   }, [autoStart]);
+
+  const handleStartReport = async () => {
+    setStarted(true);
+    setLoading(true);
+    setError("");
+    setIndicesData(null);
+    setTreasuryData(null);
+    setFxData(null);
+
+    // 현재 날짜를 endDate로 사용 (API는 6개월 전부터 계산)
+    const endDate = new Date().toISOString().split('T')[0];
+
+    try {
+      // 3개 API를 병렬로 호출
+      const [indices, treasury, fx] = await Promise.all([
+        fetchIndices6MonthsChart(endDate),
+        fetchTreasuryYields6MonthsChart(endDate),
+        fetchFx6MonthsChart(endDate)
+      ]);
+
+      setIndicesData(indices);
+      setTreasuryData(treasury);
+      setFxData(fx);
+      
+      console.log('Market data loaded:', { indices, treasury, fx });
+    } catch (e) {
+      console.error('Market API 호출 오류:', e);
+      setError('시장 데이터를 불러오지 못했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const chartData = '시장 차트 예시';
   const tableData = [
@@ -313,7 +357,7 @@ function MarketPipeline({ year, month, weekStr, autoStart }) {
       {!started && (
         <button
           className="report-start-btn"
-          onClick={() => setStarted(true)}
+          onClick={handleStartReport}
         >
           리포트 출력
         </button>
@@ -323,7 +367,59 @@ function MarketPipeline({ year, month, weekStr, autoStart }) {
           <div className="pipeline-title">
             <img src={titlecloud} alt="cloud" />증시 지표
           </div>
-          <div className="pipeline-graph">{chartData}</div>
+
+          {/* 로딩 또는 에러 표시 */}
+          {loading && (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '40px', 
+              color: '#666',
+              backgroundColor: '#f8f9fa',
+              borderRadius: '8px',
+              border: '1px solid #e9ecef',
+              marginBottom: '20px'
+            }}>
+              시장 데이터를 불러오는 중...
+            </div>
+          )}
+
+          {error && (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '40px', 
+              color: '#d32f2f',
+              backgroundColor: '#ffebee',
+              borderRadius: '8px',
+              border: '1px solid #ffcdd2',
+              marginBottom: '20px'
+            }}>
+              {error}
+            </div>
+          )}
+
+          {/* 차트들 */}
+          {!loading && !error && (
+            <>
+              <MarketIndicesChart 
+                data={indicesData} 
+                loading={loading} 
+                error={indicesData?.error} 
+              />
+              
+              <TreasuryYieldsChart 
+                data={treasuryData} 
+                loading={loading} 
+                error={treasuryData?.error} 
+              />
+              
+              <FxRatesChart 
+                data={fxData} 
+                loading={loading} 
+                error={fxData?.error} 
+              />
+            </>
+          )}
+
           <table className="pipeline-table">
             <thead>
               <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
