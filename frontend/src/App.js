@@ -444,6 +444,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
   const [prediction, setPrediction] = useState(null);
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [currentSymbol, setCurrentSymbol] = useState(""); // 현재 처리 중인 심볼 저장
 
   const textSummary = `${year}년 ${month}월 ${weekStr} 기업 데이터 분석 요약입니다.`;
 
@@ -537,25 +538,38 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
   const handleSearch = async (overrideSymbol, isAuto) => {
     setStarted(true); // 버튼 클릭 시 바로 started 상태로 전환
     const symbolToUse = overrideSymbol !== undefined ? overrideSymbol : inputSymbol;
-    if (!symbolToUse) {
+    
+    // symbol 값을 문자열로 변환하고 trim 처리
+    const cleanSymbol = typeof symbolToUse === 'string' ? symbolToUse.trim() : String(symbolToUse || '').trim();
+    
+    if (!cleanSymbol) {
       setError('종목코드를 입력해주세요');
       return;
     }
+    
+    // 현재 처리 중인 심볼 저장
+    setCurrentSymbol(cleanSymbol);
     setLoading(true);
     setError("");
     setTop3Articles(null);
     setSummaries(null);
     setKeywords(null);
     setPrediction(null);
+    
+    // 리포트 제목 설정
+    if (onSetReportTitle) {
+      onSetReportTitle(`${cleanSymbol} 리포트`);
+    }
+    
     // 실제 API 호출 파라미터 확인
-    console.log('API 호출', { symbol: symbolToUse, startDate, endDate });
+    console.log('API 호출', { symbol: cleanSymbol, startDate, endDate });
     try {
-      // 네 API를 병렬로 호출
+      // 네 API를 병렬로 호출 - cleanSymbol을 사용
       const [articlesData, summariesData, keywordsData, predictionData] = await Promise.all([
-        fetchTop3Articles({ symbol: symbolToUse, startDate, endDate }),
-        fetchWeeklySummaries({ symbol: symbolToUse, startDate, endDate }),
-        fetchWeeklyKeywords({ symbol: symbolToUse, startDate, endDate }),
-        fetchPredictionSummary({ symbol: symbolToUse, startDate, endDate })
+        fetchTop3Articles({ symbol: cleanSymbol, startDate, endDate }),
+        fetchWeeklySummaries({ symbol: cleanSymbol, startDate, endDate }),
+        fetchWeeklyKeywords({ symbol: cleanSymbol, startDate, endDate }),
+        fetchPredictionSummary({ symbol: cleanSymbol, startDate, endDate })
       ]);
       setTop3Articles(articlesData);
       setSummaries(summariesData);
@@ -579,9 +593,12 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
   // 자동 입력 및 자동 검색 트리거
   useEffect(() => {
     if (autoCompanyTrigger && autoCompanySymbol) {
-      setInputSymbol(autoCompanySymbol);
+      // autoCompanySymbol을 문자열로 변환하여 설정
+      const cleanAutoSymbol = typeof autoCompanySymbol === 'string' ? autoCompanySymbol.trim() : String(autoCompanySymbol || '').trim();
+      console.log('자동 심볼 설정:', cleanAutoSymbol); // 디버깅용
+      setInputSymbol(cleanAutoSymbol);
       setTimeout(() => {
-        handleSearch(autoCompanySymbol, true);
+        handleSearch(cleanAutoSymbol, true);
       }, 200);
     }
     // eslint-disable-next-line
@@ -607,12 +624,16 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
             <input
               type="text"
               value={inputSymbol}
-              onChange={e => setInputSymbol(e.target.value)}
+              onChange={e => {
+                const value = e.target.value;
+                setInputSymbol(typeof value === 'string' ? value : String(value || ''));
+                if (error) setError("");
+              }}
               className="company-symbol-input center-text"
               placeholder="종목코드를 입력해주세요."
             />
           </label>
-          <button className="company-search-btn" onClick={handleSearch}>리포트 출력</button>
+          <button className="company-search-btn" onClick={() => handleSearch()}>리포트 출력</button>
         </div>
       )}
       {started && (
@@ -621,10 +642,10 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
             <img src={titlecloud} alt="cloud" />기업 Pipeline
           </div>
           
-          {/* 주가 차트 컴포넌트 추가 */}
-          {inputSymbol && startDate && endDate && (
+          {/* 주가 차트 컴포넌트 추가 - currentSymbol 사용 */}
+          {currentSymbol && startDate && endDate && (
             <StockChart 
-              symbol={inputSymbol}
+              symbol={currentSymbol}
               startDate={startDate}
               endDate={endDate}
             />
@@ -632,7 +653,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
 
           <div className="pipeline-text">{textSummary}</div>
           
-          {/* 주가 전망 카드 */}
+          {/* 주가 전망 카드 - currentSymbol 사용 */}
           {started && (
             <div style={{
               marginTop: '24px',
@@ -663,7 +684,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
                   fontWeight: 'bold',
                   color: '#1976d2'
                 }}>
-                  {inputSymbol || '종목'} {getNextWeekInfo()} 주가 전망 한줄평
+                  {currentSymbol || '종목'} {getNextWeekInfo()} 주가 전망 한줄평
                 </h3>
               </div>
               
