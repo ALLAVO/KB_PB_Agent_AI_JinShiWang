@@ -101,7 +101,7 @@ function Sidebar({ userName, menu, subMenu, onMenuClick, onSubMenuClick, selecte
   );
 }
 
-function ChatPanel({ onPersonalIntent, onEnterpriseIntent, onIndustryIntent }) {
+function ChatPanel({ onPersonalIntent, onEnterpriseIntent, onIndustryIntent, onMarketIntent }) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -125,6 +125,7 @@ function ChatPanel({ onPersonalIntent, onEnterpriseIntent, onIndustryIntent }) {
       if (result && result.intent) {
         if (result.intent === "market") {
           botMsg = "진시황이 증시정보에 대해 조사 중입니다...";
+          if (onMarketIntent) onMarketIntent();
         } else if (result.intent === "industry") {
           botMsg = `진시황이 ${result.industry_keyword || ''} 산업에 대해 조사 중입니다...`;
           if (result.category && onIndustryIntent) {
@@ -295,8 +296,12 @@ function CustomerPipeline({ year, month, weekStr, onSetReportTitle, autoCustomer
   );
 }
 
-function MarketPipeline({ year, month, weekStr }) {
+function MarketPipeline({ year, month, weekStr, autoStart }) {
   const [started, setStarted] = useState(false);
+  useEffect(() => {
+    if (autoStart) setStarted(true);
+  }, [autoStart]);
+
   const chartData = '시장 차트 예시';
   const tableData = [
     { 지수: 'KOSPI', 값: 2650, 변동: '+1.2%' },
@@ -922,7 +927,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
   );
 }
 
-function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone, setSelectedMenu, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, setSelectedSubMenu, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone }) {
+function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone, setSelectedMenu, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, setSelectedSubMenu, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone, autoMarketTrigger }) {
   // 주차 정보 추출 (예: "(1주차)")
   const weekMatch = period.match(/\((\d+주차)\)/);
   const weekStr = weekMatch ? weekMatch[1] : "";
@@ -940,6 +945,7 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCus
   // 메뉴/서브메뉴에 따라 보여줄 pipeline 결정
   let pipelineName = null;
   let defaultReportTitle = '';
+  let autoStartMarket = false;
   if (selectedMenu === "고객 관리") {
     pipelineName = "customer";
     defaultReportTitle = "고객 리포트";
@@ -947,6 +953,7 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCus
     if (selectedSubMenu === "시황") {
       pipelineName = "market";
       defaultReportTitle = "시황 리포트";
+      if (autoMarketTrigger) autoStartMarket = true;
     } else if (selectedSubMenu === "산업") {
       pipelineName = "industry";
       defaultReportTitle = "산업 리포트";
@@ -1002,6 +1009,7 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCus
             autoIndustryCategory={pipelineName === 'industry' ? autoIndustryCategory : undefined}
             autoIndustryTrigger={pipelineName === 'industry' ? autoIndustryTrigger : undefined}
             onAutoIndustryDone={pipelineName === 'industry' ? onAutoIndustryDone : undefined}
+            autoStartMarket={pipelineName === 'market' ? autoStartMarket : undefined}
           />
         )}
       </div>
@@ -1009,9 +1017,9 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCus
   );
 }
 
-function PipelinePanel({ name, year, month, weekStr, period, onSetReportTitle, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone }) {
+function PipelinePanel({ name, year, month, weekStr, period, onSetReportTitle, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone, autoStartMarket }) {
   if (name === 'customer') return <CustomerPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} autoCustomerName={autoCustomerName} autoCustomerTrigger={autoCustomerTrigger} onAutoCustomerDone={onAutoCustomerDone} />;
-  if (name === 'market') return <MarketPipeline year={year} month={month} weekStr={weekStr} />;
+  if (name === 'market') return <MarketPipeline year={year} month={month} weekStr={weekStr} autoStart={autoStartMarket} />;
   if (name === 'industry') return <IndustryPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} autoIndustryCategory={autoIndustryCategory} autoIndustryTrigger={autoIndustryTrigger} onAutoIndustryDone={onAutoIndustryDone} />;
   if (name === 'company') return <CompanyPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} autoCompanySymbol={autoCompanySymbol} autoCompanyTrigger={autoCompanyTrigger} onAutoCompanyDone={onAutoCompanyDone} />;
   return null;
@@ -1031,6 +1039,7 @@ function App() {
   const [autoCompanyTrigger, setAutoCompanyTrigger] = useState(false);
   const [autoIndustryCategory, setAutoIndustryCategory] = useState("");
   const [autoIndustryTrigger, setAutoIndustryTrigger] = useState(false);
+  const [autoMarketTrigger, setAutoMarketTrigger] = useState(false);
 
   const handleStart = () => {
     setShowIntro(false);
@@ -1088,6 +1097,7 @@ function App() {
         autoIndustryCategory={autoIndustryCategory}
         autoIndustryTrigger={autoIndustryTrigger}
         onAutoIndustryDone={handleAutoIndustryDone}
+        autoMarketTrigger={autoMarketTrigger}
       />
       <ChatPanel
         onPersonalIntent={(customerName) => {
@@ -1106,6 +1116,12 @@ function App() {
           setSelectedSubMenu("산업");
           setAutoIndustryCategory(category);
           setAutoIndustryTrigger(true);
+        }}
+        onMarketIntent={() => {
+          setSelectedMenu("진시황의 혜안");
+          setSelectedSubMenu("시황");
+          setAutoMarketTrigger(true);
+          setTimeout(() => setAutoMarketTrigger(false), 1000);
         }}
       />
     </div>
