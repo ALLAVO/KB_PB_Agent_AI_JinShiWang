@@ -101,7 +101,7 @@ function Sidebar({ userName, menu, subMenu, onMenuClick, onSubMenuClick, selecte
   );
 }
 
-function ChatPanel() {
+function ChatPanel({ onPersonalIntent }) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -131,6 +131,9 @@ function ChatPanel() {
           botMsg = `진시황이 ${result.company_name || ''}에 대해서 조사 중입니다...`;
         } else if (result.intent === "personal") {
           botMsg = `진시황이 ${result.customer_name || ''} 고객님에 대해 조사 중입니다...`;
+          if (result.customer_name && onPersonalIntent) {
+            onPersonalIntent(result.customer_name);
+          }
         } else {
           botMsg = JSON.stringify(result, null, 2);
         }
@@ -195,7 +198,7 @@ function ChatPanel() {
   );
 }
 
-function CustomerPipeline({ year, month, weekStr, onSetReportTitle }) {
+function CustomerPipeline({ year, month, weekStr, onSetReportTitle, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone }) {
   const [started, setStarted] = useState(false);
   const [inputSymbol, setInputSymbol] = useState("");
   const [error, setError] = useState("");
@@ -206,15 +209,30 @@ function CustomerPipeline({ year, month, weekStr, onSetReportTitle }) {
   ];
   const textSummary = `${year}년 ${month}월 ${weekStr} 고객 데이터 분석 요약입니다.`;
 
-  const handleSearch = () => {
-    if (!inputSymbol.trim()) {
+  // 자동 입력 및 자동 검색 트리거
+  useEffect(() => {
+    if (autoCustomerTrigger && autoCustomerName) {
+      setInputSymbol(autoCustomerName);
+      setTimeout(() => {
+        handleSearch(autoCustomerName, true);
+      }, 200); // 약간의 딜레이로 렌더링 보장
+    }
+    // eslint-disable-next-line
+  }, [autoCustomerTrigger, autoCustomerName]);
+
+  const handleSearch = (overrideName, isAuto) => {
+    const nameToUse = overrideName !== undefined ? overrideName : inputSymbol;
+    if (!nameToUse.trim()) {
       setError('고객님 성함을 입력해주세요');
       return;
     }
     setError("");
     setStarted(true);
     if (onSetReportTitle) {
-      onSetReportTitle(`${inputSymbol.trim()}님 리포트`);
+      onSetReportTitle(`${nameToUse.trim()}님 리포트`);
+    }
+    if (isAuto && onAutoCustomerDone) {
+      onAutoCustomerDone();
     }
   };
 
@@ -243,7 +261,7 @@ function CustomerPipeline({ year, month, weekStr, onSetReportTitle }) {
               placeholder="고객님 성함을 입력해주세요..."
             />
           </label>
-          <button className="customer-search-btn" onClick={handleSearch}>리포트 출력</button>
+          <button className="customer-search-btn" onClick={() => handleSearch()}>리포트 출력</button>
         </div>
       )}
       {started && (
@@ -868,15 +886,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
   );
 }
 
-function PipelinePanel({ name, year, month, weekStr, period, onSetReportTitle }) {
-  if (name === 'customer') return <CustomerPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} />;
-  if (name === 'market') return <MarketPipeline year={year} month={month} weekStr={weekStr} />;
-  if (name === 'industry') return <IndustryPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} />;
-  if (name === 'company') return <CompanyPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} />;
-  return null;
-}
-
-function MainPanel({ year, month, period, selectedMenu, selectedSubMenu }) {
+function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone, setSelectedMenu }) {
   // 주차 정보 추출 (예: "(1주차)")
   const weekMatch = period.match(/\((\d+주차)\)/);
   const weekStr = weekMatch ? weekMatch[1] : "";
@@ -916,16 +926,41 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu }) {
     // eslint-disable-next-line
   }, [selectedMenu, selectedSubMenu, year, month, period]);
 
+  // 자동 고객 리포트 트리거 감지
+  useEffect(() => {
+    if (autoCustomerTrigger && autoCustomerName && selectedMenu !== "고객 관리") {
+      setSelectedMenu("고객 관리");
+    }
+  }, [autoCustomerTrigger, autoCustomerName, selectedMenu, setSelectedMenu]);
+
   return (
     <div className="main-panel">
       <div className="main-title">[{year}년 {month}월 {(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()}] {reportTitle}</div>
       <div className="main-placeholder" style={{marginTop: '32px'}}>
         {pipelineName && (
-          <PipelinePanel name={pipelineName} year={year} month={month} weekStr={(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()} period={period} onSetReportTitle={['industry','company','customer'].includes(pipelineName) ? setReportTitle : undefined} />
+          <PipelinePanel
+            name={pipelineName}
+            year={year}
+            month={month}
+            weekStr={(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()}
+            period={period}
+            onSetReportTitle={['industry','company','customer'].includes(pipelineName) ? setReportTitle : undefined}
+            autoCustomerName={pipelineName === 'customer' ? autoCustomerName : undefined}
+            autoCustomerTrigger={pipelineName === 'customer' ? autoCustomerTrigger : undefined}
+            onAutoCustomerDone={pipelineName === 'customer' ? onAutoCustomerDone : undefined}
+          />
         )}
       </div>
     </div>
   );
+}
+
+function PipelinePanel({ name, year, month, weekStr, period, onSetReportTitle, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone }) {
+  if (name === 'customer') return <CustomerPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} autoCustomerName={autoCustomerName} autoCustomerTrigger={autoCustomerTrigger} onAutoCustomerDone={onAutoCustomerDone} />;
+  if (name === 'market') return <MarketPipeline year={year} month={month} weekStr={weekStr} />;
+  if (name === 'industry') return <IndustryPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} />;
+  if (name === 'company') return <CompanyPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} />;
+  return null;
 }
 
 function App() {
@@ -935,9 +970,18 @@ function App() {
   const [month, setMonth] = useState(6);
   const [period, setPeriod] = useState("06.01 - 06.07 (1주차)");
   const [showIntro, setShowIntro] = useState(true);
+  // 자동 고객 리포트 트리거 상태 추가
+  const [autoCustomerName, setAutoCustomerName] = useState("");
+  const [autoCustomerTrigger, setAutoCustomerTrigger] = useState(false);
 
   const handleStart = () => {
     setShowIntro(false);
+  };
+
+  // 자동 트리거 후 상태 초기화
+  const handleAutoCustomerDone = () => {
+    setAutoCustomerName("");
+    setAutoCustomerTrigger(false);
   };
 
   if (showIntro) {
@@ -961,8 +1005,24 @@ function App() {
         period={period}
         onPeriodChange={setPeriod}
       />
-      <MainPanel year={year} month={month} period={period} selectedMenu={selectedMenu} selectedSubMenu={selectedSubMenu} />
-      <ChatPanel />
+      <MainPanel
+        year={year}
+        month={month}
+        period={period}
+        selectedMenu={selectedMenu}
+        selectedSubMenu={selectedSubMenu}
+        autoCustomerName={autoCustomerName}
+        autoCustomerTrigger={autoCustomerTrigger}
+        onAutoCustomerDone={handleAutoCustomerDone}
+        setSelectedMenu={setSelectedMenu}
+      />
+      <ChatPanel
+        onPersonalIntent={(customerName) => {
+          setSelectedMenu("고객 관리");
+          setAutoCustomerName(customerName);
+          setAutoCustomerTrigger(true);
+        }}
+      />
     </div>
   );
 }
