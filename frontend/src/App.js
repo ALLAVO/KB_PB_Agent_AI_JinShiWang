@@ -427,13 +427,12 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
                 loading={loading} 
                 error={indicesData?.error} 
               />
-              
+              <MarketIndices1YearTable indices1YearData={indices1YearData} loading={loading} error={error} style={{ marginTop: 0, marginBottom: 16 }} />
               <TreasuryYieldsChart 
                 data={treasuryData} 
                 loading={loading} 
                 error={treasuryData?.error} 
               />
-              
               <FxRatesChart 
                 data={fxData} 
                 loading={loading} 
@@ -441,7 +440,6 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
               />
             </>
           )}
-          <MarketIndices1YearTable indices1YearData={indices1YearData} loading={loading} error={error} />
           <div className="pipeline-text">{textSummary}</div>
         </>
       )}

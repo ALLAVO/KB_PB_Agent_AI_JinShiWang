@@ -123,7 +123,7 @@ const MarketIndicesChart = ({ data, loading, error }) => {
       borderRadius: '8px',
       border: '1px solid #e0e0e0',
       padding: '20px',
-      marginBottom: '20px'
+      marginBottom: '8px'
     }}>
       
       {/* 지수 선택 버튼들 */}

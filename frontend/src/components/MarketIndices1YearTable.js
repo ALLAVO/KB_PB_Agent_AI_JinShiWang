@@ -105,7 +105,7 @@ function MarketIndices1YearTable({ indices1YearData, loading, error }) {
   const tableData = generateTableDataFrom1Year();
 
   return (
-    <div style={{ marginTop: '24px', marginBottom: '16px' }}>
+    <div style={{ marginTop: '0px', marginBottom: '16px' }}>
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
           1년치 데이터를 불러오는 중...
@@ -120,28 +120,28 @@ function MarketIndices1YearTable({ indices1YearData, loading, error }) {
           borderCollapse: 'separate',
           borderSpacing: 0,
           background: 'white',
-          borderRadius: '20px',
+          borderRadius: '10px', // 더 확실하게 적용
           overflow: 'hidden',
-        //   boxShadow: '0 4px 16px 0 rgba(0,0,0,0.07)',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
         }}>
-          <thead>
-            <tr style={{ background: '#eae3d7' }}>
+          <thead style={{background: 'rgba(234,227,215,0.7)', borderRadius: '6px 6px 0 0'}}>
+            <tr style={{ background: 'rgba(234,227,215,0.7)', height: 60 }}>
               <th style={{
-                padding: '12px 0 6px 0',
+                padding: '24px 0 24px 0',
                 textAlign: 'center',
-                fontWeight: 700,
+                fontWeight: 500,
                 fontSize: '1.3rem',
                 color: '#363532',
                 border: 'none',
                 letterSpacing: '-1px',
                 minWidth: 80,
-                borderTopLeftRadius: '20px',
+                borderTopLeftRadius: '6px',
                 borderBottom: '1.5px solid #e5dfd3',
               }} rowSpan="2">지수</th>
               <th style={{
-                padding: '12px 0 6px 0',
+                padding: '24px 0 24px 0',
                 textAlign: 'center',
-                fontWeight: 700,
+                fontWeight: 500,
                 fontSize: '1.3rem',
                 color: '#363532',
                 border: 'none',
@@ -150,9 +150,9 @@ function MarketIndices1YearTable({ indices1YearData, loading, error }) {
                 borderBottom: '1.5px solid #e5dfd3',
               }} rowSpan="2">금요일 종가<br/>(pt)</th>
               <th style={{
-                padding: '12px 0 6px 0',
+                padding: '10px 0 10px 0',
                 textAlign: 'center',
-                fontWeight: 700,
+                fontWeight: 500,
                 fontSize: '1.3rem',
                 color: '#363532',
                 border: 'none',
@@ -161,52 +161,52 @@ function MarketIndices1YearTable({ indices1YearData, loading, error }) {
                 borderBottom: 'none',
               }} colSpan="3">등락률(%)</th>
               <th style={{
-                padding: '12px 0 6px 0',
+                padding: '24px 0 24px 0',
                 textAlign: 'center',
-                fontWeight: 700,
+                fontWeight: 500,
                 fontSize: '1.3rem',
                 color: '#363532',
                 border: 'none',
                 letterSpacing: '-1px',
                 minWidth: 80,
-                borderTopRightRadius: '20px',
+                borderTopRightRadius: '6px',
                 borderBottom: '1.5px solid #e5dfd3',
               }} rowSpan="2">변동성(%)<br/>1M</th>
             </tr>
-            <tr style={{ background: '#eae3d7' }}>
+            <tr style={{ background: 'rgba(234,227,215,0.7)', height: 32 }}>
               <th style={{
-                padding: '0 0 6px 0',
+                padding: '0 0 10px 0',
                 textAlign: 'center',
                 fontWeight: 400,
                 fontSize: '1.1rem',
-                color: '#888',
+                color: '#363532',
                 border: 'none',
                 background: 'none',
                 borderBottom: '1.5px solid #e5dfd3',
               }}>1W</th>
               <th style={{
-                padding: '0 0 6px 0',
+                padding: '0 0 10px 0',
                 textAlign: 'center',
                 fontWeight: 400,
                 fontSize: '1.1rem',
-                color: '#888',
+                color: '#363532',
                 border: 'none',
                 background: 'none',
                 borderBottom: '1.5px solid #e5dfd3',
               }}>1M</th>
               <th style={{
-                padding: '0 0 6px 0',
+                padding: '0 0 10px 0',
                 textAlign: 'center',
                 fontWeight: 400,
                 fontSize: '1.1rem',
-                color: '#888',
+                color: '#363532',
                 border: 'none',
                 background: 'none',
                 borderBottom: '1.5px solid #e5dfd3',
               }}>YTD</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody style={{background: '#fff', borderRadius: '0 0 6px 6px'}}>
             {tableData.map((row, idx) => (
               <tr key={idx} style={{
                 background: '#fff',
@@ -216,10 +216,11 @@ function MarketIndices1YearTable({ indices1YearData, loading, error }) {
                 <td style={{
                   padding: '6px 0',
                   textAlign: 'center',
-                  fontWeight: 700,
+                  fontWeight: 500, // 기존 700에서 500으로 변경
                   fontSize: '1.3rem',
                   color: '#363532',
                   letterSpacing: '-1px',
+                  borderBottomLeftRadius: idx === tableData.length - 1 ? '6px' : 0,
                 }}>{row.지수}</td>
                 <td style={{
                   padding: '6px 0',
@@ -232,25 +233,25 @@ function MarketIndices1YearTable({ indices1YearData, loading, error }) {
                 <td style={{
                   padding: '6px 0',
                   textAlign: 'center',
-                  fontWeight: 700,
+                  fontWeight: 500, // medium
                   fontSize: '1.3rem',
-                  color: row['등락률(%)']['1W'] > 0 ? '#22c55e' : row['등락률(%)']['1W'] < 0 ? '#ef4444' : '#363532',
+                  color: row['등락률(%)']['1W'] > 0 ? '#ef4444' : row['등락률(%)']['1W'] < 0 ? '#2563eb' : '#363532', // 빨강/파랑/기본
                   letterSpacing: '-1px',
                 }}>{row['등락률(%)']['1W'] !== '-' ? (row['등락률(%)']['1W'] > 0 ? '+' : '') + row['등락률(%)']['1W'] : '-'}</td>
                 <td style={{
                   padding: '6px 0',
                   textAlign: 'center',
-                  fontWeight: 700,
+                  fontWeight: 500, // medium
                   fontSize: '1.3rem',
-                  color: row['등락률(%)']['1M'] > 0 ? '#22c55e' : row['등락률(%)']['1M'] < 0 ? '#ef4444' : '#363532',
+                  color: row['등락률(%)']['1M'] > 0 ? '#ef4444' : row['등락률(%)']['1M'] < 0 ? '#2563eb' : '#363532',
                   letterSpacing: '-1px',
                 }}>{row['등락률(%)']['1M'] !== '-' ? (row['등락률(%)']['1M'] > 0 ? '+' : '') + row['등락률(%)']['1M'] : '-'}</td>
                 <td style={{
                   padding: '6px 0',
                   textAlign: 'center',
-                  fontWeight: 700,
+                  fontWeight: 500, // medium
                   fontSize: '1.3rem',
-                  color: row['등락률(%)']['YTD'] > 0 ? '#22c55e' : row['등락률(%)']['YTD'] < 0 ? '#ef4444' : '#363532',
+                  color: row['등락률(%)']['YTD'] > 0 ? '#ef4444' : row['등락률(%)']['YTD'] < 0 ? '#2563eb' : '#363532',
                   letterSpacing: '-1px',
                 }}>{row['등락률(%)']['YTD'] !== '-' ? (row['등락률(%)']['YTD'] > 0 ? '+' : '') + row['등락률(%)']['YTD'] : '-'}</td>
                 <td style={{
@@ -260,6 +261,7 @@ function MarketIndices1YearTable({ indices1YearData, loading, error }) {
                   fontSize: '1.3rem',
                   color: '#363532',
                   letterSpacing: '-1px',
+                  borderBottomRightRadius: idx === tableData.length - 1 ? '6px' : 0,
                 }}>{row['변동성(%)']['1M']}</td>
               </tr>
             ))}
