@@ -13,10 +13,15 @@ import {fetchWeeklySummaries } from "./api/summarize";
 import {fetchWeeklyKeywords } from "./api/keyword";
 import {fetchPredictionSummary } from "./api/prediction";
 import {fetchIndustryTop3Articles } from "./api/industry";
+import {fetchIndices6MonthsChart, fetchTreasuryYields6MonthsChart, fetchFx6MonthsChart, fetchIndices1YearChart, fetchTreasuryYields1YearChart, fetchFx1YearChart} from "./api/market";
+import {fetchIntention} from "./api/intention";
 import StockChart from "./components/StockChart";
+import MarketIndicesChart from "./components/MarketIndicesChart";
+import CombinedFinancialChart from "./components/CombinedFinancialChart";
 import IntroScreen from "./components/IntroScreen";
 import IntentionForm from "./components/IntentionForm";
-import { fetchIntention } from "./api/intention";
+import MarketIndices1YearTable from "./components/MarketIndices1YearTable";
+import FiccTable1Year from "./components/FiccTable1Year";
 
 function CloudDecorations() {
   return (
@@ -295,25 +300,96 @@ function CustomerPipeline({ year, month, weekStr, onSetReportTitle, autoCustomer
   );
 }
 
-function MarketPipeline({ year, month, weekStr, autoStart }) {
+function MarketPipeline({ year, month, weekStr, period, autoStart }) {
   const [started, setStarted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [indicesData, setIndicesData] = useState(null);
+  const [treasuryData, setTreasuryData] = useState(null);
+  const [fxData, setFxData] = useState(null);
+  const [indices1YearData, setIndices1YearData] = useState(null);
+  const [treasuryData1Year, setTreasuryData1Year] = useState(null);
+  const [fxData1Year, setFxData1Year] = useState(null);
+  const [error, setError] = useState("");
+
   useEffect(() => {
-    if (autoStart) setStarted(true);
-  }, [autoStart]);
+    if (autoStart) {
+      handleStartReport();
+    }
+  }, [autoStart, year, month, period]);
+
+  // 연/월/주차가 변경될 때 기존 데이터 초기화
+  useEffect(() => {
+    if (started && !autoStart) {
+      // 자동 시작이 아닌 경우에만 데이터 초기화
+      setIndicesData(null);
+      setTreasuryData(null);
+      setFxData(null);
+      setIndices1YearData(null);
+      setTreasuryData1Year(null);
+      setFxData1Year(null);
+      setError("");
+    }
+  }, [year, month, period]);
+
+  const handleStartReport = async () => {
+    setStarted(true);
+    setLoading(true);
+    setError("");
+    setIndicesData(null);
+    setTreasuryData(null);
+    setFxData(null);
+    setIndices1YearData(null);
+    setTreasuryData1Year(null);
+    setFxData1Year(null);
+
+    // period에서 종료일 추출하여 endDate로 사용
+    const dateMatch = period.match(/(\d{2})\.(\d{2}) - (\d{2})\.(\d{2})/);
+    let endDate;
+    if (dateMatch) {
+      // 주차의 종료일을 endDate로 사용
+      endDate = `${year}-${dateMatch[3]}-${dateMatch[4]}`;
+    } else {
+      // period 파싱에 실패하면 현재 날짜 사용
+      endDate = new Date().toISOString().split('T')[0];
+    }
+
+    try {
+      // 6개 API를 병렬로 호출 (1년치 FICC 데이터 추가)
+      const [indices, treasury, fx, indices1Year, treasury1Year, fx1Year] = await Promise.all([
+        fetchIndices6MonthsChart(endDate),
+        fetchTreasuryYields6MonthsChart(endDate),
+        fetchFx6MonthsChart(endDate),
+        fetchIndices1YearChart(endDate),
+        fetchTreasuryYields1YearChart(endDate),
+        fetchFx1YearChart(endDate)
+      ]);
+
+      setIndicesData(indices);
+      setTreasuryData(treasury);
+      setFxData(fx);
+      setIndices1YearData(indices1Year);
+      setTreasuryData1Year(treasury1Year);
+      setFxData1Year(fx1Year);
+      
+      console.log('Market data loaded:', { indices, treasury, fx, indices1Year, treasury1Year, fx1Year });
+    } catch (e) {
+      console.error('Market API 호출 오류:', e);
+      setError('시장 데이터를 불러오지 못했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const chartData = '시장 차트 예시';
-  const tableData = [
-    { 지수: 'KOSPI', 값: 2650, 변동: '+1.2%' },
-    { 지수: 'KOSDAQ', 값: 900, 변동: '-0.5%' }
-  ];
-  const textSummary = `${year}년 ${month}월 ${weekStr} 시장 데이터 분석 요약입니다.`;
+  
+  const textSummary = `${year}년 ${month}월 ${weekStr} (${period}) 시장 데이터 분석 요약입니다.`;
 
   return (
     <div>
       {!started && (
         <button
           className="report-start-btn"
-          onClick={() => setStarted(true)}
+          onClick={handleStartReport}
         >
           리포트 출력
         </button>
@@ -321,19 +397,64 @@ function MarketPipeline({ year, month, weekStr, autoStart }) {
       {started && (
         <>
           <div className="pipeline-title">
-            <img src={titlecloud} alt="cloud" />증시 지표
+            <img src={titlecloud} alt="cloud" /> 미국 증시 동향
           </div>
-          <div className="pipeline-graph">{chartData}</div>
-          <table className="pipeline-table">
-            <thead>
-              <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
-            </thead>
-            <tbody>
-              {tableData.map((row, idx) => (
-                <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
-              ))}
-            </tbody>
-          </table>
+
+          {/* 로딩 또는 에러 표시 */}
+          {loading && (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '40px', 
+              color: '#666',
+              backgroundColor: '#f8f9fa',
+              borderRadius: '8px',
+              border: '1px solid #e9ecef',
+              marginBottom: '20px'
+            }}>
+              시장 데이터를 불러오는 중...
+            </div>
+          )}
+
+          {error && (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '40px', 
+              color: '#d32f2f',
+              backgroundColor: '#ffebee',
+              borderRadius: '8px',
+              border: '1px solid #ffcdd2',
+              marginBottom: '20px'
+            }}>
+              {error}
+            </div>
+          )}
+
+          {/* 차트들 */}
+          {!loading && !error && (
+            <>
+              <MarketIndicesChart 
+                data={indicesData} 
+                loading={loading} 
+                error={indicesData?.error} 
+              />
+              <MarketIndices1YearTable indices1YearData={indices1YearData} loading={loading} error={error} />
+              <div className="pipeline-title">
+                <img src={titlecloud} alt="cloud" /> FICC
+              </div>
+              <CombinedFinancialChart 
+                treasuryData={treasuryData} 
+                fxData={fxData}
+                loading={loading} 
+                error={treasuryData?.error || fxData?.error} 
+              />
+              <FiccTable1Year 
+                treasuryData1Year={treasuryData1Year}
+                fxData1Year={fxData1Year}
+                loading={loading}
+                error={treasuryData1Year?.error || fxData1Year?.error}
+              />
+            </>
+          )}
           <div className="pipeline-text">{textSummary}</div>
         </>
       )}
@@ -1285,9 +1406,9 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCus
     pipelineName = "customer";
     defaultReportTitle = "고객 리포트";
   } else if (selectedMenu === "진시황의 혜안") {
-    if (selectedSubMenu === "시황") {
+    if (selectedSubMenu === "증시") {
       pipelineName = "market";
-      defaultReportTitle = "시황 리포트";
+      defaultReportTitle = "증시 리포트";
       if (autoMarketTrigger) autoStartMarket = true;
     } else if (selectedSubMenu === "산업") {
       pipelineName = "industry";
@@ -1354,7 +1475,7 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCus
 
 function PipelinePanel({ name, year, month, weekStr, period, onSetReportTitle, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone, autoStartMarket }) {
   if (name === 'customer') return <CustomerPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} autoCustomerName={autoCustomerName} autoCustomerTrigger={autoCustomerTrigger} onAutoCustomerDone={onAutoCustomerDone} />;
-  if (name === 'market') return <MarketPipeline year={year} month={month} weekStr={weekStr} autoStart={autoStartMarket} />;
+  if (name === 'market') return <MarketPipeline year={year} month={month} weekStr={weekStr} period={period} autoStart={autoStartMarket} />;
   if (name === 'industry') return <IndustryPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} autoIndustryCategory={autoIndustryCategory} autoIndustryTrigger={autoIndustryTrigger} onAutoIndustryDone={onAutoIndustryDone} />;
   if (name === 'company') return <CompanyPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} autoCompanySymbol={autoCompanySymbol} autoCompanyTrigger={autoCompanyTrigger} onAutoCompanyDone={onAutoCompanyDone} />;
   return null;
@@ -1362,7 +1483,7 @@ function PipelinePanel({ name, year, month, weekStr, period, onSetReportTitle, a
 
 function App() {
   const [selectedMenu, setSelectedMenu] = useState("진시황의 혜안");
-  const [selectedSubMenu, setSelectedSubMenu] = useState("시황");
+  const [selectedSubMenu, setSelectedSubMenu] = useState("증시");
   const [year, setYear] = useState(2025);
   const [month, setMonth] = useState(6);
   const [period, setPeriod] = useState("06.01 - 06.07 (1주차)");
@@ -1403,7 +1524,7 @@ function App() {
       <Sidebar
         userName="김PB"
         menu={["진시황의 혜안", "고객 관리"]}
-        subMenu={["시황", "산업", "기업"]}
+        subMenu={["증시", "산업", "기업"]}
         selectedMenu={selectedMenu}
         selectedSubMenu={selectedSubMenu}
         onMenuClick={setSelectedMenu}
@@ -1454,7 +1575,7 @@ function App() {
         }}
         onMarketIntent={() => {
           setSelectedMenu("진시황의 혜안");
-          setSelectedSubMenu("시황");
+          setSelectedSubMenu("증시");
           setAutoMarketTrigger(true);
           setTimeout(() => setAutoMarketTrigger(false), 1000);
         }}

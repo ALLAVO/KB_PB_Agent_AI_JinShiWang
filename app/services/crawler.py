@@ -477,6 +477,42 @@ def get_us_indices_6months_chart(end_date: str) -> dict:
     except Exception as e:
         return {'error': f'Error fetching 6-month US indices data: {e}'}
 
+def get_us_indices_1year_chart(end_date: str) -> dict:
+    """
+    DOW, S&P500, NASDAQ 1년치 일별 종가 데이터를 반환합니다.
+    end_date: 'YYYY-MM-DD' (그래프 마지막 날짜)
+    반환: {
+        'dow': {'dates': [...], 'closes': [...]},
+        'sp500': {'dates': [...], 'closes': [...]},
+        'nasdaq': {'dates': [...], 'closes': [...]}
+    }
+    """
+    try:
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        start_dt = end_dt - timedelta(days=365)  # 1년(365일)
+        start_str = start_dt.strftime('%Y-%m-%d')
+        end_str = end_dt.strftime('%Y-%m-%d')
+
+        indices = {
+            'dow': '^DJI',
+            'sp500': '^SPX',
+            'nasdaq': '^NDQ'
+        }
+        result = {}
+        for key, ticker in indices.items():
+            df = web.DataReader(ticker, 'stooq', start=start_str, end=end_str)
+            df = df.sort_index()
+            if df.empty:
+                result[key] = {'dates': [], 'closes': []}
+            else:
+                result[key] = {
+                    'dates': [d.strftime('%Y-%m-%d') for d in df.index],
+                    'closes': df['Close'].tolist()
+                }
+        return result
+    except Exception as e:
+        return {'error': f'Error fetching 1-year US indices data: {e}'}
+
 ## 04-2. 미국 국채 금리
 def get_us_treasury_yields_6months(fred_api_key: str, end_date: str) -> dict:
     """
@@ -509,6 +545,39 @@ def get_us_treasury_yields_6months(fred_api_key: str, end_date: str) -> dict:
         }
     except Exception as e:
         return {'error': f'Error fetching 6-month US treasury yields: {e}'}
+
+def get_us_treasury_yields_1year(fred_api_key: str, end_date: str) -> dict:
+    """
+    FRED API를 이용해 미국 국채 2년물(DGS2), 10년물(DGS10) 1년(365일)치 일별 금리 데이터를 반환합니다.
+    end_date: 'YYYY-MM-DD' (마지막 날짜)
+    반환: {
+        'dates': [...],
+        'us_2y': [...],
+        'us_10y': [...]
+    }
+    """
+    try:
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        start_dt = end_dt - timedelta(days=365)
+        start_str = start_dt.strftime('%Y-%m-%d')
+        end_str = end_dt.strftime('%Y-%m-%d')
+        url_2y = f"https://api.stlouisfed.org/fred/series/observations?series_id=DGS2&api_key={fred_api_key}&file_type=json&observation_start={start_str}&observation_end={end_str}"
+        url_10y = f"https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key={fred_api_key}&file_type=json&observation_start={start_str}&observation_end={end_str}"
+        resp_2y = requests.get(url_2y)
+        resp_10y = requests.get(url_10y)
+        obs_2y = resp_2y.json().get('observations', [])
+        obs_10y = resp_10y.json().get('observations', [])
+        dates = [o['date'] for o in obs_2y if o['value'] not in ('.', None, '')]
+        us_2y = [float(o['value']) for o in obs_2y if o['value'] not in ('.', None, '')]
+        us_10y = [float(o['value']) for o in obs_10y if o['value'] not in ('.', None, '')]
+        return {
+            'dates': dates,
+            'us_2y': us_2y,
+            'us_10y': us_10y
+        }
+    except Exception as e:
+        return {'error': f'Error fetching 1-year US treasury yields: {e}'}
+
 
 # 04-3. 한국 환율
 def get_kr_fx_rates_6months(end_date: str) -> dict:
@@ -544,6 +613,40 @@ def get_kr_fx_rates_6months(end_date: str) -> dict:
         }
     except Exception as e:
         return {'error': f'Error fetching 6-month KR FX rates: {e}'}
+
+def get_kr_fx_rates_1year(end_date: str) -> dict:
+    """
+    Frankfurter API를 이용해 USD/KRW, EUR/KRW 환율의 1년(365일)치 일별 데이터를 반환합니다.
+    end_date: 'YYYY-MM-DD' (마지막 날짜)
+    반환: {
+        'dates': [...],
+        'usd_krw': [...],
+        'eur_usd': [...]
+    }
+    """
+    try:
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        start_dt = end_dt - timedelta(days=365)
+        start_str = start_dt.strftime('%Y-%m-%d')
+        end_str = end_dt.strftime('%Y-%m-%d')
+        url_usd = f"https://api.frankfurter.app/{start_str}..{end_str}?from=USD&to=KRW"
+        url_eur = f"https://api.frankfurter.app/{start_str}..{end_str}?from=EUR&to=USD"
+        resp_usd = requests.get(url_usd)
+        resp_usd.raise_for_status()
+        data_usd = resp_usd.json().get('rates', {})
+        resp_eur = requests.get(url_eur)
+        resp_eur.raise_for_status()
+        data_eur = resp_eur.json().get('rates', {})
+        dates = sorted(list(set(data_usd.keys()) | set(data_eur.keys())))
+        usd_krw = [data_usd.get(date, {}).get('KRW') for date in dates]
+        eur_usd = [data_eur.get(date, {}).get('USD') for date in dates]
+        return {
+            'dates': dates,
+            'usd_krw': usd_krw,
+            'eur_usd': eur_usd
+        }
+    except Exception as e:
+        return {'error': f'Error fetching 1-year KR FX rates: {e}'}
 
 def get_commodity_prices_6months(fred_api_key: str, end_date: str) -> dict:
     """
