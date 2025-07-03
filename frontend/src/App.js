@@ -17,8 +17,6 @@ import {fetchIndices6MonthsChart, fetchTreasuryYields6MonthsChart, fetchFx6Month
 import {fetchIntention} from "./api/intention";
 import StockChart from "./components/StockChart";
 import MarketIndicesChart from "./components/MarketIndicesChart";
-import TreasuryYieldsChart from "./components/TreasuryYieldsChart";
-import FxRatesChart from "./components/FxRatesChart";
 import CombinedFinancialChart from "./components/CombinedFinancialChart";
 import IntroScreen from "./components/IntroScreen";
 import IntentionForm from "./components/IntentionForm";
