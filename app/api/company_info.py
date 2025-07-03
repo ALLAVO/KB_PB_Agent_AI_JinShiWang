@@ -161,6 +161,7 @@ def get_company_financial_analysis(
         "stock_symbol": stock_symbol,
         "sector": profile.get("sector"),
         "industry": profile.get("industry"),
+        "business_summary": profile.get("description"),
         "financial_health": financial_health,
         "profitability": profitability,
         "valuation": valuation,

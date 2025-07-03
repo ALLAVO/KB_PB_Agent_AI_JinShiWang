@@ -1,10 +1,10 @@
 .financial-analysis-section {
   margin: 24px 0;
   padding: 20px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e3f2fd 100%);
+  background: #FEFCF7;
   border-radius: 12px;
-  border: 2px solid #e3f2fd;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 2px solid #E5DFD1;
+  box-shadow: 0 4px 12px rgba(139, 115, 85, 0.12);
   position: relative;
 }
 
@@ -25,37 +25,43 @@
   margin: 0;
   font-size: 20px;
   font-weight: bold;
-  color: #1976d2;
+  color: #6D5A42;
 }
 
 .sector-nav-button {
-  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
-  color: white;
-  border: none;
+  background: #F5E6A3;
+  color: #6D5A42;
+  border: 2px solid #8B7355;
   padding: 8px 16px;
   border-radius: 20px;
   font-size: 12px;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 6px rgba(76, 175, 80, 0.3);
+  box-shadow: 0 2px 6px rgba(139, 115, 85, 0.25);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .sector-nav-button:hover {
-  background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+  background: #E5D084;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+  box-shadow: 0 4px 12px rgba(139, 115, 85, 0.3);
 }
 
 .financial-analysis-content {
   background: white;
   padding: 20px;
   border-radius: 10px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #E5DFD1;
 }
 
 .financial-category {
   margin-bottom: 32px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(139, 115, 85, 0.1);
+  border: 1px solid #E5DFD1;
 }
 
 .financial-category:last-child {
@@ -65,51 +71,52 @@
 .financial-category-title {
   font-size: 18px;
   font-weight: bold;
-  color: #333;
-  margin-bottom: 16px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #e3f2fd;
+  color: #6D5A42;
+  margin-bottom: 0;
+  padding: 12px 16px;
+  background: #F5E6A3;
   display: flex;
   align-items: center;
   gap: 8px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .financial-table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  overflow: hidden;
+  margin: 0;
+  background: white;
 }
 
 .financial-table th {
-  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
-  color: white;
+  background: #E5DFD1;
+  color: #6D5A42;
   padding: 12px 16px;
   text-align: left;
   font-weight: bold;
   font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .financial-table td {
   padding: 12px 16px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid #E5DFD1;
   font-size: 14px;
 }
 
 .financial-table tr:nth-child(even) {
-  background-color: #f8f9fa;
+  background-color: #F7F3E9;
 }
 
 .financial-table tr:hover {
-  background-color: #e3f2fd;
+  background-color: #FAF2D1;
   transition: background-color 0.2s ease;
 }
 
 .metric-name {
   font-weight: bold;
-  color: #333;
+  color: #6D5A42;
 }
 
 .metric-value {
@@ -118,25 +125,25 @@
 }
 
 .metric-value.positive {
-  color: #4caf50;
+  color: #7BA05B;
 }
 
 .metric-value.negative {
-  color: #f44336;
+  color: #C4756E;
 }
 
 .metric-value.neutral {
-  color: #333;
+  color: #666666;
 }
 
 .metric-unit {
-  color: #666;
+  color: #8B7355;
   font-size: 12px;
   margin-left: 4px;
 }
 
 .metric-description {
-  color: #666;
+  color: #666666;
   font-size: 12px;
   font-style: italic;
 }
@@ -146,37 +153,44 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  color: #666;
+  color: #6D5A42;
   font-style: italic;
   padding: 40px;
+  background: #FAF2D1;
+  border-radius: 8px;
+  border: 2px dashed #E5DFD1;
 }
 
 .financial-error {
-  color: #d32f2f;
+  color: #C4756E;
   font-style: italic;
   padding: 20px;
   text-align: center;
-  background: #ffebee;
+  background: #FBF5F5;
   border-radius: 6px;
-  border: 1px solid #ffcdd2;
+  border: 1px solid #C4756E;
 }
 
 .financial-no-data {
-  color: #666;
+  color: #666666;
   font-style: italic;
   padding: 20px;
   text-align: center;
-  background: #f5f5f5;
+  background: #F7F3E9;
   border-radius: 6px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #E5DFD1;
 }
 
 .last-updated {
   text-align: right;
-  color: #666;
+  color: #666666;
   font-size: 11px;
   margin-top: 16px;
   font-style: italic;
+  padding: 8px 12px;
+  background: #FAF2D1;
+  border-radius: 4px;
+  border-left: 3px solid #8B7355;
 }
 
 @media (max-width: 768px) {
