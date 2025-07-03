@@ -13,7 +13,7 @@ import {fetchWeeklySummaries } from "./api/summarize";
 import {fetchWeeklyKeywords } from "./api/keyword";
 import {fetchPredictionSummary } from "./api/prediction";
 import {fetchIndustryTop3Articles } from "./api/industry";
-import {fetchIndices6MonthsChart, fetchTreasuryYields6MonthsChart, fetchFx6MonthsChart, fetchIndices1YearChart} from "./api/market";
+import {fetchIndices6MonthsChart, fetchTreasuryYields6MonthsChart, fetchFx6MonthsChart, fetchIndices1YearChart, fetchTreasuryYields1YearChart, fetchFx1YearChart} from "./api/market";
 import {fetchIntention} from "./api/intention";
 import StockChart from "./components/StockChart";
 import MarketIndicesChart from "./components/MarketIndicesChart";
@@ -21,6 +21,7 @@ import CombinedFinancialChart from "./components/CombinedFinancialChart";
 import IntroScreen from "./components/IntroScreen";
 import IntentionForm from "./components/IntentionForm";
 import MarketIndices1YearTable from "./components/MarketIndices1YearTable";
+import FiccTable1Year from "./components/FiccTable1Year";
 
 function CloudDecorations() {
   return (
@@ -306,6 +307,8 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
   const [treasuryData, setTreasuryData] = useState(null);
   const [fxData, setFxData] = useState(null);
   const [indices1YearData, setIndices1YearData] = useState(null);
+  const [treasuryData1Year, setTreasuryData1Year] = useState(null);
+  const [fxData1Year, setFxData1Year] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -322,6 +325,8 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
       setTreasuryData(null);
       setFxData(null);
       setIndices1YearData(null);
+      setTreasuryData1Year(null);
+      setFxData1Year(null);
       setError("");
     }
   }, [year, month, period]);
@@ -334,6 +339,8 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
     setTreasuryData(null);
     setFxData(null);
     setIndices1YearData(null);
+    setTreasuryData1Year(null);
+    setFxData1Year(null);
 
     // period에서 종료일 추출하여 endDate로 사용
     const dateMatch = period.match(/(\d{2})\.(\d{2}) - (\d{2})\.(\d{2})/);
@@ -347,20 +354,24 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
     }
 
     try {
-      // 4개 API를 병렬로 호출 (1년치 데이터 추가)
-      const [indices, treasury, fx, indices1Year] = await Promise.all([
+      // 6개 API를 병렬로 호출 (1년치 FICC 데이터 추가)
+      const [indices, treasury, fx, indices1Year, treasury1Year, fx1Year] = await Promise.all([
         fetchIndices6MonthsChart(endDate),
         fetchTreasuryYields6MonthsChart(endDate),
         fetchFx6MonthsChart(endDate),
-        fetchIndices1YearChart(endDate)
+        fetchIndices1YearChart(endDate),
+        fetchTreasuryYields1YearChart(endDate),
+        fetchFx1YearChart(endDate)
       ]);
 
       setIndicesData(indices);
       setTreasuryData(treasury);
       setFxData(fx);
       setIndices1YearData(indices1Year);
+      setTreasuryData1Year(treasury1Year);
+      setFxData1Year(fx1Year);
       
-      console.log('Market data loaded:', { indices, treasury, fx, indices1Year });
+      console.log('Market data loaded:', { indices, treasury, fx, indices1Year, treasury1Year, fx1Year });
     } catch (e) {
       console.error('Market API 호출 오류:', e);
       setError('시장 데이터를 불러오지 못했습니다.');
@@ -435,6 +446,12 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
                 fxData={fxData}
                 loading={loading} 
                 error={treasuryData?.error || fxData?.error} 
+              />
+              <FiccTable1Year 
+                treasuryData1Year={treasuryData1Year}
+                fxData1Year={fxData1Year}
+                loading={loading}
+                error={treasuryData1Year?.error || fxData1Year?.error}
               />
             </>
           )}
