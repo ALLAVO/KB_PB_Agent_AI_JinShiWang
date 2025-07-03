@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
 import "./components/IndustryPipeline.css";
+import "./components/CompanyProfile.css";
+import "./components/FinancialAnalysis.css";
 import kblogo from "./kblogo";
 import { getWeeksOfMonth } from "./weekUtils";
 import sendIcon from "./assets/send.png";
@@ -859,7 +861,7 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
   );
 }
 
-function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone }) {
+function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, onNavigateToIndustry }) {
   const [started, setStarted] = useState(false);
   const [inputSymbol, setInputSymbol] = useState("");
   const [loading, setLoading] = useState(false);
@@ -871,6 +873,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [currentSymbol, setCurrentSymbol] = useState(""); // 현재 처리 중인 심볼 저장
+  const [financialData, setFinancialData] = useState(null);
 
   const textSummary = `${year}년 ${month}월 ${weekStr} 기업 데이터 분석 요약입니다.`;
 
@@ -961,6 +964,36 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
     return null;
   };
 
+  const formatValue = (value, unit) => {
+    if (value === null || value === undefined) return "N/A";
+    
+    if (unit === "USD" && typeof value === 'number') {
+      if (value >= 1000000000) {
+        return `$${(value / 1000000000).toFixed(1)}B`;
+      } else if (value >= 1000000) {
+        return `$${(value / 1000000).toFixed(1)}M`;
+      } else if (value >= 1000) {
+        return `$${(value / 1000).toFixed(1)}K`;
+      } else {
+        return `$${value.toFixed(2)}`;
+      }
+    }
+    
+    if (typeof value === 'number') {
+      return value.toFixed(2);
+    }
+    
+    return value;
+  };
+
+  const getValueClass = (value) => {
+    if (value === null || value === undefined) return "neutral";
+    if (typeof value === 'number') {
+      return value > 0 ? "positive" : value < 0 ? "negative" : "neutral";
+    }
+    return "neutral";
+  };
+
   const handleSearch = async (overrideSymbol, isAuto) => {
     setStarted(true); // 버튼 클릭 시 바로 started 상태로 전환
     const symbolToUse = overrideSymbol !== undefined ? overrideSymbol : inputSymbol;
@@ -990,17 +1023,20 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
     // 실제 API 호출 파라미터 확인
     console.log('API 호출', { symbol: cleanSymbol, startDate, endDate });
     try {
-      // 네 API를 병렬로 호출 - cleanSymbol을 사용
-      const [articlesData, summariesData, keywordsData, predictionData] = await Promise.all([
+      // 다섯 API를 병렬로 호출 - 재무분석 추가
+      const [financialAnalysisData, articlesData, summariesData, keywordsData, predictionData] = await Promise.all([
+        fetchCompanyFinancialAnalysis(cleanSymbol, startDate, endDate).catch(e => ({ error: e.message })), 
         fetchTop3Articles({ symbol: cleanSymbol, startDate, endDate }),
         fetchWeeklySummaries({ symbol: cleanSymbol, startDate, endDate }),
         fetchWeeklyKeywords({ symbol: cleanSymbol, startDate, endDate }),
         fetchPredictionSummary({ symbol: cleanSymbol, startDate, endDate })
       ]);
+      setFinancialData(financialAnalysisData);
       setTop3Articles(articlesData);
       setSummaries(summariesData);
       setKeywords(keywordsData);
       setPrediction(predictionData);
+      console.log('재무 분석 데이터:', financialAnalysisData);
       console.log('기사 데이터:', articlesData);
       console.log('요약 데이터:', summariesData);
       console.log('키워드 데이터:', keywordsData);
@@ -1037,6 +1073,12 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
     // eslint-disable-next-line
   }, [started]);
 
+  const handleSectorClick = (sector) => {
+    if (onNavigateToIndustry) {
+      onNavigateToIndustry(sector);
+    }
+  };
+
   return (
     <div>
       {!started && (
@@ -1068,7 +1110,188 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
             <img src={titlecloud} alt="cloud" />기업 Pipeline
           </div>
           
-          {/* 주가 차트 컴포넌트 추가 - currentSymbol 사용 */}
+          {/* 재무 및 밸류에이션 분석 섹션 */}
+          <div className="financial-analysis-section">
+            <div className="financial-analysis-header">
+              <div className="financial-analysis-title">
+                <span style={{ fontSize: '20px' }}>📊</span>
+                <h3>{currentSymbol || '기업'} 재무 및 밸류에이션</h3>
+              </div>
+              {financialData && financialData.sector && (
+                <button
+                  onClick={() => handleSectorClick(financialData.sector)}
+                  className="sector-nav-button"
+                >
+                  {financialData.sector} 산업군 분석 바로가기 →
+                </button>
+              )}
+            </div>
+            
+            <div className="financial-analysis-content">
+              {loading ? (
+                <div className="financial-loading">
+                  <span>🔄</span>
+                  AI가 재무 데이터를 분석하고 있습니다...
+                </div>
+              ) : error && error !== '종목코드를 입력해주세요' ? (
+                <div className="financial-error">
+                  재무 데이터를 불러오지 못했습니다.
+                </div>
+              ) : financialData && !financialData.error ? (
+                <div>
+                  {/* 기업 개요 섹션 */}
+                  {financialData.business_summary && (
+                    <div className="financial-category">
+                      <div className="financial-category-title">
+                        <span>🏢</span>
+                        기업 개요
+                      </div>
+                      <div style={{
+                        padding: '16px',
+                        backgroundColor: '#f8f9fa',
+                        borderRadius: '6px',
+                        border: '1px solid #e0e0e0',
+                        lineHeight: '1.6',
+                        fontSize: '14px',
+                        color: '#555',
+                        textAlign: 'justify'
+                      }}>
+                        {financialData.business_summary}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 재무 건전성 */}
+                  <div className="financial-category">
+                    <div className="financial-category-title">
+                      <span>💪</span>
+                      재무 건전성
+                    </div>
+                    <table className="financial-table">
+                      <thead>
+                        <tr>
+                          <th>지표</th>
+                          <th>값</th>
+                          <th>설명</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(financialData.financial_health || {}).map(([key, data]) => (
+                          <tr key={key}>
+                            <td className="metric-name">{key}</td>
+                            <td className={`metric-value ${getValueClass(data.value)}`}>
+                              {formatValue(data.value, data.unit)}
+                              {data.unit && <span className="metric-unit">{data.unit}</span>}
+                            </td>
+                            <td className="metric-description">{data.description}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* 수익성 지표 */}
+                  <div className="financial-category">
+                    <div className="financial-category-title">
+                      <span>💰</span>
+                      수익성 지표
+                    </div>
+                    <table className="financial-table">
+                      <thead>
+                        <tr>
+                          <th>지표</th>
+                          <th>값</th>
+                          <th>설명</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(financialData.profitability || {}).map(([key, data]) => (
+                          <tr key={key}>
+                            <td className="metric-name">{key}</td>
+                            <td className={`metric-value ${getValueClass(data.value)}`}>
+                              {formatValue(data.value, data.unit)}
+                              {data.unit && <span className="metric-unit">{data.unit}</span>}
+                            </td>
+                            <td className="metric-description">{data.description}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* 밸류에이션 지표 */}
+                  <div className="financial-category">
+                    <div className="financial-category-title">
+                      <span>📈</span>
+                      밸류에이션 지표
+                    </div>
+                    <table className="financial-table">
+                      <thead>
+                        <tr>
+                          <th>지표</th>
+                          <th>값</th>
+                          <th>설명</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(financialData.valuation || {}).map(([key, data]) => (
+                          <tr key={key}>
+                            <td className="metric-name">{key}</td>
+                            <td className={`metric-value ${getValueClass(data.value)}`}>
+                              {formatValue(data.value, data.unit)}
+                              {data.unit && <span className="metric-unit">{data.unit}</span>}
+                            </td>
+                            <td className="metric-description">{data.description}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* 주가 정보 */}
+                  <div className="financial-category">
+                    <div className="financial-category-title">
+                      <span>📊</span>
+                      주가 정보
+                    </div>
+                    <table className="financial-table">
+                      <thead>
+                        <tr>
+                          <th>지표</th>
+                          <th>값</th>
+                          <th>설명</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(financialData.stock_info || {}).map(([key, data]) => (
+                          <tr key={key}>
+                            <td className="metric-name">{key}</td>
+                            <td className={`metric-value ${getValueClass(data.value)}`}>
+                              {formatValue(data.value, data.unit)}
+                              {data.unit && <span className="metric-unit">{data.unit}</span>}
+                            </td>
+                            <td className="metric-description">{data.description}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {financialData.last_updated && (
+                    <div className="last-updated">
+                      최종 업데이트: {financialData.last_updated}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="financial-no-data">
+                  재무 데이터가 없습니다.
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* 주가 차트 컴포넌트 - 재무 분석 섹션 아래에 배치 */}
           {currentSymbol && startDate && endDate && (
             <StockChart 
               symbol={currentSymbol}
@@ -1383,7 +1606,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
   );
 }
 
-function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone, setSelectedMenu, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, setSelectedSubMenu, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone, autoMarketTrigger }) {
+function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone, setSelectedMenu, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, setSelectedSubMenu, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone, autoMarketTrigger, setAutoIndustryTrigger, setAutoIndustryCategory }) {
   // 주차 정보 추출 (예: "(1주차)")
   const weekMatch = period.match(/\((\d+주차)\)/);
   const weekStr = weekMatch ? weekMatch[1] : "";
@@ -1444,6 +1667,17 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCus
     }
   }, [autoIndustryTrigger, autoIndustryCategory, selectedMenu, selectedSubMenu, setSelectedMenu, setSelectedSubMenu]);
 
+  // 산업 네비게이션 핸들러 추가
+  const handleNavigateToIndustry = (sector) => {
+    setSelectedMenu("진시황의 혜안");
+    setSelectedSubMenu("산업");
+    // 약간의 딜레이 후 자동 트리거 설정
+    setTimeout(() => {
+      if (setAutoIndustryTrigger) setAutoIndustryTrigger(true);
+      if (setAutoIndustryCategory) setAutoIndustryCategory(sector);
+    }, 100);
+  };
+
   return (
     <div className="main-panel">
       <div className="main-title">[{year}년 {month}월 {(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()}] {reportTitle}</div>
@@ -1462,6 +1696,7 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCus
             autoCompanySymbol={pipelineName === 'company' ? autoCompanySymbol : undefined}
             autoCompanyTrigger={pipelineName === 'company' ? autoCompanyTrigger : undefined}
             onAutoCompanyDone={pipelineName === 'company' ? onAutoCompanyDone : undefined}
+            onNavigateToIndustry={pipelineName === 'company' ? handleNavigateToIndustry : undefined}
             autoIndustryCategory={pipelineName === 'industry' ? autoIndustryCategory : undefined}
             autoIndustryTrigger={pipelineName === 'industry' ? autoIndustryTrigger : undefined}
             onAutoIndustryDone={pipelineName === 'industry' ? onAutoIndustryDone : undefined}
@@ -1473,11 +1708,11 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCus
   );
 }
 
-function PipelinePanel({ name, year, month, weekStr, period, onSetReportTitle, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone, autoStartMarket }) {
+function PipelinePanel({ name, year, month, weekStr, period, onSetReportTitle, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, onNavigateToIndustry, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone, autoStartMarket }) {
   if (name === 'customer') return <CustomerPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} autoCustomerName={autoCustomerName} autoCustomerTrigger={autoCustomerTrigger} onAutoCustomerDone={onAutoCustomerDone} />;
   if (name === 'market') return <MarketPipeline year={year} month={month} weekStr={weekStr} period={period} autoStart={autoStartMarket} />;
   if (name === 'industry') return <IndustryPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} autoIndustryCategory={autoIndustryCategory} autoIndustryTrigger={autoIndustryTrigger} onAutoIndustryDone={onAutoIndustryDone} />;
-  if (name === 'company') return <CompanyPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} autoCompanySymbol={autoCompanySymbol} autoCompanyTrigger={autoCompanyTrigger} onAutoCompanyDone={onAutoCompanyDone} />;
+  if (name === 'company') return <CompanyPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} autoCompanySymbol={autoCompanySymbol} autoCompanyTrigger={autoCompanyTrigger} onAutoCompanyDone={onAutoCompanyDone} onNavigateToIndustry={onNavigateToIndustry} />;
   return null;
 }
 
@@ -1554,6 +1789,8 @@ function App() {
         autoIndustryTrigger={autoIndustryTrigger}
         onAutoIndustryDone={handleAutoIndustryDone}
         autoMarketTrigger={autoMarketTrigger}
+        setAutoIndustryTrigger={setAutoIndustryTrigger}
+        setAutoIndustryCategory={setAutoIndustryCategory}
       />
       <ChatPanel
         onPersonalIntent={(customerName) => {
