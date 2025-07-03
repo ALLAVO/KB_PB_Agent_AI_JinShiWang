@@ -477,6 +477,42 @@ def get_us_indices_6months_chart(end_date: str) -> dict:
     except Exception as e:
         return {'error': f'Error fetching 6-month US indices data: {e}'}
 
+def get_us_indices_1year_chart(end_date: str) -> dict:
+    """
+    DOW, S&P500, NASDAQ 1년치 일별 종가 데이터를 반환합니다.
+    end_date: 'YYYY-MM-DD' (그래프 마지막 날짜)
+    반환: {
+        'dow': {'dates': [...], 'closes': [...]},
+        'sp500': {'dates': [...], 'closes': [...]},
+        'nasdaq': {'dates': [...], 'closes': [...]}
+    }
+    """
+    try:
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        start_dt = end_dt - timedelta(days=365)  # 1년(365일)
+        start_str = start_dt.strftime('%Y-%m-%d')
+        end_str = end_dt.strftime('%Y-%m-%d')
+
+        indices = {
+            'dow': '^DJI',
+            'sp500': '^SPX',
+            'nasdaq': '^NDQ'
+        }
+        result = {}
+        for key, ticker in indices.items():
+            df = web.DataReader(ticker, 'stooq', start=start_str, end=end_str)
+            df = df.sort_index()
+            if df.empty:
+                result[key] = {'dates': [], 'closes': []}
+            else:
+                result[key] = {
+                    'dates': [d.strftime('%Y-%m-%d') for d in df.index],
+                    'closes': df['Close'].tolist()
+                }
+        return result
+    except Exception as e:
+        return {'error': f'Error fetching 1-year US indices data: {e}'}
+
 ## 04-2. 미국 국채 금리
 def get_us_treasury_yields_6months(fred_api_key: str, end_date: str) -> dict:
     """

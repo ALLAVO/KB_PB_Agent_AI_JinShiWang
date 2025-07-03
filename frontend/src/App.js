@@ -13,7 +13,7 @@ import {fetchWeeklySummaries } from "./api/summarize";
 import {fetchWeeklyKeywords } from "./api/keyword";
 import {fetchPredictionSummary } from "./api/prediction";
 import {fetchIndustryTop3Articles } from "./api/industry";
-import {fetchIndices6MonthsChart, fetchTreasuryYields6MonthsChart, fetchFx6MonthsChart} from "./api/market";
+import {fetchIndices6MonthsChart, fetchTreasuryYields6MonthsChart, fetchFx6MonthsChart, fetchIndices1YearChart} from "./api/market";
 import {fetchIntention} from "./api/intention";
 import StockChart from "./components/StockChart";
 import MarketIndicesChart from "./components/MarketIndicesChart";
@@ -21,6 +21,7 @@ import TreasuryYieldsChart from "./components/TreasuryYieldsChart";
 import FxRatesChart from "./components/FxRatesChart";
 import IntroScreen from "./components/IntroScreen";
 import IntentionForm from "./components/IntentionForm";
+import MarketIndices1YearTable from "./components/MarketIndices1YearTable";
 
 function CloudDecorations() {
   return (
@@ -305,6 +306,7 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
   const [indicesData, setIndicesData] = useState(null);
   const [treasuryData, setTreasuryData] = useState(null);
   const [fxData, setFxData] = useState(null);
+  const [indices1YearData, setIndices1YearData] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -320,6 +322,7 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
       setIndicesData(null);
       setTreasuryData(null);
       setFxData(null);
+      setIndices1YearData(null);
       setError("");
     }
   }, [year, month, period]);
@@ -331,6 +334,7 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
     setIndicesData(null);
     setTreasuryData(null);
     setFxData(null);
+    setIndices1YearData(null);
 
     // period에서 종료일 추출하여 endDate로 사용
     const dateMatch = period.match(/(\d{2})\.(\d{2}) - (\d{2})\.(\d{2})/);
@@ -344,18 +348,20 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
     }
 
     try {
-      // 3개 API를 병렬로 호출
-      const [indices, treasury, fx] = await Promise.all([
+      // 4개 API를 병렬로 호출 (1년치 데이터 추가)
+      const [indices, treasury, fx, indices1Year] = await Promise.all([
         fetchIndices6MonthsChart(endDate),
         fetchTreasuryYields6MonthsChart(endDate),
-        fetchFx6MonthsChart(endDate)
+        fetchFx6MonthsChart(endDate),
+        fetchIndices1YearChart(endDate)
       ]);
 
       setIndicesData(indices);
       setTreasuryData(treasury);
       setFxData(fx);
+      setIndices1YearData(indices1Year);
       
-      console.log('Market data loaded:', { indices, treasury, fx });
+      console.log('Market data loaded:', { indices, treasury, fx, indices1Year });
     } catch (e) {
       console.error('Market API 호출 오류:', e);
       setError('시장 데이터를 불러오지 못했습니다.');
@@ -365,10 +371,7 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
   };
 
   const chartData = '시장 차트 예시';
-  const tableData = [
-    { 지수: 'KOSPI', 값: 2650, 변동: '+1.2%' },
-    { 지수: 'KOSDAQ', 값: 900, 변동: '-0.5%' }
-  ];
+  
   const textSummary = `${year}년 ${month}월 ${weekStr} (${period}) 시장 데이터 분석 요약입니다.`;
 
   return (
@@ -438,17 +441,7 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
               />
             </>
           )}
-
-          <table className="pipeline-table">
-            <thead>
-              <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
-            </thead>
-            <tbody>
-              {tableData.map((row, idx) => (
-                <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
-              ))}
-            </tbody>
-          </table>
+          <MarketIndices1YearTable indices1YearData={indices1YearData} loading={loading} error={error} />
           <div className="pipeline-text">{textSummary}</div>
         </>
       )}

@@ -74,3 +74,28 @@ export const fetchFx6MonthsChart = async (endDate) => {
     throw error;
   }
 };
+
+// 미국 주요 지수 1년치 데이터 가져오기 (테이블용)
+export const fetchIndices1YearChart = async (endDate) => {
+  try {
+    const url = new URL(`${API_BASE_URL}/market/indices-1year-chart`);
+    url.searchParams.append('end_date', endDate);
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching 1-year indices data:', error);
+    throw error;
+  }
+};
