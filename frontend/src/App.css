@@ -195,7 +195,7 @@
   width: 100%;
   display: flex;
   justify-content: center;
-  padding-bottom: 20px;
+  padding-bottom: 40px;
 }
 
 .sidebar-yearmonth select.sidebar-period-select,
