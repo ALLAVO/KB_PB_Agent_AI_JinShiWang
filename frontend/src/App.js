@@ -19,6 +19,7 @@ import StockChart from "./components/StockChart";
 import MarketIndicesChart from "./components/MarketIndicesChart";
 import TreasuryYieldsChart from "./components/TreasuryYieldsChart";
 import FxRatesChart from "./components/FxRatesChart";
+import CombinedFinancialChart from "./components/CombinedFinancialChart";
 import IntroScreen from "./components/IntroScreen";
 import IntentionForm from "./components/IntentionForm";
 import MarketIndices1YearTable from "./components/MarketIndices1YearTable";
@@ -427,16 +428,15 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
                 loading={loading} 
                 error={indicesData?.error} 
               />
-              <MarketIndices1YearTable indices1YearData={indices1YearData} loading={loading} error={error} style={{ marginTop: 0, marginBottom: 16 }} />
-              <TreasuryYieldsChart 
-                data={treasuryData} 
+              <MarketIndices1YearTable indices1YearData={indices1YearData} loading={loading} error={error} />
+              <div className="pipeline-title">
+                <img src={titlecloud} alt="cloud" /> FICC
+              </div>
+              <CombinedFinancialChart 
+                treasuryData={treasuryData} 
+                fxData={fxData}
                 loading={loading} 
-                error={treasuryData?.error} 
-              />
-              <FxRatesChart 
-                data={fxData} 
-                loading={loading} 
-                error={fxData?.error} 
+                error={treasuryData?.error || fxData?.error} 
               />
             </>
           )}
