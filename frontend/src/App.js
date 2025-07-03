@@ -22,6 +22,8 @@ import MarketIndicesChart from "./components/MarketIndicesChart";
 import CombinedFinancialChart from "./components/CombinedFinancialChart";
 import IntroScreen from "./components/IntroScreen";
 import IntentionForm from "./components/IntentionForm";
+import { fetchIntention } from "./api/intention";
+import { fetchCompanyFinancialAnalysis } from "./api/company";
 import MarketIndices1YearTable from "./components/MarketIndices1YearTable";
 import FiccTable1Year from "./components/FiccTable1Year";
 
