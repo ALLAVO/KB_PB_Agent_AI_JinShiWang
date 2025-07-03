@@ -19,7 +19,9 @@ import StockChart from "./components/StockChart";
 import IntroScreen from "./components/IntroScreen";
 import IntentionForm from "./components/IntentionForm";
 import { fetchIntention } from "./api/intention";
-import { fetchCompanyProfile, fetchCompanyFinancialAnalysis } from "./api/company";
+import { fetchCompanyFinancialAnalysis } from "./api/company";
+import MarketIndices1YearTable from "./components/MarketIndices1YearTable";
+import FiccTable1Year from "./components/FiccTable1Year";
 
 function CloudDecorations() {
   return (
