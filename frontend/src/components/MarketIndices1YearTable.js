@@ -130,7 +130,7 @@ function MarketIndices1YearTable({ indices1YearData, loading, error }) {
                 padding: '24px 0 24px 0',
                 textAlign: 'center',
                 fontWeight: 500,
-                fontSize: '1.3rem',
+                fontSize: '1.2rem', // 1.3 -> 1.2
                 color: '#363532',
                 border: 'none',
                 letterSpacing: '-1px',
@@ -142,7 +142,7 @@ function MarketIndices1YearTable({ indices1YearData, loading, error }) {
                 padding: '24px 0 24px 0',
                 textAlign: 'center',
                 fontWeight: 500,
-                fontSize: '1.3rem',
+                fontSize: '1.2rem', // 1.3 -> 1.2
                 color: '#363532',
                 border: 'none',
                 letterSpacing: '-1px',
@@ -153,7 +153,7 @@ function MarketIndices1YearTable({ indices1YearData, loading, error }) {
                 padding: '10px 0 10px 0',
                 textAlign: 'center',
                 fontWeight: 500,
-                fontSize: '1.3rem',
+                fontSize: '1.2rem', // 1.3 -> 1.2
                 color: '#363532',
                 border: 'none',
                 letterSpacing: '-1px',
@@ -164,7 +164,7 @@ function MarketIndices1YearTable({ indices1YearData, loading, error }) {
                 padding: '24px 0 24px 0',
                 textAlign: 'center',
                 fontWeight: 500,
-                fontSize: '1.3rem',
+                fontSize: '1.2rem', // 1.3 -> 1.2
                 color: '#363532',
                 border: 'none',
                 letterSpacing: '-1px',
@@ -178,7 +178,7 @@ function MarketIndices1YearTable({ indices1YearData, loading, error }) {
                 padding: '0 0 10px 0',
                 textAlign: 'center',
                 fontWeight: 400,
-                fontSize: '1.1rem',
+                fontSize: '1.0rem', // 1.1 -> 1.0
                 color: '#363532',
                 border: 'none',
                 background: 'none',
@@ -188,7 +188,7 @@ function MarketIndices1YearTable({ indices1YearData, loading, error }) {
                 padding: '0 0 10px 0',
                 textAlign: 'center',
                 fontWeight: 400,
-                fontSize: '1.1rem',
+                fontSize: '1.0rem', // 1.1 -> 1.0
                 color: '#363532',
                 border: 'none',
                 background: 'none',
@@ -198,7 +198,7 @@ function MarketIndices1YearTable({ indices1YearData, loading, error }) {
                 padding: '0 0 10px 0',
                 textAlign: 'center',
                 fontWeight: 400,
-                fontSize: '1.1rem',
+                fontSize: '1.0rem', // 1.1 -> 1.0
                 color: '#363532',
                 border: 'none',
                 background: 'none',
@@ -217,7 +217,7 @@ function MarketIndices1YearTable({ indices1YearData, loading, error }) {
                   padding: '6px 0',
                   textAlign: 'center',
                   fontWeight: 500, // 기존 700에서 500으로 변경
-                  fontSize: '1.3rem',
+                  fontSize: '1.2rem', // 1.3 -> 1.2
                   color: '#363532',
                   letterSpacing: '-1px',
                   borderBottomLeftRadius: idx === tableData.length - 1 ? '6px' : 0,
@@ -226,7 +226,7 @@ function MarketIndices1YearTable({ indices1YearData, loading, error }) {
                   padding: '6px 0',
                   textAlign: 'center',
                   fontWeight: 400,
-                  fontSize: '1.3rem',
+                  fontSize: '1.2rem', // 1.3 -> 1.2
                   color: '#363532',
                   letterSpacing: '-1px',
                 }}>{row['금요일종가(pt)']}</td>
@@ -234,7 +234,7 @@ function MarketIndices1YearTable({ indices1YearData, loading, error }) {
                   padding: '6px 0',
                   textAlign: 'center',
                   fontWeight: 500, // medium
-                  fontSize: '1.3rem',
+                  fontSize: '1.2rem', // 1.3 -> 1.2
                   color: row['등락률(%)']['1W'] > 0 ? '#ef4444' : row['등락률(%)']['1W'] < 0 ? '#2563eb' : '#363532', // 빨강/파랑/기본
                   letterSpacing: '-1px',
                 }}>{row['등락률(%)']['1W'] !== '-' ? (row['등락률(%)']['1W'] > 0 ? '+' : '') + row['등락률(%)']['1W'] : '-'}</td>
@@ -242,7 +242,7 @@ function MarketIndices1YearTable({ indices1YearData, loading, error }) {
                   padding: '6px 0',
                   textAlign: 'center',
                   fontWeight: 500, // medium
-                  fontSize: '1.3rem',
+                  fontSize: '1.2rem', // 1.3 -> 1.2
                   color: row['등락률(%)']['1M'] > 0 ? '#ef4444' : row['등락률(%)']['1M'] < 0 ? '#2563eb' : '#363532',
                   letterSpacing: '-1px',
                 }}>{row['등락률(%)']['1M'] !== '-' ? (row['등락률(%)']['1M'] > 0 ? '+' : '') + row['등락률(%)']['1M'] : '-'}</td>
@@ -250,7 +250,7 @@ function MarketIndices1YearTable({ indices1YearData, loading, error }) {
                   padding: '6px 0',
                   textAlign: 'center',
                   fontWeight: 500, // medium
-                  fontSize: '1.3rem',
+                  fontSize: '1.2rem', // 1.3 -> 1.2
                   color: row['등락률(%)']['YTD'] > 0 ? '#ef4444' : row['등락률(%)']['YTD'] < 0 ? '#2563eb' : '#363532',
                   letterSpacing: '-1px',
                 }}>{row['등락률(%)']['YTD'] !== '-' ? (row['등락률(%)']['YTD'] > 0 ? '+' : '') + row['등락률(%)']['YTD'] : '-'}</td>
@@ -258,7 +258,7 @@ function MarketIndices1YearTable({ indices1YearData, loading, error }) {
                   padding: '6px 0',
                   textAlign: 'center',
                   fontWeight: 400,
-                  fontSize: '1.3rem',
+                  fontSize: '1.2rem', // 1.3 -> 1.2
                   color: '#363532',
                   letterSpacing: '-1px',
                   borderBottomRightRadius: idx === tableData.length - 1 ? '6px' : 0,

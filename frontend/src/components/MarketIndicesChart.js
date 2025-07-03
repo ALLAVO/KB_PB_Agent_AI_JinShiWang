@@ -123,6 +123,7 @@ const MarketIndicesChart = ({ data, loading, error }) => {
       borderRadius: '8px',
       border: '1px solid #e0e0e0',
       padding: '20px',
+
       marginBottom: '8px'
     }}>
       
@@ -177,9 +178,9 @@ const MarketIndicesChart = ({ data, loading, error }) => {
           {/* X축 */}
           <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#ccc" strokeWidth="1" />
           
-          {/* Y축 눈금 및 레이블 */}
+          {/* Y축 눈금 및 레이블 (내림차순) */}
           {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-            const value = minValue + ratio * valueRange;
+            const value = maxValue - ratio * valueRange;
             const y = padding + ratio * (height - 2 * padding);
             return (
               <g key={ratio}>
