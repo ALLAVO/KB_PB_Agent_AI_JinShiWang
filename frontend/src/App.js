@@ -1406,9 +1406,9 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCus
     pipelineName = "customer";
     defaultReportTitle = "고객 리포트";
   } else if (selectedMenu === "진시황의 혜안") {
-    if (selectedSubMenu === "시황") {
+    if (selectedSubMenu === "증시") {
       pipelineName = "market";
-      defaultReportTitle = "시황 리포트";
+      defaultReportTitle = "증시 리포트";
       if (autoMarketTrigger) autoStartMarket = true;
     } else if (selectedSubMenu === "산업") {
       pipelineName = "industry";
@@ -1483,7 +1483,7 @@ function PipelinePanel({ name, year, month, weekStr, period, onSetReportTitle, a
 
 function App() {
   const [selectedMenu, setSelectedMenu] = useState("진시황의 혜안");
-  const [selectedSubMenu, setSelectedSubMenu] = useState("시황");
+  const [selectedSubMenu, setSelectedSubMenu] = useState("증시");
   const [year, setYear] = useState(2025);
   const [month, setMonth] = useState(6);
   const [period, setPeriod] = useState("06.01 - 06.07 (1주차)");
@@ -1524,7 +1524,7 @@ function App() {
       <Sidebar
         userName="김PB"
         menu={["진시황의 혜안", "고객 관리"]}
-        subMenu={["시황", "산업", "기업"]}
+        subMenu={["증시", "산업", "기업"]}
         selectedMenu={selectedMenu}
         selectedSubMenu={selectedSubMenu}
         onMenuClick={setSelectedMenu}
@@ -1575,7 +1575,7 @@ function App() {
         }}
         onMarketIntent={() => {
           setSelectedMenu("진시황의 혜안");
-          setSelectedSubMenu("시황");
+          setSelectedSubMenu("증시");
           setAutoMarketTrigger(true);
           setTimeout(() => setAutoMarketTrigger(false), 1000);
         }}
