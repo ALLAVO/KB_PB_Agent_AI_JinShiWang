@@ -215,6 +215,9 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
       )}
       {started && (
         <>
+          <div className="pipeline-title">
+            <img src={titlecloud} alt="cloud" /> {currentSymbol ? `${currentSymbol} 주가 동향` : '주가 동향'}
+          </div>
           {/* 주가 차트 컴포넌트 추가 - currentSymbol 사용 */}
           {currentSymbol && startDate && endDate && (
             <StockChart 

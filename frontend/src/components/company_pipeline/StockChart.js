@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import { fetchCombinedStockChart, fetchStockChartSummary } from '../../api/stockChart';
 import ReturnAnalysisChart from '../ReturnAnalysisChart';
+import './StockChart.css';
 
 const StockChart = ({ symbol, startDate, endDate }) => {
   const [chartData, setChartData] = useState([]);
@@ -239,16 +240,14 @@ const StockChart = ({ symbol, startDate, endDate }) => {
     return <div className="stock-chart-error">{error}</div>;
   }
 
+  // 기존에는 모든 내용을 stock-chart-container로 감쌌으나, 이제 각각의 요소를 개별적으로 렌더링
   return (
-    <div className="stock-chart-container">
-      <div className="stock-chart-title">
-        <h3>{symbol} 주가 차트</h3>
-      </div>
-      
+    <>
       {/* 차트 요약 정보 */}
       {chartSummary && (
         <div className="chart-summary">
-          <div className="summary-grid">
+          <div className="summary-grid summary-grid-2rows">
+            {/* 첫 번째 행: 기간, 시작가, 종가 */}
             <div className="summary-item">
               <span className="summary-label">기간:</span>
               <span className="summary-value">{chartSummary.period}</span>
@@ -261,6 +260,7 @@ const StockChart = ({ symbol, startDate, endDate }) => {
               <span className="summary-label">종가:</span>
               <span className="summary-value">${chartSummary.end_price}</span>
             </div>
+            {/* 두 번째 행: 변화, 최고가, 최저가 */}
             <div className="summary-item">
               <span className="summary-label">변화:</span>
               <span className={`summary-value ${chartSummary.change >= 0 ? 'positive' : 'negative'}`}>
@@ -278,7 +278,6 @@ const StockChart = ({ symbol, startDate, endDate }) => {
           </div>
         </div>
       )}
-      
       {/* 컨트롤 섹션 */}
       <div className="stock-chart-controls">
         {/* 기간 선택 */}
@@ -296,7 +295,6 @@ const StockChart = ({ symbol, startDate, endDate }) => {
             ))}
           </div>
         </div>
-
         {/* 차트 타입 선택 */}
         <div className="control-section">
           <h4 className="control-title">차트 타입:</h4>
@@ -312,7 +310,6 @@ const StockChart = ({ symbol, startDate, endDate }) => {
             ))}
           </div>
         </div>
-
         {/* 이동평균 기간 선택 (이동평균이 선택된 경우에만 표시) */}
         {selectedChartTypes.includes('moving_average') && (
           <div className="control-section">
@@ -331,7 +328,6 @@ const StockChart = ({ symbol, startDate, endDate }) => {
           </div>
         )}
       </div>
-
       {/* 차트 */}
       <div className="stock-chart-wrapper">
         {chartData.length > 0 ? (
@@ -445,14 +441,13 @@ const StockChart = ({ symbol, startDate, endDate }) => {
           <div className="no-chart-data">차트 데이터가 없습니다.</div>
         )}
       </div>
-
       {/* 수익률 분석 차트 - 주가 차트와 독립적으로 동작 */}
       <ReturnAnalysisChart 
         symbol={symbol}
         startDate={startDate}
         endDate={endDate}
       />
-    </div>
+    </>
   );
 };
 
