@@ -82,7 +82,7 @@
 }
 
 .control-title {
-  margin: 0 0 10px 0;
+  margin: 0;
   font-weight: 600;
   color: #302a24;
   font-size: 1rem;
@@ -91,12 +91,7 @@
 }
 
 .control-title:before {
-  content: '';
-  width: 4px;
-  height: 16px;
-  background: #b08d57;
-  margin-right: 8px;
-  border-radius: 2px;
+  content: none;
 }
 
 .control-buttons {
@@ -170,7 +165,7 @@
 }
 
 .stock-chart-wrapper {
-  background: #fafafa;
+  /* background: #fafafa; */
   border-radius: 6px;
   padding: 10px;
 }

@@ -19,9 +19,10 @@ const StockChart = ({ symbol, startDate, endDate }) => {
   const [chartSummary, setChartSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [selectedPeriod, setSelectedPeriod] = useState('1M');
-  const [selectedChartTypes, setSelectedChartTypes] = useState(['price']);
-  const [maPeriods, setMaPeriods] = useState([5, 20, 60]);
+  const [selectedPeriod, setSelectedPeriod] = useState('6M');
+  const [selectedChartTypes, setSelectedChartTypes] = useState(['price', 'moving_average', 'volume']);
+  const [maPeriods, setMaPeriods] = useState([5, 60]);
+  const [showPeriodOptions, setShowPeriodOptions] = useState(false);
 
   const periodOptions = [
     { value: '1W', label: '1주' },
@@ -34,8 +35,7 @@ const StockChart = ({ symbol, startDate, endDate }) => {
   const chartTypeOptions = [
     { value: 'price', label: '주가' },
     { value: 'moving_average', label: '이동평균' },
-    { value: 'volume', label: '거래량' },
-    { value: 'relative_nasdaq', label: '나스닥 대비 상대지수' }
+    { value: 'volume', label: '거래량' }
   ];
 
   const maOptions = [
@@ -143,11 +143,6 @@ const StockChart = ({ symbol, startDate, endDate }) => {
           item.volume = data.data.volume.volumes[index];
         }
         
-        // 나스닥 대비 상대지수 데이터
-        if (selectedChartTypes.includes('relative_nasdaq') && data.data.relative_nasdaq) {
-          item.relative_nasdaq = data.data.relative_nasdaq.values[index];
-        }
-        
         return item;
       });
       
@@ -210,11 +205,6 @@ const StockChart = ({ symbol, startDate, endDate }) => {
     return `$${value}`;
   };
 
-  // 상대지수 포맷터
-  const formatRelativeIndex = (value) => {
-    return `${value.toFixed(1)}pt`;
-  };
-
   // 커스텀 툴팁
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -250,7 +240,33 @@ const StockChart = ({ symbol, startDate, endDate }) => {
             {/* 첫 번째 행: 기간, 시작가, 종가 */}
             <div className="summary-item">
               <span className="summary-label">기간:</span>
-              <span className="summary-value">{chartSummary.period}</span>
+              <span className="summary-value period-dropdown-wrapper" style={{ position: 'relative' }}>
+                <button
+                  className="period-dropdown-btn"
+                  onClick={() => setShowPeriodOptions((prev) => !prev)}
+                  style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, color: '#2563eb', fontWeight: 'bold' }}
+                >
+                  {periodOptions.find(opt => opt.value === selectedPeriod)?.label || chartSummary.period}
+                  <span style={{ marginLeft: 4 }}>▼</span>
+                </button>
+                {showPeriodOptions && (
+                  <div className="period-dropdown-menu" style={{ position: 'absolute', zIndex: 10, background: '#fff', border: '1px solid #ddd', borderRadius: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginTop: 4, minWidth: 120, width: 140 }}>
+                    {periodOptions.map(option => (
+                      <button
+                        key={option.value}
+                        className={`control-btn period-btn${selectedPeriod === option.value ? ' active' : ''}`}
+                        style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 16px', background: 'none', border: 'none', color: selectedPeriod === option.value ? '#2563eb' : '#222', fontWeight: selectedPeriod === option.value ? 'bold' : 'normal', cursor: 'pointer' }}
+                        onClick={() => {
+                          setSelectedPeriod(option.value);
+                          setShowPeriodOptions(false);
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </span>
             </div>
             <div className="summary-item">
               <span className="summary-label">시작가:</span>
@@ -279,54 +295,42 @@ const StockChart = ({ symbol, startDate, endDate }) => {
         </div>
       )}
       {/* 컨트롤 섹션 */}
-      <div className="stock-chart-controls">
-        {/* 기간 선택 */}
-        <div className="control-section">
-          <h4 className="control-title">기간:</h4>
-          <div className="control-buttons">
-            {periodOptions.map(option => (
-              <button
-                key={option.value}
-                className={`control-btn period-btn ${selectedPeriod === option.value ? 'active' : ''}`}
-                onClick={() => setSelectedPeriod(option.value)}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        {/* 차트 타입 선택 */}
-        <div className="control-section">
-          <h4 className="control-title">차트 타입:</h4>
-          <div className="control-buttons">
-            {chartTypeOptions.map(option => (
-              <button
-                key={option.value}
-                className={`control-btn chart-type-btn ${selectedChartTypes.includes(option.value) ? 'active' : ''}`}
-                onClick={() => toggleChartType(option.value)}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        {/* 이동평균 기간 선택 (이동평균이 선택된 경우에만 표시) */}
-        {selectedChartTypes.includes('moving_average') && (
-          <div className="control-section">
-            <h4 className="control-title">이동평균:</h4>
-            <div className="control-buttons">
-              {maOptions.map(option => (
+      <div className="stock-chart-controls" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '24px' }}>
+        {/* 차트 타입 + 이동평균 한 줄에 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px', width: '100%' }}>
+          {/* 차트 타입 선택 */}
+          <div className="control-section" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* <h4 className="control-title" style={{ margin: 0, marginRight: 8 }}>차트 타입:</h4> 갈색 작대기(제목) 제거 */}
+            <div className="control-buttons" style={{ display: 'flex', gap: '4px' }}>
+              {chartTypeOptions.map(option => (
                 <button
                   key={option.value}
-                  className={`control-btn ma-btn ${maPeriods.includes(option.value) ? 'active' : ''}`}
-                  onClick={() => toggleMAPeriod(option.value)}
+                  className={`control-btn chart-type-btn ${selectedChartTypes.includes(option.value) ? 'active' : ''}`}
+                  onClick={() => toggleChartType(option.value)}
                 >
                   {option.label}
                 </button>
               ))}
             </div>
           </div>
-        )}
+          {/* 이동평균 기간 선택 (이동평균이 선택된 경우에만 표시) */}
+          {selectedChartTypes.includes('moving_average') && (
+            <div className="control-section" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+              {/* <h4 className="control-title" style={{ margin: 0, marginRight: 8 }}>이동평균:</h4> 갈색 작대기(제목) 제거 */}
+              <div className="control-buttons" style={{ display: 'flex', gap: '4px' }}>
+                {maOptions.map(option => (
+                  <button
+                    key={option.value}
+                    className={`control-btn ma-btn ${maPeriods.includes(option.value) ? 'active' : ''}`}
+                    onClick={() => toggleMAPeriod(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
       {/* 차트 */}
       <div className="stock-chart-wrapper">
@@ -353,24 +357,13 @@ const StockChart = ({ symbol, startDate, endDate }) => {
               />
               
               {/* 거래량용 Y축 (오른쪽) - 거래량이 선택된 경우 */}
-              {selectedChartTypes.includes('volume') && !selectedChartTypes.includes('relative_nasdaq') && (
+              {selectedChartTypes.includes('volume') && (
                 <YAxis 
                   yAxisId="volume" 
                   orientation="right"
                   tick={{ fontSize: 12 }}
                   tickFormatter={formatVolume}
                   label={{ value: '거래량', angle: 90, position: 'insideRight' }}
-                />
-              )}
-              
-              {/* 상대지수용 Y축 (오른쪽) - 상대지수가 선택된 경우 */}
-              {selectedChartTypes.includes('relative_nasdaq') && (
-                <YAxis 
-                  yAxisId="relative" 
-                  orientation="right"
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={formatRelativeIndex}
-                  label={{ value: '상대지수 (pt)', angle: 90, position: 'insideRight' }}
                 />
               )}
               
@@ -412,21 +405,8 @@ const StockChart = ({ symbol, startDate, endDate }) => {
                 );
               })}
               
-              {/* 나스닥 대비 상대지수 라인 */}
-              {selectedChartTypes.includes('relative_nasdaq') && (
-                <Line
-                  yAxisId="relative"
-                  type="monotone"
-                  dataKey="relative_nasdaq"
-                  stroke="#ff6b35"
-                  strokeWidth={2}
-                  dot={false}
-                  name="나스닥 대비 상대지수"
-                />
-              )}
-              
               {/* 거래량 바 차트 (상대지수가 선택되지 않은 경우에만) */}
-              {selectedChartTypes.includes('volume') && !selectedChartTypes.includes('relative_nasdaq') && (
+              {selectedChartTypes.includes('volume') && (
                 <Bar
                   yAxisId="volume"
                   dataKey="volume"
