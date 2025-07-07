@@ -91,6 +91,8 @@ def get_industry_top3_articles(sector: str, start_date: str):
     cnt = collections.Counter(labels[labels >= 0])
     if len(cnt) < 3:
         print(f"❗ 클러스터 개수가 부족합니다. (필요: 3개, 현재: {len(cnt)}개)")
+        print(f"📊 총 기사 수: {len(valid_articles)}, 클러스터링된 기사 수: {len(labels[labels >= 0])}, 노이즈 기사 수: {len(labels[labels == -1])}")
+        
         # 클러스터가 부족한 경우 가장 큰 클러스터들과 노이즈에서 선택
         available_clusters = [cl[0] for cl in cnt.most_common()]
         noise_indices = np.where(labels == -1)[0]
@@ -108,21 +110,32 @@ def get_industry_top3_articles(sector: str, start_date: str):
             article_data = valid_articles[medoid_pos]
             top3_articles.append(article_data)
         
+        print(f"🔍 클러스터에서 선택된 기사 수: {len(top3_articles)}")
+        
         # 부족한 만큼 노이즈에서 추가 선택 (무작위)
         needed = 3 - len(top3_articles)
         if needed > 0 and len(noise_indices) > 0:
+            print(f"🎲 노이즈에서 {needed}개 기사 추가 선택 (사용 가능한 노이즈: {len(noise_indices)}개)")
             selected_noise = np.random.choice(noise_indices, min(needed, len(noise_indices)), replace=False)
             for idx in selected_noise:
                 article_data = valid_articles[idx]
                 top3_articles.append(article_data)
         
         # 여전히 부족하면 전체에서 무작위 선택
-        while len(top3_articles) < 3 and len(valid_articles) > len(top3_articles):
-            remaining_indices = [i for i in range(len(valid_articles)) 
-                               if valid_articles[i] not in top3_articles]
-            if remaining_indices:
-                selected_idx = np.random.choice(remaining_indices)
-                top3_articles.append(valid_articles[selected_idx])
+        remaining_needed = 3 - len(top3_articles)
+        if remaining_needed > 0:
+            print(f"⚠️ 여전히 {remaining_needed}개 기사 부족 - 전체에서 무작위 선택")
+            while len(top3_articles) < 3 and len(valid_articles) > len(top3_articles):
+                remaining_indices = [i for i in range(len(valid_articles)) 
+                                   if valid_articles[i] not in top3_articles]
+                if remaining_indices:
+                    selected_idx = np.random.choice(remaining_indices)
+                    top3_articles.append(valid_articles[selected_idx])
+                else:
+                    print("❌ 더 이상 선택할 기사가 없습니다.")
+                    break
+        
+        print(f"✅ 최종 선택된 기사 수: {len(top3_articles)}")
     else:
         top_clusters = [cl[0] for cl in cnt.most_common(3)]
         top3_articles = []
