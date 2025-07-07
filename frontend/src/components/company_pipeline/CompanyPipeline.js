@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import StockChart from '../StockChart';
+import StockChart from './StockChart';
+import StockPredictionCard from './StockPredictionCard';
 import titlecloud from '../../assets/titlecloud.png';
 import { fetchTop3Articles } from '../../api/sentiment';
 import { fetchWeeklySummaries } from '../../api/summarize';
 import { fetchWeeklyKeywords } from '../../api/keyword';
 import { fetchPredictionSummary } from '../../api/prediction';
+import Top3Articles from './Top3Articles';
+import ArticleDetailModal from './ArticleDetailModal';
+import './Top3Articles.css';
 
 function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone }) {
   const [started, setStarted] = useState(false);
@@ -211,10 +215,6 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
       )}
       {started && (
         <>
-          <div className="pipeline-title">
-            <img src={titlecloud} alt="cloud" />기업 Pipeline
-          </div>
-          
           {/* 주가 차트 컴포넌트 추가 - currentSymbol 사용 */}
           {currentSymbol && startDate && endDate && (
             <StockChart 
@@ -223,305 +223,27 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
               endDate={endDate}
             />
           )}
-          
           {/* 주가 전망 카드 - currentSymbol 사용 */}
           {started && (
-            <div style={{
-              marginTop: '24px',
-              marginBottom: '16px',
-              padding: '20px',
-              backgroundColor: '#f8f9fa',
-              borderRadius: '12px',
-              border: '2px solid #e3f2fd',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                marginBottom: '12px',
-                gap: '8px'
-              }}>
-                <img 
-                  src={require('../../assets/smile_king.png')} 
-                  alt="smile_king" 
-                  style={{
-                    width: '24px',
-                    height: '24px'
-                  }}
-                />
-                <h3 style={{
-                  margin: 0,
-                  fontSize: '18px',
-                  fontWeight: 'bold',
-                  color: '#1976d2'
-                }}>
-                  {currentSymbol || '종목'} {getNextWeekInfo()} 주가 전망 한줄평
-                </h3>
-              </div>
-              
-              <div style={{
-                fontSize: '15px',
-                lineHeight: '1.6',
-                color: '#333',
-                backgroundColor: 'white',
-                padding: '16px',
-                borderRadius: '8px',
-                border: '1px solid #e0e0e0',
-                minHeight: '60px',
-                display: 'flex',
-                alignItems: 'center'
-              }}>
-                {loading ? (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    color: '#666',
-                    fontStyle: 'italic'
-                  }}>
-                    <span>🔄</span>
-                    AI가 주가 전망을 분석하고 있습니다...
-                  </div>
-                ) : error && error !== '종목코드를 입력해주세요' ? (
-                  <div style={{
-                    color: '#d32f2f',
-                    fontStyle: 'italic'
-                  }}>
-                    주가 전망 데이터를 불러오지 못했습니다.
-                  </div>
-                ) : prediction && prediction.summary ? (
-                  prediction.summary
-                ) : (
-                  <div style={{
-                    color: '#666',
-                    fontStyle: 'italic'
-                  }}>
-                    주가 전망 데이터가 없습니다.
-                  </div>
-                )}
-              </div>
-            </div>
+            <StockPredictionCard 
+              currentSymbol={currentSymbol}
+              getNextWeekInfo={getNextWeekInfo}
+              loading={loading}
+              error={error}
+              prediction={prediction}
+            />
           )}
-          
           {/* top3 기사 표시 */}
-          <div className="top3-articles">
-            <b>Top3 기사:</b>
-            {loading ? '로딩 중...'
-              : error && error !== '종목코드를 입력해주세요'
-                ? error
-              : top3Articles && top3Articles.top3_articles && top3Articles.top3_articles.length > 0 ? (
-                <ol style={{marginTop: '8px'}}>
-                  {top3Articles.top3_articles.map((art, idx) => (
-                    <li key={idx} style={{marginBottom: '12px'}}>
-                      <div style={{fontWeight:'bold', fontSize:'16px'}}>
-                        {art.article_title}
-                        <span style={{marginLeft:'10px', color:'#0077cc', fontWeight:'normal', fontSize:'15px'}}>
-                          {art.score > 0 ? '+' : ''}{art.score}
-                        </span>
-                      </div>
-                      {/* 기사 작성 날짜 - 작은 회색 글씨로 표시 */}
-                      <div style={{fontSize:'12px', color:'#888', marginBottom:'2px'}}>{art.date}</div>
-                      
-                      {/* 기사 키워드 - 해시태그 형태로 표시 */}
-                      {(() => {
-                        const articleKeywords = findKeywordsForArticle(art);
-                        return articleKeywords && articleKeywords.length > 0 ? (
-                          <div style={{
-                            margin: '6px 0',
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: '4px'
-                          }}>
-                            {articleKeywords.slice(0, 5).map((keyword, idx) => (
-                              <span
-                                key={idx}
-                                style={{
-                                  backgroundColor: '#e3f2fd',
-                                  color: '#1976d2',
-                                  fontSize: '11px',
-                                  padding: '2px 6px',
-                                  borderRadius: '12px',
-                                  border: '1px solid #bbdefb',
-                                  display: 'inline-block',
-                                  fontWeight: '500'
-                                }}
-                              >
-                                #{keyword}
-                              </span>
-                            ))}
-                          </div>
-                        ) : loading ? (
-                          <div style={{
-                            fontSize: '11px',
-                            color: '#9e9e9e',
-                            fontStyle: 'italic',
-                            margin: '6px 0'
-                          }}>
-                            키워드 생성 중...
-                          </div>
-                        ) : null;
-                      })()}
-                      
-                      {/* 기사 요약 내용 */}
-                      {(() => {
-                        const summary = findSummaryForArticle(art);
-                        return summary ? (
-                          <div style={{
-                            fontSize: '13px',
-                            color: '#555',
-                            backgroundColor: '#f8f9fa',
-                            padding: '8px 12px',
-                            borderRadius: '6px',
-                            border: '1px solid #e9ecef',
-                            margin: '6px 0',
-                            lineHeight: '1.4'
-                          }}>
-                            <div style={{fontWeight: 'bold', fontSize: '12px', color: '#6c757d', marginBottom: '4px'}}>
-                              📄 기사 요약
-                            </div>
-                            {summary}
-                          </div>
-                        ) : loading ? (
-                          <div style={{
-                            fontSize: '12px',
-                            color: '#6c757d',
-                            fontStyle: 'italic',
-                            margin: '6px 0'
-                          }}>
-                            요약 생성 중...
-                          </div>
-                        ) : null;
-                      })()}
-                      
-                      {/* 기사 본문 확인 버튼 */}
-                      <button 
-                        onClick={() => handleArticleClick(art)}
-                        style={{
-                          backgroundColor: '#0077cc',
-                          color: 'white',
-                          border: 'none',
-                          padding: '6px 12px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                          marginTop: '4px'
-                        }}
-                      >
-                        기사 본문 자세히 확인하기
-                      </button>
-                    </li>
-                  ))}
-                </ol>
-              ) : '데이터 없음'}
-          </div>
-          
+          <Top3Articles
+            loading={loading}
+            error={error}
+            top3Articles={top3Articles}
+            findKeywordsForArticle={findKeywordsForArticle}
+            findSummaryForArticle={findSummaryForArticle}
+            handleArticleClick={handleArticleClick}
+          />
           {/* 기사 상세 모달 */}
-          {showModal && selectedArticle && (
-            <div style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              zIndex: 1000
-            }}>
-              <div style={{
-                backgroundColor: 'white',
-                padding: '24px',
-                borderRadius: '8px',
-                maxWidth: '80%',
-                maxHeight: '80%',
-                overflow: 'auto',
-                position: 'relative',
-                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-              }}>
-                {/* 닫기 버튼 */}
-                <button 
-                  onClick={closeModal}
-                  style={{
-                    position: 'absolute',
-                    top: '12px',
-                    right: '12px',
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    fontSize: '20px',
-                    cursor: 'pointer',
-                    color: '#666'
-                  }}
-                >
-                  ×
-                </button>
-                
-                {/* 모달 내용 */}
-                <div style={{marginRight: '30px'}}>
-                  <h2 style={{
-                    fontSize: '20px',
-                    fontWeight: 'bold',
-                    marginBottom: '12px',
-                    color: '#333',
-                    lineHeight: '1.4'
-                  }}>
-                    {selectedArticle.article_title}
-                  </h2>
-                  
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    marginBottom: '16px',
-                    gap: '16px'
-                  }}>
-                    <span style={{
-                      fontSize: '14px',
-                      color: '#666',
-                      backgroundColor: '#f5f5f5',
-                      padding: '4px 8px',
-                      borderRadius: '4px'
-                    }}>
-                      {selectedArticle.date}
-                    </span>
-                    <span style={{
-                      fontSize: '14px',
-                      color: '#666',
-                      backgroundColor: '#e3f2fd',
-                      padding: '4px 8px',
-                      borderRadius: '4px'
-                    }}>
-                      {selectedArticle.stock_symbol}
-                    </span>
-                    <span style={{
-                      fontSize: '16px',
-                      fontWeight: 'bold',
-                      color: selectedArticle.score > 0 ? '#22c55e' : selectedArticle.score < 0 ? '#ef4444' : '#666',
-                      backgroundColor: '#f9f9f9',
-                      padding: '4px 8px',
-                      borderRadius: '4px'
-                    }}>
-                      감성점수: {selectedArticle.score > 0 ? '+' : ''}{selectedArticle.score}
-                    </span>
-                  </div>
-                  
-                  <div style={{
-                    fontSize: '15px',
-                    lineHeight: '1.6',
-                    color: '#444',
-                    textAlign: 'justify',
-                    maxHeight: '400px',
-                    overflowY: 'auto',
-                    padding: '16px',
-                    backgroundColor: '#fafafa',
-                    borderRadius: '6px',
-                    border: '1px solid #e0e0e0'
-                  }}>
-                    {selectedArticle.article}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          <ArticleDetailModal show={showModal} article={selectedArticle} onClose={closeModal} />
         </>
       )}
     </div>

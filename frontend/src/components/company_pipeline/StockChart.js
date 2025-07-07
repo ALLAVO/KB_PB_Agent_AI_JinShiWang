@@ -10,8 +10,8 @@ import {
   Legend, 
   ResponsiveContainer 
 } from 'recharts';
-import { fetchCombinedStockChart, fetchStockChartSummary } from '../api/stockChart';
-import ReturnAnalysisChart from './ReturnAnalysisChart';
+import { fetchCombinedStockChart, fetchStockChartSummary } from '../../api/stockChart';
+import ReturnAnalysisChart from '../ReturnAnalysisChart';
 
 const StockChart = ({ symbol, startDate, endDate }) => {
   const [chartData, setChartData] = useState([]);
