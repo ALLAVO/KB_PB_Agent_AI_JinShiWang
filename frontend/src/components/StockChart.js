@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import './StockChart.css';
 import { 
   ComposedChart, 
   Line, 
@@ -394,6 +393,7 @@ const StockChart = ({ symbol, startDate, endDate }) => {
                   name="종가"
                 />
               )}
+              
               
               {/* 이동평균 라인들 */}
               {selectedChartTypes.includes('moving_average') && maPeriods.map((period, index) => {
