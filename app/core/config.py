@@ -1,4 +1,5 @@
 # 환경설정 및 환경변수 관리
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -14,7 +15,7 @@ class Settings(BaseSettings):
     # API KEY 설정
     ALPHAVANTAGE_API_KEY: str
     FRED_API_KEY: str
-    OPENAI_API_KEY: str
+    OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY")
 
     @property
     def DATABASE_URL(self) -> str:

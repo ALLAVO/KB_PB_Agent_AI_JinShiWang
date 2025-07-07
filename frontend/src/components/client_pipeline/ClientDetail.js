@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { fetchClientSummary } from '../../api/clients';
+import { fetchClientSummary, fetchClientPerformance } from '../../api/clients';
 import './ClientPipeline.css';
 
-const ClientDetail = ({ client, onBack, year, month, weekStr }) => {
+const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
   const [clientData, setClientData] = useState(null);
+  const [performanceData, setPerformanceData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -11,14 +12,32 @@ const ClientDetail = ({ client, onBack, year, month, weekStr }) => {
     if (client && client.id) {
       loadClientDetail();
     }
-  }, [client]);
+  }, [client, period]);
 
   const loadClientDetail = async () => {
     setLoading(true);
     setError('');
     try {
-      const summary = await fetchClientSummary(client.id);
+      // period에서 종료일 추출 - null/undefined 체크 추가
+      let periodEndDate;
+      if (period && typeof period === 'string') {
+        const dateMatch = period.match(/(\d{2})\.(\d{2}) - (\d{2})\.(\d{2})/);
+        if (dateMatch) {
+          periodEndDate = `${year}-${dateMatch[3]}-${dateMatch[4]}`;
+        } else {
+          periodEndDate = new Date().toISOString().split('T')[0];
+        }
+      } else {
+        periodEndDate = new Date().toISOString().split('T')[0];
+      }
+
+      const [summary, performance] = await Promise.all([
+        fetchClientSummary(client.id),
+        fetchClientPerformance(client.id, periodEndDate)
+      ]);
+      
       setClientData(summary);
+      setPerformanceData(performance);
     } catch (err) {
       setError('고객 상세 정보를 불러오는데 실패했습니다: ' + err.message);
       console.error('Client detail loading error:', err);
@@ -173,14 +192,100 @@ const ClientDetail = ({ client, onBack, year, month, weekStr }) => {
         </div>
       )}
 
-      {/* 금주 요약 및 코멘트 */}
-      <div className="weekly-summary-section">
-        <h3 className="section-title">금주 요약 및 코멘트</h3>
-        <div className="summary-content">
-          <div className="summary-placeholder">
-            <p>금주 투자 요약 및 분석 코멘트가 여기에 표시됩니다.</p>
-            <small className="coming-soon">* 추후 구현 예정</small>
+      {/* AI 투자 분석 요약 */}
+      {performanceData && (performanceData.ai_summary || performanceData.ai_comment) && (
+        <div className="ai-analysis-section">
+          <h3 className="section-title">🤖 AI 투자 분석 요약</h3>
+          <div className="ai-analysis-content">
+            {performanceData.ai_summary && (
+              <div className="ai-summary-card">
+                <h4 className="ai-card-title">📊 투자 성과 요약</h4>
+                <p className="ai-summary-text">{performanceData.ai_summary}</p>
+              </div>
+            )}
+            
+            {performanceData.ai_comment && (
+              <div className="ai-comment-card">
+                <h4 className="ai-card-title">💡 투자 코멘트</h4>
+                <p className="ai-comment-text">{performanceData.ai_comment}</p>
+              </div>
+            )}
           </div>
+        </div>
+      )}
+
+      {/* 고객 수익률 차트 */}
+      <div className="weekly-summary-section">
+        <h3 className="section-title">{client_info.name} 고객님 수익률 차트</h3>
+        <div className="summary-content">
+          {performanceData ? (
+            <div className="performance-analysis">
+              <div className="performance-summary">
+                <div className="performance-info">
+                  <span className="performance-label">분석 기준일:</span>
+                  <span className="performance-value">{performanceData.period_end}</span>
+                </div>
+                <div className="performance-info">
+                  <span className="performance-label">벤치마크:</span>
+                  <span className="performance-value">
+                    {performanceData.benchmark}
+                    {performanceData.benchmark_symbol && (
+                      <span className="benchmark-symbol"> ({performanceData.benchmark_symbol})</span>
+                    )}
+                  </span>
+                </div>
+                <div className="performance-info">
+                  <span className="performance-label">성과구간:</span>
+                  <span className="performance-value">{performanceData.performance_period_months}개월</span>
+                </div>
+              </div>
+              
+              <div className="performance-table-container">
+                <table className="performance-table">
+                  <thead>
+                    <tr>
+                      <th>구분</th>
+                      <th>포트폴리오 수익률</th>
+                      <th>벤치마크 수익률<br/>
+                        <small style={{fontWeight: 'normal', opacity: 0.8}}>
+                          ({performanceData.benchmark})
+                        </small>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="period-label">일주일간 수익률</td>
+                      <td className={`return-value ${performanceData.weekly_return.portfolio >= 0 ? 'positive' : 'negative'}`}>
+                        {performanceData.weekly_return.portfolio >= 0 ? '+' : ''}{performanceData.weekly_return.portfolio}%
+                      </td>
+                      <td className={`return-value ${performanceData.weekly_return.benchmark >= 0 ? 'positive' : 'negative'}`}>
+                        {performanceData.weekly_return.benchmark >= 0 ? '+' : ''}{performanceData.weekly_return.benchmark}%
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="period-label">성과구간 수익률 ({performanceData.performance_period_months}개월)</td>
+                      <td className={`return-value ${performanceData.performance_return.portfolio >= 0 ? 'positive' : 'negative'}`}>
+                        {performanceData.performance_return.portfolio >= 0 ? '+' : ''}{performanceData.performance_return.portfolio}%
+                      </td>
+                      <td className={`return-value ${performanceData.performance_return.benchmark >= 0 ? 'positive' : 'negative'}`}>
+                        {performanceData.performance_return.benchmark >= 0 ? '+' : ''}{performanceData.performance_return.benchmark}%
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <small className="coming-soon">* 성과 구간은 고객님 최근 리밸런싱 이후부터 지난주 금요일까지를 대상으로 합니다.</small>
+              </div>
+            </div>
+          ) : loading ? (
+            <div className="summary-placeholder">
+              <p>수익률 데이터를 불러오는 중...</p>
+            </div>
+          ) : (
+            <div className="summary-placeholder">
+              <p>수익률 데이터를 불러올 수 없습니다.</p>
+            </div>
+          )}
         </div>
       </div>
 

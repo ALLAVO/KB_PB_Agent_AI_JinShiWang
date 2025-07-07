@@ -665,7 +665,324 @@
   border: 1px solid var(--kb-brown-light);
 }
 
-/* 반응형 디자인 */
+/* 성과 분석 스타일 */
+.performance-analysis {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid var(--kb-brown-light);
+}
+
+.performance-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: var(--kb-yellow-light);
+  border-radius: 6px;
+  border: 1px solid var(--kb-brown-light);
+}
+
+.performance-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.performance-label {
+  font-size: 12px;
+  color: var(--kb-gray);
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.performance-value {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--kb-brown-dark);
+}
+
+/* 성과 테이블 */
+.performance-table-container {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid var(--kb-brown-light);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(139, 115, 85, 0.1);
+}
+
+.performance-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.performance-table th {
+  background: var(--kb-brown);
+  color: white;
+  padding: 16px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.performance-table td {
+  padding: 16px;
+  text-align: center;
+  border-bottom: 1px solid var(--kb-brown-light);
+  font-size: 14px;
+}
+
+.performance-table tr:nth-child(even) {
+  background-color: var(--kb-beige);
+}
+
+.performance-table tr:hover {
+  background: var(--kb-yellow-light);
+  transition: background 0.2s ease;
+}
+
+.period-label {
+  font-weight: bold;
+  color: var(--kb-brown-dark);
+  text-align: left !important;
+  background: var(--kb-yellow-light);
+}
+
+.return-value {
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+  font-size: 16px;
+  position: relative;
+}
+
+/* 표 헤더에서 벤치마크 이름 스타일링 */
+.performance-table th small {
+  display: block;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 2px;
+  font-weight: normal;
+}
+
+/* 벤치마크 정보 섹션 */
+.benchmark-info {
+  margin-top: 20px;
+  padding: 20px;
+  background: var(--kb-beige);
+  border-radius: 8px;
+  border-left: 4px solid var(--kb-brown);
+  box-shadow: 0 2px 8px rgba(139, 115, 85, 0.1);
+}
+
+.benchmark-note {
+  text-align: left;
+}
+
+.benchmark-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: 16px;
+  color: var(--kb-brown-dark);
+}
+
+.benchmark-icon {
+  font-size: 18px;
+}
+
+.benchmark-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.benchmark-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid var(--kb-brown-light);
+}
+
+.benchmark-label {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--kb-brown);
+  min-width: 80px;
+}
+
+.benchmark-value {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--kb-brown-dark);
+  background: var(--kb-yellow-light);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--kb-yellow);
+}
+
+.benchmark-description {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--kb-brown-dark);
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 6px;
+  border: 1px solid var(--kb-brown-light);
+  font-style: italic;
+  text-align: center;
+}
+
+.performance-note {
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--kb-brown);
+  font-style: italic;
+  text-align: left;
+  border-left: 3px solid var(--kb-brown);
+}
+
+.return-value.positive {
+  color: var(--kb-success);
+}
+
+.return-value.negative {
+  color: var(--kb-danger);
+}
+
+/* AI 분석 섹션 스타일 */
+.ai-analysis-section {
+  margin: 32px;
+  padding: 24px;
+  background: var(--kb-beige);
+  border-radius: 12px;
+  border: 1px solid var(--kb-brown-light);
+  position: relative;
+}
+
+.ai-analysis-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--kb-yellow), var(--kb-brown));
+  border-radius: 12px 12px 0 0;
+}
+
+.ai-analysis-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.ai-summary-card,
+.ai-comment-card {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  border: 1px solid var(--kb-brown-light);
+  box-shadow: 0 2px 8px rgba(139, 115, 85, 0.1);
+  transition: all 0.3s ease;
+}
+
+.ai-summary-card:hover,
+.ai-comment-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(139, 115, 85, 0.15);
+}
+
+.ai-card-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--kb-brown-dark);
+  margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-summary-text,
+.ai-comment-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--kb-brown-dark);
+  margin: 0;
+  text-align: justify;
+  background: var(--kb-yellow-light);
+  padding: 16px;
+  border-radius: 8px;
+  border-left: 4px solid var(--kb-brown);
+}
+
+.ai-summary-card {
+  border-left: 4px solid var(--kb-success);
+}
+
+.ai-comment-card {
+  border-left: 4px solid var(--kb-warning);
+}
+
+/* AI 분석 섹션 - 통합 버전 */
+.ai-analysis-content-combined {
+  margin-top: 20px;
+}
+
+.ai-combined-card {
+  background: white;
+  padding: 24px;
+  border-radius: 10px;
+  border: 1px solid var(--kb-brown-light);
+  box-shadow: 0 2px 8px rgba(139, 115, 85, 0.1);
+  transition: all 0.3s ease;
+}
+
+.ai-combined-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(139, 115, 85, 0.15);
+}
+
+.ai-summary-section {
+  margin-bottom: 0;
+}
+
+.ai-section-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--kb-brown-dark);
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--kb-brown-light);
+}
+
+.ai-summary-text {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--kb-brown-dark);
+  margin: 0;
+  text-align: justify;
+  background: var(--kb-yellow-light);
+  padding: 20px;
+  border-radius: 8px;
+  border-left: 4px solid var(--kb-success);
+}
+
+/* 모바일 반응형 */
 @media (max-width: 768px) {
   .client-grid {
     grid-template-columns: 1fr;
@@ -695,4 +1012,61 @@
     gap: 16px;
     align-items: flex-start;
   }
+  
+  .performance-summary {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+  
+  .performance-table {
+    font-size: 12px;
+  }
+  
+  .performance-table th,
+  .performance-table td {
+    padding: 12px 8px;
+  }
+  
+  .return-value {
+    font-size: 14px;
+  }
+  
+  .benchmark-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  
+  .benchmark-label {
+    min-width: auto;
+  }
+  
+  .benchmark-description {
+    font-size: 12px;
+    padding: 10px;
+  }
+  
+  .ai-analysis-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .ai-analysis-section {
+    margin: 16px;
+    padding: 16px;
+  }
 }
+  .benchmark-description {
+    font-size: 12px;
+    padding: 10px;
+  }
+  
+  .ai-analysis-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .ai-analysis-section {
+    margin: 16px;
+    padding: 16px;
+  }
+
