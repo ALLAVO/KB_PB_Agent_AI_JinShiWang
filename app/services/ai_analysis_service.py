@@ -1,0 +1,106 @@
+import openai
+from app.core.config import settings
+import logging
+from typing import Dict, Any
+
+logger = logging.getLogger(__name__)
+
+def generate_performance_summary(performance_data: Dict[str, Any]) -> Dict[str, str]:
+    """
+    고객 성과 데이터를 바탕으로 AI 요약과 코멘트를 생성합니다.
+    """
+    try:
+        # OpenAI API 키 설정
+        openai.api_key = settings.OPENAI_API_KEY
+        
+        # 성과 데이터에서 주요 정보 추출
+        client_name = performance_data.get('client_name', '고객')
+        benchmark = performance_data.get('benchmark', 'S&P 500')
+        period_months = performance_data.get('performance_period_months', 3)
+        
+        weekly_portfolio = performance_data.get('weekly_return', {}).get('portfolio', 0)
+        weekly_benchmark = performance_data.get('weekly_return', {}).get('benchmark', 0)
+        performance_portfolio = performance_data.get('performance_return', {}).get('portfolio', 0)
+        performance_benchmark = performance_data.get('performance_return', {}).get('benchmark', 0)
+        
+        # 초과수익률 계산
+        weekly_outperformance = weekly_portfolio - weekly_benchmark
+        performance_outperformance = performance_portfolio - performance_benchmark
+        
+        # 프롬프트 생성
+        prompt = f"""
+당신은 전문 포트폴리오 매니저입니다. 다음 고객의 투자 성과 데이터를 분석하여 요약과 투자 조언을 제공해주세요.
+
+**고객 정보:**
+- 고객명: {client_name}
+- 벤치마크: {benchmark}
+- 성과 구간: {period_months}개월
+
+**성과 데이터:**
+- 일주일간 포트폴리오 수익률: {weekly_portfolio:+.2f}%
+- 일주일간 벤치마크 수익률: {weekly_benchmark:+.2f}%
+- 일주일간 초과수익률: {weekly_outperformance:+.2f}%p
+
+- {period_months}개월 포트폴리오 수익률: {performance_portfolio:+.2f}%
+- {period_months}개월 벤치마크 수익률: {performance_benchmark:+.2f}%
+- {period_months}개월 초과수익률: {performance_outperformance:+.2f}%p
+
+다음 형식으로 응답해주세요:
+
+**투자 성과 요약:**
+(3-4줄로 간단한 성과 요약)
+
+**투자 코멘트:**
+(향후 투자 방향성과 조언을 3-4줄로 제공)
+
+전문적이고 친근한 톤으로 작성해주세요.
+"""
+
+        # OpenAI API 호출
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "당신은 KB국민은행의 전문 PB(Private Banker)입니다. 고객에게 친근하면서도 전문적인 투자 조언을 제공합니다."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=800,
+            temperature=0.7
+        )
+        
+        ai_response = response.choices[0].message.content.strip()
+        
+        # 응답을 요약과 코멘트로 분리
+        lines = ai_response.split('\n')
+        summary_lines = []
+        comment_lines = []
+        current_section = None
+        
+        for line in lines:
+            line = line.strip()
+            if '투자 성과 요약' in line or '성과 요약' in line:
+                current_section = 'summary'
+                continue
+            elif '투자 코멘트' in line or '코멘트' in line:
+                current_section = 'comment'
+                continue
+            elif line and not line.startswith('**'):
+                if current_section == 'summary':
+                    summary_lines.append(line)
+                elif current_section == 'comment':
+                    comment_lines.append(line)
+        
+        summary = ' '.join(summary_lines) if summary_lines else ai_response[:200] + "..."
+        comment = ' '.join(comment_lines) if comment_lines else "지속적인 포트폴리오 모니터링을 통해 안정적인 수익 추구를 권장드립니다."
+        
+        return {
+            "summary": summary,
+            "comment": comment
+        }
+        
+    except Exception as e:
+        logger.error(f"Error generating AI performance summary: {e}")
+        # 기본 요약 반환
+        return {
+            "summary": f"{client_name} 고객님의 투자 성과를 분석한 결과, 전반적으로 양호한 수익률을 보이고 있습니다.",
+            "comment": "시장 상황을 지속적으로 모니터링하며 리스크 관리에 중점을 둔 투자 전략을 권장드립니다."
+        }

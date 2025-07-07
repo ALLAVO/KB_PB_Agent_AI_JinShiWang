@@ -6,6 +6,7 @@ import re
 import yfinance as yf
 from datetime import datetime, timedelta
 import pandas as pd
+from app.services.ai_analysis_service import generate_performance_summary
 
 logger = logging.getLogger(__name__)
 
@@ -355,7 +356,7 @@ def get_client_performance_analysis(client_id: str, period_end_date: str) -> Dic
         if weekly_benchmark_return == 0.0 and performance_benchmark_return == 0.0:
             logger.warning(f"Benchmark returns are both 0.0 - this might indicate data fetching issues for {benchmark}")
         
-        return {
+        performance_data = {
             "client_name": client_info['name'],
             "benchmark": benchmark_display,
             "benchmark_symbol": benchmark,
@@ -380,6 +381,18 @@ def get_client_performance_analysis(client_id: str, period_end_date: str) -> Dic
                 "benchmark_display_name": benchmark_display
             }
         }
+        
+        # AI 요약 생성
+        try:
+            ai_analysis = generate_performance_summary(performance_data)
+            performance_data["ai_summary"] = ai_analysis.get("summary", "")
+            performance_data["ai_comment"] = ai_analysis.get("comment", "")
+        except Exception as e:
+            logger.warning(f"Failed to generate AI summary for client {client_id}: {e}")
+            performance_data["ai_summary"] = ""
+            performance_data["ai_comment"] = ""
+        
+        return performance_data
         
     except Exception as e:
         logger.error(f"Error calculating client performance for {client_id}: {e}")
@@ -410,4 +423,5 @@ def get_client_summary(client_id: str) -> Dict:
         }
     except Exception as e:
         logger.error(f"Error fetching client summary for {client_id}: {e}")
+        raise
         raise
