@@ -2,7 +2,6 @@ import requests
 import time
 import os
 import json
-import yfinance as yf
 import pandas_datareader.data as web
 from app.core.config import settings
 import pandas as pd
@@ -219,90 +218,75 @@ get_weekly_stock_indicators_from_yahoo = get_weekly_stock_indicators_from_stooq
 
 def get_stock_price_chart_data(ticker: str, start_date: str, end_date: str) -> Dict:
     """
-    주식 가격 차트 데이터를 가져옵니다.
+    주식 가격 차트 데이터를 Stooq에서 가져옵니다.
     """
     try:
-        ticker_obj = yf.Ticker(ticker)
-        hist = ticker_obj.history(start=start_date, end=end_date)
-        
-        if hist.empty:
+        if not ticker.endswith('.US'):
+            ticker = ticker + '.US'
+        df = web.DataReader(ticker, 'stooq', start=start_date, end=end_date)
+        if df.empty:
             return {"error": f"No data found for symbol {ticker}"}
-        
+        df = df.sort_index()
         return {
-            "dates": [date.strftime('%Y-%m-%d') for date in hist.index],
-            "closes": hist['Close'].tolist(),
-            "opens": hist['Open'].tolist(),
-            "highs": hist['High'].tolist(),
-            "lows": hist['Low'].tolist(),
-            "volumes": hist['Volume'].tolist()
+            "dates": [date.strftime('%Y-%m-%d') for date in df.index],
+            "closes": df['Close'].tolist(),
+            "opens": df['Open'].tolist(),
+            "highs": df['High'].tolist(),
+            "lows": df['Low'].tolist(),
+            "volumes": df['Volume'].tolist()
         }
-        
     except Exception as e:
-        return {"error": f"Error fetching stock data for {ticker}: {e}"}
+        return {"error": f"Error fetching stock data from Stooq for {ticker}: {e}"}
 
 def get_stock_price_chart_with_ma(ticker: str, start_date: str, end_date: str, ma_periods: List[int]) -> Dict:
     """
-    이동평균이 포함된 주식 가격 차트 데이터를 가져옵니다.
+    이동평균이 포함된 주식 가격 차트 데이터를 Stooq에서 가져옵니다.
     """
     try:
-        ticker_obj = yf.Ticker(ticker)
-        
-        # 이동평균 계산을 위해 더 긴 기간의 데이터 필요
+        if not ticker.endswith('.US'):
+            ticker = ticker + '.US'
         start_dt = datetime.strptime(start_date, '%Y-%m-%d')
         extended_start = start_dt - timedelta(days=max(ma_periods) + 30)
-        
-        hist = ticker_obj.history(start=extended_start.strftime('%Y-%m-%d'), end=end_date)
-        
-        if hist.empty:
+        df = web.DataReader(ticker, 'stooq', start=extended_start.strftime('%Y-%m-%d'), end=end_date)
+        if df.empty:
             return {"error": f"No data found for symbol {ticker}"}
-        
-        # 이동평균 계산
+        df = df.sort_index()
         for period in ma_periods:
-            hist[f'ma{period}'] = hist['Close'].rolling(window=period).mean()
-        
-        # 원하는 기간으로 필터링
-        filtered_hist = hist[hist.index >= start_date]
-        
-        if filtered_hist.empty:
+            df[f'ma{period}'] = df['Close'].rolling(window=period).mean()
+        filtered_df = df[df.index >= start_date]
+        if filtered_df.empty:
             return {"error": f"No data in specified date range for {ticker}"}
-        
         result = {
-            "dates": [date.strftime('%Y-%m-%d') for date in filtered_hist.index],
-            "closes": filtered_hist['Close'].tolist()
+            "dates": [date.strftime('%Y-%m-%d') for date in filtered_df.index],
+            "closes": filtered_df['Close'].tolist()
         }
-        
-        # 이동평균 데이터 추가
         for period in ma_periods:
             ma_key = f"ma{period}"
-            result[ma_key] = filtered_hist[f'ma{period}'].tolist()
-        
+            result[ma_key] = filtered_df[ma_key].tolist()
         return result
-        
     except Exception as e:
-        return {"error": f"Error fetching MA data for {ticker}: {e}"}
+        return {"error": f"Error fetching MA data from Stooq for {ticker}: {e}"}
 
 def get_index_chart_data(symbol: str, start_date: str, end_date: str) -> Dict:
     """
-    지수 데이터를 가져옵니다 (나스닥, S&P 500 등)
+    지수 데이터를 Stooq에서 가져옵니다 (나스닥, S&P 500 등)
     """
     try:
-        ticker = yf.Ticker(symbol)
-        hist = ticker.history(start=start_date, end=end_date)
-        
-        if hist.empty:
+        # Stooq는 미국 지수는 심볼 그대로 사용
+        df = web.DataReader(symbol, 'stooq', start=start_date, end=end_date)
+        if df.empty:
             return {"error": f"No data found for symbol {symbol}"}
-        
+        df = df.sort_index()
         return {
-            "dates": [date.strftime('%Y-%m-%d') for date in hist.index],
-            "closes": hist['Close'].tolist(),
-            "opens": hist['Open'].tolist(),
-            "highs": hist['High'].tolist(),
-            "lows": hist['Low'].tolist(),
-            "volumes": hist['Volume'].tolist()
+            "dates": [date.strftime('%Y-%m-%d') for date in df.index],
+            "closes": df['Close'].tolist(),
+            "opens": df['Open'].tolist(),
+            "highs": df['High'].tolist(),
+            "lows": df['Low'].tolist(),
+            "volumes": df['Volume'].tolist()
         }
-        
     except Exception as e:
-        return {"error": f"Error fetching index data for {symbol}: {e}"}
+        return {"error": f"Error fetching index data from Stooq for {symbol}: {e}"}
 
 def get_nasdaq_index_data(start_date: str, end_date: str) -> dict:
     """
