@@ -51,3 +51,16 @@ export const fetchClientSummary = async (clientId) => {
     throw error;
   }
 };
+
+export const fetchClientPerformance = async (clientId, periodEndDate) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/clients/${clientId}/performance/${periodEndDate}`);
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Client performance API error:', error);
+    throw error;
+  }
+};

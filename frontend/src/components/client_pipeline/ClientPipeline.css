@@ -665,6 +665,109 @@
   border: 1px solid var(--kb-brown-light);
 }
 
+/* 성과 분석 스타일 */
+.performance-analysis {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid var(--kb-brown-light);
+}
+
+.performance-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: var(--kb-yellow-light);
+  border-radius: 6px;
+  border: 1px solid var(--kb-brown-light);
+}
+
+.performance-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.performance-label {
+  font-size: 12px;
+  color: var(--kb-gray);
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.performance-value {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--kb-brown-dark);
+}
+
+/* 성과 테이블 */
+.performance-table-container {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid var(--kb-brown-light);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(139, 115, 85, 0.1);
+}
+
+.performance-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.performance-table th {
+  background: var(--kb-brown);
+  color: white;
+  padding: 16px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.performance-table td {
+  padding: 16px;
+  text-align: center;
+  border-bottom: 1px solid var(--kb-brown-light);
+  font-size: 14px;
+}
+
+.performance-table tr:nth-child(even) {
+  background-color: var(--kb-beige);
+}
+
+.performance-table tr:hover {
+  background: var(--kb-yellow-light);
+  transition: background 0.2s ease;
+}
+
+.period-label {
+  font-weight: bold;
+  color: var(--kb-brown-dark);
+  text-align: left !important;
+  background: var(--kb-yellow-light);
+}
+
+.return-value {
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+  font-size: 16px;
+  position: relative;
+}
+
+/* 표 헤더에서 벤치마크 이름 스타일링 */
+.performance-table th small {
+  display: block;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 2px;
+  font-weight: normal;
+}
+
 /* 반응형 디자인 */
 @media (max-width: 768px) {
   .client-grid {
@@ -694,5 +797,24 @@
     flex-direction: column;
     gap: 16px;
     align-items: flex-start;
+  }
+  
+  .performance-summary {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+  
+  .performance-table {
+    font-size: 12px;
+  }
+  
+  .performance-table th,
+  .performance-table td {
+    padding: 12px 8px;
+  }
+  
+  .return-value {
+    font-size: 14px;
   }
 }
