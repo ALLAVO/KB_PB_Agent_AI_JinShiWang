@@ -382,8 +382,6 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
 
   const chartData = '시장 차트 예시';
   
-  const textSummary = `${year}년 ${month}월 ${weekStr} (${period}) 시장 데이터 분석 요약입니다.`;
-
   return (
     <div>
       {!started && (
@@ -396,35 +394,15 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
       )}
       {started && (
         <>
-          <div className="pipeline-title">
-            <img src={titlecloud} alt="cloud" /> 미국 증시 동향
-          </div>
-
           {/* 로딩 또는 에러 표시 */}
           {loading && (
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '40px', 
-              color: '#666',
-              backgroundColor: '#f8f9fa',
-              borderRadius: '8px',
-              border: '1px solid #e9ecef',
-              marginBottom: '20px'
-            }}>
+            <div className="market-loading-message">
               시장 데이터를 불러오는 중...
             </div>
           )}
 
           {error && (
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '40px', 
-              color: '#d32f2f',
-              backgroundColor: '#ffebee',
-              borderRadius: '8px',
-              border: '1px solid #ffcdd2',
-              marginBottom: '20px'
-            }}>
+            <div className="market-error-message">
               {error}
             </div>
           )}
@@ -432,6 +410,9 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
           {/* 차트들 */}
           {!loading && !error && (
             <>
+              <div className="pipeline-title">
+                <img src={titlecloud} alt="cloud" /> 미국 증시 동향
+              </div>
               <MarketIndicesChart 
                 data={indicesData} 
                 loading={loading} 
@@ -455,7 +436,6 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
               />
             </>
           )}
-          <div className="pipeline-text">{textSummary}</div>
         </>
       )}
     </div>
@@ -746,7 +726,7 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
               ))}
             </tbody>
           </table>
-          <div className="pipeline-text">{textSummary}</div>
+          {/* <div className="pipeline-text">{textSummary}</div> */}
           
           {/* 기사 상세 모달 */}
           {showModal && selectedArticle && (
@@ -1076,8 +1056,6 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
               endDate={endDate}
             />
           )}
-
-          <div className="pipeline-text">{textSummary}</div>
           
           {/* 주가 전망 카드 - currentSymbol 사용 */}
           {started && (
