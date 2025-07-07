@@ -205,7 +205,7 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
 
       {/* 고객 수익률 차트 */}
       <div className="weekly-summary-section">
-        <h3 className="section-title">📈 {client_info.name} 고객님 수익률 차트</h3>
+        <h3 className="section-title">{client_info.name} 고객님 수익률 차트</h3>
         <div className="summary-content">
           {performanceData ? (
             <div className="performance-analysis">
@@ -275,11 +275,22 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
               {/* 벤치마크 정보 */}
               <div className="benchmark-info">
                 <div className="benchmark-note">
-                  <small>
-                    <strong>벤치마크 정보:</strong> {performanceData.benchmark}는 해당 고객의 투자성향과 포트폴리오 구성에 적합한 비교지수입니다.
-                    초과수익률은 포트폴리오 수익률에서 벤치마크 수익률을 차감한 값으로, 
-                    양수일 경우 벤치마크 대비 우수한 성과를 의미합니다.
-                  </small>
+                  <div className="benchmark-header">
+                    <span className="benchmark-icon"></span>
+                    <strong>벤치마크 분석</strong>
+                  </div>
+                  <div className="benchmark-details">
+                    <div className="benchmark-item">
+                      <span className="benchmark-label">비교지수:</span>
+                      <span className="benchmark-value">{performanceData.benchmark}</span>
+                    </div>
+                    <div className="benchmark-description">
+                      투자성향과 포트폴리오 구성에 적합한 시장 비교지수를 기준으로 상대적 투자 성과를 평가합니다.
+                    </div>
+                    <div className="performance-note">
+                      *성과 구간은 고객님 최근 리밸런싱 이후부터 지난주 금요일까지를 대상으로 합니다.
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

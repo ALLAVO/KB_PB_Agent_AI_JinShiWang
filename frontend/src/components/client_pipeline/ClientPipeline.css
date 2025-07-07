@@ -768,6 +768,99 @@
   font-weight: normal;
 }
 
+/* 벤치마크 정보 섹션 */
+.benchmark-info {
+  margin-top: 20px;
+  padding: 20px;
+  background: var(--kb-beige);
+  border-radius: 8px;
+  border-left: 4px solid var(--kb-brown);
+  box-shadow: 0 2px 8px rgba(139, 115, 85, 0.1);
+}
+
+.benchmark-note {
+  text-align: left;
+}
+
+.benchmark-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: 16px;
+  color: var(--kb-brown-dark);
+}
+
+.benchmark-icon {
+  font-size: 18px;
+}
+
+.benchmark-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.benchmark-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid var(--kb-brown-light);
+}
+
+.benchmark-label {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--kb-brown);
+  min-width: 80px;
+}
+
+.benchmark-value {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--kb-brown-dark);
+  background: var(--kb-yellow-light);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--kb-yellow);
+}
+
+.benchmark-description {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--kb-brown-dark);
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 6px;
+  border: 1px solid var(--kb-brown-light);
+  font-style: italic;
+  text-align: center;
+}
+
+.performance-note {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 4px;
+  border: 1px solid var(--kb-yellow);
+  font-size: 12px;
+  color: var(--kb-brown);
+  font-style: italic;
+  text-align: center;
+  border-left: 3px solid var(--kb-brown);
+}
+
+.return-value.positive {
+  color: var(--kb-success);
+}
+
+.return-value.negative {
+  color: var(--kb-danger);
+}
+
 /* 반응형 디자인 */
 @media (max-width: 768px) {
   .client-grid {
@@ -816,5 +909,20 @@
   
   .return-value {
     font-size: 14px;
+  }
+  
+  .benchmark-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  
+  .benchmark-label {
+    min-width: auto;
+  }
+  
+  .benchmark-description {
+    font-size: 12px;
+    padding: 10px;
   }
 }
