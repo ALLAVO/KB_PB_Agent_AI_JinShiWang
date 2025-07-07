@@ -1300,3 +1300,36 @@
   height: 24px;
   pointer-events: none;
 }
+
+/* MarketPipeline 로딩/에러 메시지 중앙 정렬 */
+.market-loading-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  width: 95%;
+  max-width: 900px;
+  margin: 300px 0 auto 0;
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.market-error-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  width: 100%;
+  max-width: 900px;
+  margin: 120px auto 20px auto;
+  text-align: center;
+  padding: 40px;
+  color: #d32f2f;
+  background-color: #ffebee;
+  border-radius: 8px;
+  border: 1px solid #ffcdd2;
+  font-size: 1.1rem;
+  box-sizing: border-box;
+}

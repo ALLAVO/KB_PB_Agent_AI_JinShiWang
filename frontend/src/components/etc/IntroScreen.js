@@ -6,7 +6,7 @@ const IntroScreen = ({ onStart }) => {
     <div className="intro-screen">
       <div className="intro-background">
         <img 
-          src={require('../assets/Intro_image.png')} 
+          src={require('../../assets/Intro_image.png')} 
           alt="intro background" 
           className="intro-background-image"
         />
