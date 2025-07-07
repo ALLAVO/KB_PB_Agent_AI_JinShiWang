@@ -16,12 +16,12 @@ import {fetchIndustryTop3Articles } from "./api/industry";
 import {fetchIndices6MonthsChart, fetchTreasuryYields6MonthsChart, fetchFx6MonthsChart, fetchIndices1YearChart, fetchTreasuryYields1YearChart, fetchFx1YearChart} from "./api/market";
 import {fetchIntention} from "./api/intention";
 import StockChart from "./components/StockChart";
-import MarketIndicesChart from "./components/MarketIndicesChart";
-import CombinedFinancialChart from "./components/CombinedFinancialChart";
-import IntroScreen from "./components/IntroScreen";
-import IntentionForm from "./components/IntentionForm";
-import MarketIndices1YearTable from "./components/MarketIndices1YearTable";
-import FiccTable1Year from "./components/FiccTable1Year";
+import MarketIndicesChart from "./components/market_pipeline/MarketIndicesChart";
+import CombinedFinancialChart from "./components/market_pipeline/FICCchart";
+import IntroScreen from "./components/etc/IntroScreen";
+import IntentionForm from "./components/etc/IntentionForm";
+import MarketIndices1YearTable from "./components/market_pipeline/MarketIndices1YearTable";
+import FiccTable1Year from "./components/market_pipeline/FiccTable1Year";
 
 function CloudDecorations() {
   return (

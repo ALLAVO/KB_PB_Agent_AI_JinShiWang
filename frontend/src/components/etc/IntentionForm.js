@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { fetchIntention } from "../api/intention";
+import { fetchIntention } from "../../api/intention";
 
 function IntentionForm() {
   const [input, setInput] = useState("");
