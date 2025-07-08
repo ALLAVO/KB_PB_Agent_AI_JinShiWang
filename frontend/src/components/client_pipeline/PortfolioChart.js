@@ -1,0 +1,183 @@
+import React, { useState, useEffect } from 'react';
+import { fetchClientPortfolioChart } from '../../api/clients';
+
+const PortfolioChart = ({ clientId }) => {
+  const [chartData, setChartData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (clientId) {
+      loadChartData();
+    }
+  }, [clientId]);
+
+  const loadChartData = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await fetchClientPortfolioChart(clientId);
+      setChartData(data);
+    } catch (err) {
+      setError('포트폴리오 차트 데이터를 불러오는데 실패했습니다: ' + err.message);
+      console.error('Portfolio chart loading error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createDonutChart = (data, title) => {
+    if (!data || data.length === 0) {
+      return (
+        <div className="chart-placeholder">
+          <p>데이터가 없습니다</p>
+        </div>
+      );
+    }
+
+    // 색상 팔레트
+    const colors = [
+      '#F5E6A3', '#8B7355', '#D4B96A', '#7BA05B', '#C4756E',
+      '#E5DFD1', '#FAF2D1', '#E5D084', '#6D5A42', '#FEFCF7'
+    ];
+
+    const total = data.reduce((sum, item) => sum + item.percentage, 0);
+    let currentAngle = 0;
+
+    const radius = 80;
+    const centerX = 100;
+    const centerY = 100;
+
+    const createArcPath = (startAngle, endAngle, outerRadius, innerRadius = 40) => {
+      const start = polarToCartesian(centerX, centerY, outerRadius, endAngle);
+      const end = polarToCartesian(centerX, centerY, outerRadius, startAngle);
+      const innerStart = polarToCartesian(centerX, centerY, innerRadius, endAngle);
+      const innerEnd = polarToCartesian(centerX, centerY, innerRadius, startAngle);
+
+      const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+
+      return [
+        "M", start.x, start.y,
+        "A", outerRadius, outerRadius, 0, largeArcFlag, 0, end.x, end.y,
+        "L", innerEnd.x, innerEnd.y,
+        "A", innerRadius, innerRadius, 0, largeArcFlag, 1, innerStart.x, innerStart.y,
+        "Z"
+      ].join(" ");
+    };
+
+    const polarToCartesian = (centerX, centerY, radius, angleInDegrees) => {
+      const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
+      return {
+        x: centerX + (radius * Math.cos(angleInRadians)),
+        y: centerY + (radius * Math.sin(angleInRadians))
+      };
+    };
+
+    return (
+      <div className="donut-chart-container">
+        <h4 className="chart-title">{title}</h4>
+        <div className="chart-content">
+          <svg width="200" height="200" viewBox="0 0 200 200" className="donut-chart">
+            {data.map((item, index) => {
+              const angle = (item.percentage / 100) * 360;
+              const path = createArcPath(currentAngle, currentAngle + angle, radius);
+              const textAngle = currentAngle + angle / 2;
+              const textRadius = 60;
+              const textPos = polarToCartesian(centerX, centerY, textRadius, textAngle);
+              
+              currentAngle += angle;
+
+              return (
+                <g key={index} className="chart-segment">
+                  <path
+                    d={path}
+                    fill={colors[index % colors.length]}
+                    stroke="#fff"
+                    strokeWidth="2"
+                    className="chart-arc"
+                  />
+                  {item.percentage > 5 && (
+                    <text
+                      x={textPos.x}
+                      y={textPos.y}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      fontSize="10"
+                      fill="#333"
+                      fontWeight="bold"
+                    >
+                      {item.percentage}%
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+          </svg>
+          <div className="chart-legend">
+            {data.map((item, index) => (
+              <div key={index} className="legend-item">
+                <div 
+                  className="legend-color" 
+                  style={{ backgroundColor: colors[index % colors.length] }}
+                ></div>
+                <span className="legend-label">{item.sector}</span>
+                <span className="legend-value">{item.percentage}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="portfolio-chart-loading">
+        <div className="loading-spinner"></div>
+        <span>포트폴리오 차트를 불러오는 중...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="portfolio-chart-error">
+        <p>{error}</p>
+      </div>
+    );
+  }
+
+  if (!chartData) {
+    return <div>차트 데이터를 불러오고 있습니다...</div>;
+  }
+
+  const { client_name, risk_profile_info, client_portfolio, recommended_portfolio } = chartData;
+
+  return (
+    <div className="portfolio-chart-section">
+      <h3 className="section-title">포트폴리오 분석</h3>
+      <div className="portfolio-charts-container">
+        <div className="chart-column">
+          {createDonutChart(client_portfolio, `${client_name}님 포트폴리오`)}
+        </div>
+        <div className="chart-column">
+          {createDonutChart(
+            recommended_portfolio, 
+            `${risk_profile_info?.korean_name || risk_profile_info?.label || '추천'} 위험군 포트폴리오`
+          )}
+        </div>
+      </div>
+      <div className="portfolio-analysis-note">
+        <p>
+          <strong>{client_name}님의 투자성향:</strong> 
+          <span style={{ color: risk_profile_info?.color || '#666' }}>
+            {risk_profile_info?.korean_name || risk_profile_info?.label}
+          </span>
+        </p>
+        <p className="risk-description">{risk_profile_info?.description}</p>
+      </div>
+    </div>
+  );
+};
+
+export default PortfolioChart;

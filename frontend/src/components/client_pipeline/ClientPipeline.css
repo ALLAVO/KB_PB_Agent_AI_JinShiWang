@@ -1016,7 +1016,173 @@
   border-bottom: 2px solid var(--kb-brown-light);
 }
 
+/* 포트폴리오 차트 스타일 */
+.portfolio-chart-section {
+  margin: 32px;
+  padding: 24px;
+  background: var(--kb-beige);
+  border-radius: 12px;
+  border: 1px solid var(--kb-brown-light);
+}
 
+.portfolio-charts-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  margin-top: 20px;
+}
+
+.chart-column {
+  display: flex;
+  justify-content: center;
+}
+
+.donut-chart-container {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--kb-brown-light);
+  box-shadow: 0 2px 8px rgba(139, 115, 85, 0.1);
+  text-align: center;
+  max-width: 400px;
+  width: 100%;
+}
+
+.chart-title {
+  margin: 0 0 20px 0;
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--kb-brown-dark);
+  border-bottom: 2px solid var(--kb-brown-light);
+  padding-bottom: 8px;
+}
+
+.chart-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.donut-chart {
+  transition: transform 0.2s ease;
+}
+
+.chart-arc {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.chart-arc:hover {
+  filter: brightness(1.1);
+  stroke-width: 3;
+}
+
+.chart-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 200px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--kb-yellow-light);
+  border: 1px solid var(--kb-brown-light);
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid var(--kb-brown-light);
+  flex-shrink: 0;
+}
+
+.legend-label {
+  flex: 1;
+  font-size: 12px;
+  color: var(--kb-brown-dark);
+  text-align: left;
+}
+
+.legend-value {
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--kb-brown);
+}
+
+.chart-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--kb-gray);
+  background: var(--kb-gray-light);
+  border-radius: 8px;
+  border: 2px dashed var(--kb-brown-light);
+}
+
+.portfolio-analysis-note {
+  margin-top: 20px;
+  padding: 16px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid var(--kb-brown-light);
+  text-align: center;
+}
+
+.portfolio-analysis-note p {
+  margin: 8px 0;
+  font-size: 14px;
+  color: var(--kb-brown-dark);
+}
+
+.portfolio-analysis-note strong {
+  color: var(--kb-brown);
+}
+
+.risk-description {
+  font-style: italic;
+  color: var(--kb-gray);
+}
+
+.portfolio-chart-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: var(--kb-yellow-light);
+  border-radius: 12px;
+  border: 2px dashed var(--kb-brown-light);
+}
+
+.portfolio-chart-error {
+  text-align: center;
+  padding: 20px;
+  background: #FBF5F5;
+  border-radius: 8px;
+  border: 2px solid var(--kb-danger);
+  color: var(--kb-danger);
+}
+
+/* 포트폴리오 로딩 상태 */
+.portfolio-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: var(--kb-yellow-light);
+  border-radius: 8px;
+  border: 2px dashed var(--kb-brown-light);
+  color: var(--kb-gray);
+}
 
 /* 모바일 반응형 */
 @media (max-width: 768px) {
@@ -1140,6 +1306,19 @@
   .portfolio-table th,
   .portfolio-table td {
     padding: 8px 4px;
+  }
+  
+  .portfolio-charts-container {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .donut-chart-container {
+    max-width: 100%;
+  }
+  
+  .chart-legend {
+    max-width: 100%;
   }
 }
 
