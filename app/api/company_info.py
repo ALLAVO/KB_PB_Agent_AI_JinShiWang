@@ -23,9 +23,7 @@ def get_company_financial_analysis(
     import datetime
     
     # Alpha Vantage 기업 개요 (밸류에이션 지표 포함)
-    profile = get_company_profile_from_
-    
-    alphavantage(stock_symbol, settings.ALPHAVANTAGE_API_KEY)
+    profile = get_company_profile_from_alphavantage(stock_symbol, settings.ALPHAVANTAGE_API_KEY)
     
     # SEC 재무제표
     financials = get_financial_statements_from_sec(stock_symbol, start_date=start_date, end_date=end_date)
