@@ -578,27 +578,69 @@
 
 .summary-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
+  grid-template-columns: 1fr;
+  gap: 12px;
 }
 
 .stat-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--kb-brown-light);
+}
+
+.stat-item:last-child {
+  border-bottom: none;
+}
+
+.stat-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.stat-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  min-height: 24px;
 }
 
 .stat-label {
   font-size: 14px;
   color: var(--kb-gray);
   font-weight: 500;
+  flex-shrink: 0;
+  min-width: 120px;
 }
 
 .stat-value {
   font-size: 14px;
   font-weight: bold;
   color: var(--kb-brown);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.sectors-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  max-width: calc(100% - 140px);
+}
+
+.sector-item {
+  background: var(--kb-yellow);
+  color: var(--kb-brown-dark);
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: bold;
+  border: 1px solid var(--kb-brown-light);
+  white-space: nowrap;
+  line-height: 1.2;
 }
 
 /* 포트폴리오 테이블 */
@@ -618,32 +660,50 @@
   background: var(--kb-brown-light);
   color: var(--kb-brown-dark);
   padding: 16px;
-  text-align: left;
   font-weight: bold;
   font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
+.portfolio-table th:nth-child(1) {
+  text-align: center;
+}
+
+.portfolio-table th:nth-child(2) {
+  text-align: center;
+}
+
+.portfolio-table th:nth-child(3) {
+  text-align: center;
+}
+
 .portfolio-table td {
   padding: 16px;
+  text-align: center;
   border-bottom: 1px solid var(--kb-brown-light);
   font-size: 14px;
 }
 
 .portfolio-table tr:hover {
   background: var(--kb-yellow-light);
+  transition: background 0.2s ease;
 }
 
 .stock-name {
   font-weight: bold;
   color: var(--kb-brown-dark);
+  text-align: center;
 }
 
 .stock-quantity {
-  text-align: right;
+  text-align: center;
   font-weight: 600;
   color: var(--kb-brown);
+}
+
+.stock-sector {
+  text-align: center;
 }
 
 .sector-badge {
@@ -654,15 +714,7 @@
   font-size: 12px;
   font-weight: bold;
   border: 1px solid var(--kb-brown-light);
-}
-
-.no-portfolio-message {
-  text-align: center;
-  padding: 40px;
-  color: var(--kb-gray);
-  background: white;
-  border-radius: 8px;
-  border: 1px solid var(--kb-brown-light);
+  display: inline-block;
 }
 
 /* 성과 분석 스타일 */
@@ -734,10 +786,6 @@
   text-align: center;
   border-bottom: 1px solid var(--kb-brown-light);
   font-size: 14px;
-}
-
-.performance-table tr:nth-child(even) {
-  background-color: var(--kb-beige);
 }
 
 .performance-table tr:hover {
@@ -1055,18 +1103,46 @@
     margin: 16px;
     padding: 16px;
   }
-}
-  .benchmark-description {
+  
+  .stat-value.sectors {
+    max-width: 60%;
     font-size: 12px;
-    padding: 10px;
+    padding: 3px 8px;
   }
   
-  .ai-analysis-content {
-    grid-template-columns: 1fr;
+  .sectors-container {
+    gap: 6px;
   }
   
-  .ai-analysis-section {
-    margin: 16px;
-    padding: 16px;
+  .sector-item {
+    font-size: 11px;
+    padding: 3px 8px;
   }
+  
+  .stat-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .stat-label {
+    min-width: auto;
+  }
+  
+  .stat-value {
+    text-align: center;
+    width: 100%;
+  }
+  
+  .sectors-container {
+    justify-content: center;
+    max-width: 100%;
+    gap: 4px;
+  }
+  
+  .sector-item {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+}
 
