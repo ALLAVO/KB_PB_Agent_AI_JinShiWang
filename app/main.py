@@ -1,7 +1,7 @@
 # FastAPI 앱 실행 엔트리포인트
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import company_info, customer, prediction, report, sentiment, market, summarize, keyword_extractor, stock_chart, return_analysis, industry, clients
+from app.api import company_info, customer, prediction, report, sentiment, market, summarize, keyword_extractor, stock_chart, return_analysis, industry, clients, portfolio_charts
 from app.api.intention import router as intention
 app = FastAPI(
     docs_url="/api/v1/docs",
@@ -34,6 +34,7 @@ app.include_router(return_analysis.router, prefix="/api/v1", tags=["return-analy
 app.include_router(intention, prefix="/api/v1", tags=["intention"])  # intention_api 라우터 prefix 추가
 app.include_router(industry.router, prefix="/api/v1")  # industry 라우터 prefix 추가
 app.include_router(clients.router, prefix="/api/v1", tags=["clients"])  # clients 라우터 추가
+app.include_router(portfolio_charts.router, prefix="/api/v1", tags=["portfolio-charts"])  # portfolio_charts 라우터 추가
 
 @app.get("/")
 def read_root():

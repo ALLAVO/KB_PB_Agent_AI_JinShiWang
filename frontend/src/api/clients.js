@@ -69,3 +69,16 @@ export const fetchClientPerformance = async (clientId, periodEndDate) => {
     throw error;
   }
 };
+
+export const fetchClientPortfolioChart = async (clientId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/clients/${clientId}/portfolio-chart`);
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Client portfolio chart API error:', error);
+    throw error;
+  }
+};
