@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
-import "./components/IndustryPipeline.css";
+import "./components/industry_pipeline/IndustryPipeline.css";
 import kblogo from "./kblogo";
 import { getWeeksOfMonth } from "./weekUtils";
 import sendIcon from "./assets/send.png";
@@ -11,7 +11,7 @@ import titlecloud from "./assets/titlecloud.png";
 import {fetchIndustryTop3Articles } from "./api/industry";
 import {fetchIndices6MonthsChart, fetchTreasuryYields6MonthsChart, fetchFx6MonthsChart, fetchIndices1YearChart, fetchTreasuryYields1YearChart, fetchFx1YearChart} from "./api/market";
 import {fetchIntention} from "./api/intention";
-import StockChart from "./components/StockChart";
+import StockChart from "./components/company_pipeline/StockChart";
 import MarketIndicesChart from "./components/market_pipeline/MarketIndicesChart";
 import CombinedFinancialChart from "./components/market_pipeline/FICCchart";
 import IntroScreen from "./components/etc/IntroScreen";

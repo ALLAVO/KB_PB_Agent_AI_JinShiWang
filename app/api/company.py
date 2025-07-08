@@ -8,12 +8,24 @@ from app.services.sentiment import get_weekly_sentiment_scores_by_stock_symbol
 from app.services.crawler import (
     get_company_profile_from_alphavantage,
     get_financial_statements_from_sec,
-    get_weekly_stock_indicators_from_stooq,
-    get_moving_averages_from_stooq
+    get_weekly_stock_indicators_from_stooq
 )
 from app.core.config import settings
 
 router = APIRouter()
+
+# 기업 기본 정보만 반환하는 API
+@router.get("/companies/{stock_symbol}/info")
+def get_company_basic_info(stock_symbol: str):
+    profile = get_company_profile_from_alphavantage(stock_symbol, settings.ALPHAVANTAGE_API_KEY)
+    return {
+        "company_name": profile.get("company_name") or stock_symbol,
+        "stock_symbol": stock_symbol,
+        "industry": profile.get("industry"),
+        "sector": profile.get("sector"),
+        "business_summary": profile.get("description"),
+        "address": profile.get("address")
+    }
 
 # 기업 정보 조회 API
 @router.get("/companies/{stock_symbol}")
@@ -37,18 +49,17 @@ def get_company_info(
         end = datetime.datetime.today().strftime("%Y-%m-%d")
         start = (datetime.datetime.today() - datetime.timedelta(days=6)).strftime("%Y-%m-%d")
     indicators = get_weekly_stock_indicators_from_stooq(stock_symbol, start, end)
-    # Stooq 이동평균
-    ma = get_moving_averages_from_stooq(stock_symbol, end)
     return {
-        "company_name": profile.get("company_name") or stock_symbol,
-        "stock_symbol": stock_symbol,
-        "industry": profile.get("industry"),
-        "sector": profile.get("sector"),
-        "business_summary": profile.get("description"),
-        "address": profile.get("address"),
+        "company_info": {
+            "company_name": profile.get("company_name") or stock_symbol,
+            "stock_symbol": stock_symbol,
+            "industry": profile.get("industry"),
+            "sector": profile.get("sector"),
+            "business_summary": profile.get("description"),
+            "address": profile.get("address")
+        },
         "income_statements": financials,
-        "weekly_indicators": indicators,
-        "moving_averages": ma
+        "weekly_indicators": indicators
     }
 
 def safe_float(val):
