@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
-import "./components/IndustryPipeline.css";
+import "./components/industry_pipeline/IndustryPipeline.css";
 import kblogo from "./kblogo";
 import { getWeeksOfMonth } from "./weekUtils";
 import sendIcon from "./assets/send.png";

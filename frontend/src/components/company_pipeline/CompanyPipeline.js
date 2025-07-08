@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-// import StockChart from './StockChart';
 import StockPredictionCard from './StockPredictionCard';
+import CompanyInfo from './CompanyInfo';
 import titlecloud from '../../assets/titlecloud.png';
 import { fetchTop3Articles } from '../../api/sentiment';
 import { fetchWeeklySummaries } from '../../api/summarize';
@@ -8,6 +8,7 @@ import { fetchWeeklyKeywords } from '../../api/keyword';
 import { fetchPredictionSummary } from '../../api/prediction';
 import Top3Articles from './Top3Articles';
 import ArticleDetailModal from './ArticleDetailModal';
+// import StockChart from './StockChart';
 // import './StockChart.css';
 import './Top3Articles.css';
 
@@ -226,18 +227,22 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
       {started && (
         <>
           <div className="pipeline-title">
+            <img src={titlecloud} alt="cloud" /> {currentSymbol ? `${currentSymbol} 기업 정보` : '기업 정보'}
+          </div>
+          <CompanyInfo symbol={currentSymbol} />
+          <div className="pipeline-title">
             <img src={titlecloud} alt="cloud" /> {currentSymbol ? `${currentSymbol} 주가 동향` : '주가 동향'}
           </div>
           {/* 주가 차트 컴포넌트 추가 - currentSymbol 사용 */}
-          {/*
-          {currentSymbol && startDate && endDate && (
+          
+          {/* {currentSymbol && startDate && endDate && (
             <StockChart 
               symbol={currentSymbol}
               startDate={startDate}
               endDate={endDate}
             />
-          )}
-          */}
+          )} */}
+         
           <div className="pipeline-title">
             <img src={titlecloud} alt="cloud" /> {` ${getNextWeekInfo()} 진시황의 혜안`}
           </div>
@@ -251,19 +256,6 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
               prediction={prediction}
             />
           )}
-          {/* <div className="pipeline-title">
-            <img src={titlecloud} alt="cloud" /> {`진시황의 한마디 : ${currentSymbol || '종목'} ${getNextWeekInfo()} 주가 전망`}
-          </div>
-          주가 전망 카드 - currentSymbol 사용 
-          {started && (
-            <StockPredictionCard1 
-              currentSymbol={currentSymbol}
-              getNextWeekInfo={getNextWeekInfo}
-              loading={loading}
-              error={error}
-              prediction={prediction}
-            />
-          )} */}
           <div className="pipeline-title" style={{ marginBottom: '8px' }}>
             <img src={titlecloud} alt="cloud" /> {`${getCurrentWeekInfo()} 핵심 뉴스`}
           </div>

@@ -22,7 +22,7 @@ function StockPredictionCard({ currentSymbol, getNextWeekInfo, loading, error, p
             borderRadius: '0',
             boxShadow: 'none',
             background: 'none',
-            marginLeft: '30px',
+            // marginLeft: '30px',
             marginRight: '20px'
           }}
         />
