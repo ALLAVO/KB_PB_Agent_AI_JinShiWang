@@ -32,7 +32,7 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
       }
 
       const [summary, performance] = await Promise.all([
-        fetchClientSummary(client.id),
+        fetchClientSummary(client.id, periodEndDate),
         fetchClientPerformance(client.id, periodEndDate)
       ]);
       
@@ -195,11 +195,11 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
       {/* AI 투자 분석 요약 */}
       {performanceData && performanceData.ai_summary && (
         <div className="ai-analysis-section">
-          <h3 className="section-title">🤖 AI 투자 분석 요약</h3>
+          <h3 className="section-title">AI 투자 분석 요약</h3>
           <div className="ai-analysis-content-combined">
             <div className="ai-combined-card">
               <div className="ai-summary-section">
-                <h4 className="ai-section-title">📊 투자 성과 분석</h4>
+                <h4 className="ai-section-title">투자 성과 분석</h4>
                 <p className="ai-summary-text">{performanceData.ai_summary}</p>
               </div>
             </div>
@@ -290,16 +290,26 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
         <div className="portfolio-summary">
           <div className="summary-stats">
             <div className="stat-item">
-              <span className="stat-label">보유 종목 수:</span>
-              <span className="stat-value">{portfolio_summary.total_stocks}개</span>
+              <div className="stat-content">
+                <span className="stat-label">보유 종목 수</span>
+                <span className="stat-value">{portfolio_summary.total_stocks}개</span>
+              </div>
             </div>
-            <div className="stat-item">
-              <span className="stat-label">투자 섹터:</span>
-              <span className="stat-value">{portfolio_summary.sectors.join(', ')}</span>
+            <div className="stat-item full-width">
+              <div className="stat-content">
+                <span className="stat-label">총 보유 수량</span>
+                <span className="stat-value">{portfolio_summary.total_quantity.toLocaleString()}주</span>
+              </div>
             </div>
-            <div className="stat-item">
-              <span className="stat-label">총 보유 수량:</span>
-              <span className="stat-value">{portfolio_summary.total_quantity.toLocaleString()}주</span>
+            <div className="stat-item full-width">
+              <div className="stat-content">
+                <span className="stat-label">투자 섹터</span>
+                <div className="sectors-container">
+                  {portfolio_summary.sectors.map((sector, index) => (
+                    <span key={index} className="sector-item">{sector}</span>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -311,7 +321,11 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
               <thead>
                 <tr>
                   <th>종목명</th>
+                  <th>비중</th>
                   <th>보유 수량</th>
+                  <th>1주일 수익률</th>
+                  <th>1달 수익률</th>
+                  <th>변동성</th>
                   <th>섹터</th>
                 </tr>
               </thead>
@@ -319,7 +333,15 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
                 {portfolio.map((item, index) => (
                   <tr key={index}>
                     <td className="stock-name">{item.stock}</td>
+                    <td className="stock-weight">{item.weight}%</td>
                     <td className="stock-quantity">{item.quantity.toLocaleString()}주</td>
+                    <td className={`return-value ${item.weekly_return >= 0 ? 'positive' : 'negative'}`}>
+                      {item.weekly_return >= 0 ? '+' : ''}{item.weekly_return}%
+                    </td>
+                    <td className={`return-value ${item.monthly_return >= 0 ? 'positive' : 'negative'}`}>
+                      {item.monthly_return >= 0 ? '+' : ''}{item.monthly_return}%
+                    </td>
+                    <td className="stock-volatility">{item.volatility}%</td>
                     <td className="stock-sector">
                       <span className="sector-badge">{item.sector}</span>
                     </td>
