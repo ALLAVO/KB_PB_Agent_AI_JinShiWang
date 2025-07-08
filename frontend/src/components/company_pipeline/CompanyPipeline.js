@@ -5,6 +5,8 @@ import { fetchTop3Articles } from '../../api/sentiment';
 import { fetchWeeklySummaries } from '../../api/summarize';
 import { fetchWeeklyKeywords } from '../../api/keyword';
 import { fetchPredictionSummary } from '../../api/prediction';
+import { fetchCompanyFinancialAnalysis } from '../../api/company';
+import FinancialAnalysis from '../FinancialAnalysis';
 
 function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone }) {
   const [started, setStarted] = useState(false);
@@ -18,6 +20,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [currentSymbol, setCurrentSymbol] = useState(""); // 현재 처리 중인 심볼 저장
+  const [financialData, setFinancialData] = useState(null);
 
   const textSummary = `${year}년 ${month}월 ${weekStr} 기업 데이터 분석 요약입니다.`;
 
@@ -152,6 +155,9 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
       console.log('요약 데이터:', summariesData);
       console.log('키워드 데이터:', keywordsData);
       console.log('예측 데이터:', predictionData);
+
+      const financial = await fetchCompanyFinancialAnalysis(symbolToUse, startDate, endDate);
+      setFinancialData(financial);
     } catch (e) {
       console.error('API 호출 오류:', e);
       setError('데이터를 불러오지 못했습니다.');
@@ -215,7 +221,17 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
             <img src={titlecloud} alt="cloud" />기업 Pipeline
           </div>
           
-          {/* 주가 차트 컴포넌트 추가 - currentSymbol 사용 */}
+          {/* 재무 분석 컴포넌트 - 가장 위에 배치 */}
+          {currentSymbol && (
+            <FinancialAnalysis 
+              financialData={financialData}
+              loading={loading}
+              error={error}
+              symbol={currentSymbol}
+            />
+          )}
+          
+          {/* 주가 차트 컴포넌트 */}
           {currentSymbol && startDate && endDate && (
             <StockChart 
               symbol={currentSymbol}
