@@ -39,15 +39,20 @@ export const fetchClientPortfolio = async (clientId) => {
   }
 };
 
-export const fetchClientSummary = async (clientId) => {
+export const fetchClientSummary = async (clientId, periodEndDate = null) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/clients/${clientId}/summary`);
+    let url = `${API_BASE_URL}/api/v1/clients/${clientId}/summary`;
+    if (periodEndDate) {
+      url += `?period_end_date=${periodEndDate}`;
+    }
+    
+    const response = await fetch(url);
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
     return await response.json();
   } catch (error) {
-    console.error('Client summary API error:', error);
+    console.error('Error fetching client summary:', error);
     throw error;
   }
 };

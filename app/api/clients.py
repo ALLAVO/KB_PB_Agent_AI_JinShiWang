@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Path
+from fastapi import APIRouter, HTTPException, Path, Query
 from typing import List, Dict
 from app.services.client_services import get_all_clients, get_client_by_id, get_client_portfolio, get_client_summary, get_client_performance_analysis
 import logging
@@ -41,10 +41,13 @@ async def fetch_client_portfolio(client_id: str = Path(..., description="고객 
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @router.get("/clients/{client_id}/summary", response_model=Dict)
-async def fetch_client_summary(client_id: str = Path(..., description="고객 ID")):
+async def fetch_client_summary(
+    client_id: str = Path(..., description="고객 ID"),
+    period_end_date: str = Query(None, description="기준 날짜 (YYYY-MM-DD)")
+):
     """특정 고객의 종합 정보를 반환합니다."""
     try:
-        summary = get_client_summary(client_id)
+        summary = get_client_summary(client_id, period_end_date)
         if "error" in summary:
             raise HTTPException(status_code=404, detail=summary["error"])
         return summary

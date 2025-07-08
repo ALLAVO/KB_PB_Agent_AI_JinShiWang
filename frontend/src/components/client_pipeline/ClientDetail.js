@@ -32,7 +32,7 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
       }
 
       const [summary, performance] = await Promise.all([
-        fetchClientSummary(client.id),
+        fetchClientSummary(client.id, periodEndDate),
         fetchClientPerformance(client.id, periodEndDate)
       ]);
       
@@ -321,7 +321,11 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
               <thead>
                 <tr>
                   <th>종목명</th>
+                  <th>비중</th>
                   <th>보유 수량</th>
+                  <th>1주일 수익률</th>
+                  <th>1달 수익률</th>
+                  <th>변동성</th>
                   <th>섹터</th>
                 </tr>
               </thead>
@@ -329,7 +333,15 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
                 {portfolio.map((item, index) => (
                   <tr key={index}>
                     <td className="stock-name">{item.stock}</td>
+                    <td className="stock-weight">{item.weight}%</td>
                     <td className="stock-quantity">{item.quantity.toLocaleString()}주</td>
+                    <td className={`return-value ${item.weekly_return >= 0 ? 'positive' : 'negative'}`}>
+                      {item.weekly_return >= 0 ? '+' : ''}{item.weekly_return}%
+                    </td>
+                    <td className={`return-value ${item.monthly_return >= 0 ? 'positive' : 'negative'}`}>
+                      {item.monthly_return >= 0 ? '+' : ''}{item.monthly_return}%
+                    </td>
+                    <td className="stock-volatility">{item.volatility}%</td>
                     <td className="stock-sector">
                       <span className="sector-badge">{item.sector}</span>
                     </td>

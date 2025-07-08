@@ -670,11 +670,15 @@
   text-align: center;
 }
 
-.portfolio-table th:nth-child(2) {
+.portfolio-table th:nth-child(2),
+.portfolio-table th:nth-child(3),
+.portfolio-table th:nth-child(4),
+.portfolio-table th:nth-child(5),
+.portfolio-table th:nth-child(6) {
   text-align: center;
 }
 
-.portfolio-table th:nth-child(3) {
+.portfolio-table th:nth-child(7) {
   text-align: center;
 }
 
@@ -696,7 +700,9 @@
   text-align: center;
 }
 
-.stock-quantity {
+.stock-quantity,
+.stock-weight,
+.stock-volatility {
   text-align: center;
   font-weight: 600;
   color: var(--kb-brown);
@@ -979,10 +985,6 @@
   border-left: 4px solid var(--kb-success);
 }
 
-.ai-comment-card {
-  border-left: 4px solid var(--kb-warning);
-}
-
 /* AI 분석 섹션 - 통합 버전 */
 .ai-analysis-content-combined {
   margin-top: 20px;
@@ -1018,17 +1020,7 @@
   border-bottom: 2px solid var(--kb-brown-light);
 }
 
-.ai-summary-text {
-  font-size: 15px;
-  line-height: 1.7;
-  color: var(--kb-brown-dark);
-  margin: 0;
-  text-align: justify;
-  background: var(--kb-yellow-light);
-  padding: 20px;
-  border-radius: 8px;
-  border-left: 4px solid var(--kb-success);
-}
+
 
 /* 모바일 반응형 */
 @media (max-width: 768px) {
@@ -1143,6 +1135,15 @@
   .sector-item {
     font-size: 10px;
     padding: 3px 8px;
+  }
+  
+  .portfolio-table {
+    font-size: 11px;
+  }
+  
+  .portfolio-table th,
+  .portfolio-table td {
+    padding: 8px 4px;
   }
 }
 
