@@ -981,10 +981,6 @@
   border-left: 4px solid var(--kb-brown);
 }
 
-.ai-summary-card {
-  border-left: 4px solid var(--kb-success);
-}
-
 /* AI 분석 섹션 - 통합 버전 */
 .ai-analysis-content-combined {
   margin-top: 20px;
