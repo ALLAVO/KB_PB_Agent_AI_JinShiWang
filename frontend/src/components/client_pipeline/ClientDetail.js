@@ -193,23 +193,16 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
       )}
 
       {/* AI 투자 분석 요약 */}
-      {performanceData && (performanceData.ai_summary || performanceData.ai_comment) && (
+      {performanceData && performanceData.ai_summary && (
         <div className="ai-analysis-section">
           <h3 className="section-title">🤖 AI 투자 분석 요약</h3>
-          <div className="ai-analysis-content">
-            {performanceData.ai_summary && (
-              <div className="ai-summary-card">
-                <h4 className="ai-card-title">📊 투자 성과 요약</h4>
+          <div className="ai-analysis-content-combined">
+            <div className="ai-combined-card">
+              <div className="ai-summary-section">
+                <h4 className="ai-section-title">📊 투자 성과 분석</h4>
                 <p className="ai-summary-text">{performanceData.ai_summary}</p>
               </div>
-            )}
-            
-            {performanceData.ai_comment && (
-              <div className="ai-comment-card">
-                <h4 className="ai-card-title">💡 투자 코멘트</h4>
-                <p className="ai-comment-text">{performanceData.ai_comment}</p>
-              </div>
-            )}
+            </div>
           </div>
         </div>
       )}
