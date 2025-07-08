@@ -3,36 +3,19 @@ import React from 'react';
 function StockPredictionCard({ currentSymbol, getNextWeekInfo, loading, error, prediction }) {
   return (
     <div style={{
-      display: 'flex',
-      alignItems: 'flex-start',
-      justifyContent: 'flex-start',
-      gap: '0px',
+      width: '100%',
       marginTop: '0px',
       marginBottom: '32px',
-      minHeight: '180px'
+      minHeight: '80px',
+      display: 'flex',
+      justifyContent: 'center',
     }}>
-      {/* 왼쪽: 이미지 */}
-      <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'flex-start', height: '240px' }}>
-        <img
-          src={require('../../assets/smile_king.png')}
-          alt="smile_king"
-          style={{
-            height: '240px',
-            width: 'auto',
-            borderRadius: '0',
-            boxShadow: 'none',
-            background: 'none',
-            marginLeft: '30px',
-            marginRight: '20px'
-          }}
-        />
-      </div>
-      {/* 오른쪽: 예측 텍스트 박스 */}
+      {/* 오른쪽: 예측 텍스트 박스만 전체를 차지 */}
       <div style={{
         background: '#ede8dd',
         borderRadius: '10px',
-        padding: '20px 25px',
-        minWidth: '450px',
+        padding: '28px 40px',
+        width: '100%',
         maxWidth: '900px',
         fontSize: '15px',
         color: '#222',
@@ -40,10 +23,10 @@ function StockPredictionCard({ currentSymbol, getNextWeekInfo, loading, error, p
         fontWeight: 400,
         boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
         border: 'none',
+        minHeight: '30px',
+        textAlign: 'justify',
         display: 'flex',
-        alignItems: 'left',
-        minHeight: '80px',
-        textAlign: 'justify'
+        alignItems: 'center',
       }}>
         {loading ? null : error && error !== '종목코드를 입력해주세요' ? (
           <span style={{ color: '#d32f2f', fontStyle: 'italic', fontSize: '18px' }}>

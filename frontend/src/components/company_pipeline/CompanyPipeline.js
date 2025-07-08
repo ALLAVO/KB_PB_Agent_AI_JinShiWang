@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import StockChart from './StockChart';
+// import StockChart from './StockChart';
 import StockPredictionCard from './StockPredictionCard';
 import titlecloud from '../../assets/titlecloud.png';
 import { fetchTop3Articles } from '../../api/sentiment';
@@ -8,6 +8,7 @@ import { fetchWeeklyKeywords } from '../../api/keyword';
 import { fetchPredictionSummary } from '../../api/prediction';
 import Top3Articles from './Top3Articles';
 import ArticleDetailModal from './ArticleDetailModal';
+// import './StockChart.css';
 import './Top3Articles.css';
 
 function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone }) {
@@ -35,12 +36,21 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
     endDate = `${y}-${dateMatch[3]}-${dateMatch[4]}`;
   }
 
+  // 이번 주차 정보 계산
+  const getCurrentWeekInfo = () => {
+    const weekMatch = period.match(/\((\d+)주차\)/);
+    if (weekMatch) {
+      const currentWeek = parseInt(weekMatch[1]);
+      return `${month}월 ${currentWeek}주차`;
+    }
+    return "이번 주차";
+  };
+
   // 다음 주차 정보 계산
   const getNextWeekInfo = () => {
     const weekMatch = period.match(/\((\d+)주차\)/);
     if (weekMatch) {
-      const currentWeek = parseInt(weekMatch[1]);
-      const nextWeek = currentWeek + 1;
+      const nextWeek = parseInt(weekMatch[1]) + 1;
       return `${month}월 ${nextWeek}주차`;
     }
     return "다음 주차";
@@ -219,6 +229,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
             <img src={titlecloud} alt="cloud" /> {currentSymbol ? `${currentSymbol} 주가 동향` : '주가 동향'}
           </div>
           {/* 주가 차트 컴포넌트 추가 - currentSymbol 사용 */}
+          {/*
           {currentSymbol && startDate && endDate && (
             <StockChart 
               symbol={currentSymbol}
@@ -226,6 +237,10 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
               endDate={endDate}
             />
           )}
+          */}
+          <div className="pipeline-title">
+            <img src={titlecloud} alt="cloud" /> {` ${getNextWeekInfo()} 진시황의 혜안`}
+          </div>
           {/* 주가 전망 카드 - currentSymbol 사용 */}
           {started && (
             <StockPredictionCard 
@@ -236,6 +251,22 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
               prediction={prediction}
             />
           )}
+          {/* <div className="pipeline-title">
+            <img src={titlecloud} alt="cloud" /> {`진시황의 한마디 : ${currentSymbol || '종목'} ${getNextWeekInfo()} 주가 전망`}
+          </div>
+          주가 전망 카드 - currentSymbol 사용 
+          {started && (
+            <StockPredictionCard1 
+              currentSymbol={currentSymbol}
+              getNextWeekInfo={getNextWeekInfo}
+              loading={loading}
+              error={error}
+              prediction={prediction}
+            />
+          )} */}
+          <div className="pipeline-title" style={{ marginBottom: '8px' }}>
+            <img src={titlecloud} alt="cloud" /> {`${getCurrentWeekInfo()} 핵심 뉴스`}
+          </div>
           {/* top3 기사 표시 */}
           <Top3Articles
             loading={loading}
@@ -245,6 +276,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
             findSummaryForArticle={findSummaryForArticle}
             handleArticleClick={handleArticleClick}
           />
+          <div style={{ background: '#fff', height: '50px', width: '100%', borderRadius: '8px', marginTop: '24px' }} />
           {/* 기사 상세 모달 */}
           <ArticleDetailModal show={showModal} article={selectedArticle} onClose={closeModal} />
         </>
