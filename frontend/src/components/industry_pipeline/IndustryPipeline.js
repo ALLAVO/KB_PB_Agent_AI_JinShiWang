@@ -149,39 +149,22 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
       {started && (
         <>
           <div className="pipeline-title">
-            <img src={titlecloud} alt="cloud" />산업 Pipeline
+            <img src={titlecloud} alt="cloud" />{inputSymbol} 산업 핵심 뉴스
           </div>
-          {/* <div className="pipeline-graph">
-            <PipelineGraphSample />
-          </div> */}
-          
           {/* 전 주에 핫한 기사 Top 3 섹션 */}
-          <div style={{ marginTop: '24px', marginBottom: '24px' }}>
-            <h3 style={{ 
-              fontSize: '20px', 
-              fontWeight: 'bold', 
-              marginBottom: '16px',
-              color: '#333',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              <span>🔥</span>
-              전 주에 핫한 기사 Top 3
-            </h3>
-            
+          <div className="industry-top3-section">
             {loading ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+              <div className="industry-top3-loading">
                 AI가 산업 트렌드를 분석하고 있습니다...
               </div>
             ) : error && error !== '산업군 이름을 입력해주세요' ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#d32f2f' }}>
+              <div className="industry-top3-error">
                 {error}
               </div>
             ) : industryData && industryData.top3_articles && industryData.top3_articles.length > 0 ? (
               <IndustryArticleList articles={industryData.top3_articles} onArticleClick={handleArticleClick} />
             ) : (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+              <div className="industry-top3-nodata">
                 해당 산업의 데이터가 없습니다.
               </div>
             )}

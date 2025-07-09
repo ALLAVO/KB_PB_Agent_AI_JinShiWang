@@ -275,3 +275,36 @@
   }
 }
 
+.industry-top3-section {
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+.industry-top3-title {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 16px;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.industry-top3-loading {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.industry-top3-error {
+  text-align: center;
+  padding: 40px;
+  color: #d32f2f;
+}
+
+.industry-top3-nodata {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
