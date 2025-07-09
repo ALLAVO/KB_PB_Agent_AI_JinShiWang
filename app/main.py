@@ -33,7 +33,7 @@ app.include_router(keyword_extractor.router, prefix="/api/v1")  # keyword_extrac
 app.include_router(stock_chart.router, prefix="/api/v1")  # stock_chart 라우터 prefix 추가
 app.include_router(return_analysis.router, prefix="/api/v1", tags=["return-analysis"])
 app.include_router(intention, prefix="/api/v1", tags=["intention"])  # intention_api 라우터 prefix 추가
-app.include_router(industry.router, prefix="/api/v1/industry", tags=["industry"])  # industry 라우터 prefix 수정
+app.include_router(industry.router, prefix="/api/v1", tags=["industry"])  # industry 라우터 prefix 수정
 app.include_router(clients.router, prefix="/api/v1", tags=["clients"])  # clients 라우터 추가
 app.include_router(portfolio_charts.router, prefix="/api/v1", tags=["portfolio-charts"])  # portfolio_charts 라우터 추가
 
