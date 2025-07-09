@@ -208,53 +208,50 @@ const StockChart = ({ symbol, startDate, endDate }) => {
       {chartSummary && (
         <div className="chart-summary">
           <div className="summary-grid summary-grid-4rows">
-            {/* 첫 번째 행: 현재가, 52주 최고가 */}
+            {/* 1행: 현재가-평균거래량-52주 최고가-1M 변동성 */}
             <div className="summary-item">
               <span className="summary-label">현재가:</span>
               <span className="summary-value">${chartSummary.current_price || chartSummary.end_price}</span>
             </div>
             <div className="summary-item">
-              <span className="summary-label">52주 최고가:</span>
-              <span className="summary-value">${chartSummary.week_52_high || 'N/A'}</span>
-            </div>
-            {/* 두 번째 행: 평균거래량(60일), 1M변동성, 52주 최저가 */}
-            <div className="summary-item">
               <span className="summary-label">평균거래량(60일):</span>
               <span className="summary-value">{chartSummary.avg_volume_60d ? formatVolume(chartSummary.avg_volume_60d) : 'N/A'}</span>
+            </div>
+            <div className="summary-item">
+              <span className="summary-label">52주 최고가:</span>
+              <span className="summary-value">${chartSummary.week_52_high || 'N/A'}</span>
             </div>
             <div className="summary-item">
               <span className="summary-label">1M변동성:</span>
               <span className="summary-value">{chartSummary.volatility_1m ? `${chartSummary.volatility_1m}%` : 'N/A'}</span>
             </div>
-            <div className="summary-item">
-              <span className="summary-label">52주 최저가:</span>
-              <span className="summary-value">${chartSummary.week_52_low || 'N/A'}</span>
-            </div>
-            {/* 세 번째 행: 시가총액, 1Y변동성 */}
+            {/* 2행: 시가총액-유동주식수-52주 최저가-1Y변동성 */}
             <div className="summary-item">
               <span className="summary-label">시가총액:</span>
               <span className="summary-value">{chartSummary.market_cap ? formatMarketCap(chartSummary.market_cap) : 'N/A'}</span>
             </div>
             <div className="summary-item">
-              <span className="summary-label">1Y변동성:</span>
-              <span className="summary-value">{chartSummary.volatility_1y ? `${chartSummary.volatility_1y}%` : 'N/A'}</span>
-            </div>
-            {/* 네 번째 행: 유동주식수 */}
-            <div className="summary-item">
               <span className="summary-label">유동주식수:</span>
               <span className="summary-value">{chartSummary.float_shares ? formatShares(chartSummary.float_shares) : 'N/A'}</span>
+            </div>
+            <div className="summary-item">
+              <span className="summary-label">52주 최저가:</span>
+              <span className="summary-value">${chartSummary.week_52_low || 'N/A'}</span>
+            </div>
+            <div className="summary-item">
+              <span className="summary-label">1Y변동성:</span>
+              <span className="summary-value">{chartSummary.volatility_1y ? `${chartSummary.volatility_1y}%` : 'N/A'}</span>
             </div>
           </div>
         </div>
       )}
       {/* 기간 버튼 컨트롤 섹션 */}
-      <div className="stock-chart-controls" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="stock-chart-controls">
+        <div className="control-buttons control-buttons-right">
           {periodOptions.map(option => (
             <button
               key={option.value}
               className={`control-btn period-btn${selectedPeriod === option.value ? ' active' : ''}`}
-              style={{ marginRight: 8, padding: '4px 12px', background: selectedPeriod === option.value ? '#2563eb' : '#f3f4f6', color: selectedPeriod === option.value ? '#fff' : '#222', border: 'none', borderRadius: 4, fontWeight: selectedPeriod === option.value ? 'bold' : 'normal', cursor: 'pointer' }}
               onClick={() => setSelectedPeriod(option.value)}
             >
               {option.label}
@@ -296,14 +293,14 @@ const StockChart = ({ symbol, startDate, endDate }) => {
               />
               
               <Tooltip content={<CustomTooltip />} />
-              <Legend />
+              {/* <Legend /> */}
               
               {/* 주가 라인 */}
               <Line
                 yAxisId="price"
                 type="monotone"
                 dataKey="close"
-                stroke="#2563eb"
+                stroke="#EFC352"
                 strokeWidth={2}
                 dot={false}
                 name="종가"
@@ -313,7 +310,7 @@ const StockChart = ({ symbol, startDate, endDate }) => {
               <Bar
                 yAxisId="volume"
                 dataKey="volume"
-                fill="#94a3b8"
+                fill="#988A7C"
                 opacity={0.6}
                 name="거래량"
               />

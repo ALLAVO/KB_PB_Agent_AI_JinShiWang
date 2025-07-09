@@ -16,11 +16,10 @@
 
 /* 차트 요약 정보 스타일 */
 .chart-summary {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  background: linear-gradient(135deg, #E5DFD1 0%, #E5DFD1 100%);
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 20px;
-  border: 1px solid #dee2e6;
 }
 
 .summary-grid {
@@ -41,7 +40,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.9);
   border-radius: 6px;
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
@@ -100,6 +99,10 @@
   flex-wrap: wrap;
 }
 
+.control-buttons-right {
+  justify-content: flex-end;
+}
+
 .control-btn {
   padding: 8px 16px;
   border: 2px solid #e9ecef;
@@ -126,7 +129,7 @@
 }
 
 .control-btn:hover {
-  border-color: #b08d57;
+  border-color: #E5DFD1;
   background: #f8f6f2;
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(176, 141, 87, 0.2);
@@ -150,8 +153,9 @@
 
 /* 특정 버튼 타입별 스타일 */
 .period-btn.active {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  border-color: #2563eb;
+  background: linear-gradient(135deg, #E5DFD1 0%, #E5DFD1 100%);
+  border-color: #E5DFD1;
+  color: #302A24;
 }
 
 .chart-type-btn.active {
@@ -167,7 +171,8 @@
 .stock-chart-wrapper {
   /* background: #fafafa; */
   border-radius: 6px;
-  padding: 10px;
+  padding: 0px;
+  margin-left: 50px;
 }
 
 .stock-chart-loading,
