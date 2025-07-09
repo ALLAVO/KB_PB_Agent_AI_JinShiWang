@@ -9,23 +9,12 @@
 .sector-selection-container {
   margin-bottom: 24px;
   padding: 24px;
-  background: linear-gradient(135deg, #f8fafe 0%, #f1f7ff 100%);
+  background: linear-gradient(135deg, #fffbe6 0%, #fff9db 100%);
   border-radius: 16px;
-  border: 2px solid #e3f2fd;
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.08);
+  /* border: 2px solid #ffe066; */
+  box-shadow: 0 4px 12px rgba(255, 224, 102, 0.10);
   position: relative;
   overflow: hidden;
-}
-
-.sector-selection-container::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #007bff, #0056b3, #007bff);
-  animation: gradientShift 3s ease-in-out infinite;
 }
 
 @keyframes gradientShift {
@@ -37,7 +26,7 @@
   margin: 0 0 20px 0;
   font-size: 18px;
   font-weight: 700;
-  color: #1a365d;
+  color: #b48a3c;
   text-align: center;
   position: relative;
   padding-bottom: 12px;
@@ -51,7 +40,7 @@
   transform: translateX(-50%);
   width: 60px;
   height: 3px;
-  background: linear-gradient(90deg, #007bff, #0056b3);
+  background: linear-gradient(90deg, #ffe066, #ffd43b);
   border-radius: 2px;
 }
 
@@ -66,8 +55,8 @@
   position: relative;
   padding: 14px 20px;
   background: linear-gradient(145deg, #ffffff, #f8f9fa);
-  color: #495057;
-  border: 2px solid #e9ecef;
+  color: #302A24;
+  border: 2px solid #e9cfa5;
   border-radius: 12px;
   font-size: 14px;
   font-weight: 600;
@@ -96,10 +85,10 @@
 
 .sector-button:hover {
   transform: translateY(-2px) scale(1.02);
-  background: linear-gradient(145deg, #f8f9fa, #ffffff);
-  border-color: #007bff;
-  box-shadow: 0 8px 25px rgba(0, 123, 255, 0.15);
-  color: #007bff;
+  background: linear-gradient(145deg, #fffbe6, #fff9db);
+  border-color: #ffd43b;
+  box-shadow: 0 8px 25px rgba(255, 212, 59, 0.15);
+  color: #302A24;
 }
 
 .sector-button:hover::before {
@@ -107,21 +96,21 @@
 }
 
 .sector-button.selected {
-  background: linear-gradient(145deg, #007bff, #0056b3);
-  color: white;
-  border-color: #0056b3;
+  background: linear-gradient(145deg, #ffe066, #ffd43b);
+  color: #302A24;
+  border-color: #ffd43b;
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(0, 123, 255, 0.25);
+  box-shadow: 0 6px 20px rgba(255, 212, 59, 0.25);
   animation: selectedPulse 2s ease-in-out infinite;
 }
 
 @keyframes selectedPulse {
-  0%, 100% { box-shadow: 0 6px 20px rgba(0, 123, 255, 0.25); }
-  50% { box-shadow: 0 8px 30px rgba(0, 123, 255, 0.35); }
+  0%, 100% { box-shadow: 0 6px 20px rgba(255, 212, 59, 0.25); }
+  50% { box-shadow: 0 8px 30px rgba(255, 212, 59, 0.35); }
 }
 
 .sector-button.selected:hover {
-  background: linear-gradient(145deg, #0056b3, #004085);
+  background: linear-gradient(145deg, #ffd43b, #ffe066);
   transform: translateY(-2px) scale(1.02);
 }
 
