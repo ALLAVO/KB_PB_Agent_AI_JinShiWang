@@ -523,7 +523,6 @@
 }
 
 .customer-search-form,
-.industry-search-form,
 .company-search-form {
   margin: 350px 0px 0px 50px;
   display: flex;
@@ -535,9 +534,7 @@
 .company-search-btn,
 .company-symbol-input,
 .customer-search-btn,
-.customer-symbol-input,
-.industry-search-btn,
-.industry-symbol-input {
+.customer-symbol-input {
   width: 250px !important;
   min-width: 250px !important;
   max-width: 250px !important;
@@ -643,58 +640,6 @@
   background: #fffde7;
 }
 
-.industry-search-btn,
-.industry-symbol-input {
-  width: 250px !important;
-  min-width: 250px !important;
-  max-width: 250px !important;
-  box-sizing: border-box;
-}
-.industry-search-btn {
-  height: 54px;
-  margin: 10px 0;
-  padding: 0;
-  font-size: 1.5rem;
-  background: linear-gradient(90deg, #ffe066 0%, #ffd43b 100%);
-  color: #302A24;
-  border: none;
-  border-radius: 16px;
-  font-weight: 500;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.05);
-  cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
-  letter-spacing: 0.02em;
-  display: block;
-  text-align: center;
-  line-height: 54px;
-}
-.industry-search-btn:hover {
-  background: linear-gradient(90deg, #fff3bf 0%, #ffe066 100%);
-  transform: translateY(-2px) scale(1.03);
-}
-.industry-symbol-input {
-  height: 54px;
-  font-size: 1.0rem;
-  padding: 0 10px;
-  border: none;
-  border-radius: 16px;
-  background: #fffbe6;
-  color: #302A24;
-  outline: none;
-  margin-left: 0;
-  transition: border 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 16px rgba(255, 224, 102, 0.1);
-  display: block;
-}
-.industry-symbol-input.center-text {
-  text-align: center;
-}
-.industry-symbol-input:focus {
-  border: 1.5px solid #ffd43b;
-  box-shadow: 0 2px 12px rgba(255, 212, 59, 0.18);
-  background: #fffde7;
-}
-
 .cloud-decoration {
   position: absolute;
   width: 50%;
@@ -717,12 +662,6 @@
 
 .chat-panel-relative {
   position: relative;
-}
-
-.error-message {
-  color: red;
-  font-weight: bold;
-  margin-bottom: 8px;
 }
 
 /* Return Analysis Chart Styles */

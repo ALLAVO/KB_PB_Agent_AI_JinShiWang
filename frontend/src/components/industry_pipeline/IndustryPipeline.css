@@ -1,10 +1,9 @@
 .industry-search-form {
+  margin: 350px 0px 0px 50px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  max-width: 700px;
-  margin: 0 auto;
-  padding: 20px;
+  align-items: center;
+  gap: 0px;
 }
 
 .sector-selection-container {
@@ -132,23 +131,32 @@
 }
 
 .industry-symbol-input {
-  width: 100%;
-  padding: 16px 20px;
-  border: 2px solid #e9ecef;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  background: linear-gradient(145deg, #ffffff, #f8f9fa);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+  width: 250px !important;
+  min-width: 250px !important;
+  max-width: 250px !important;
+  box-sizing: border-box;
+  height: 54px;
+  font-size: 1.0rem;
+  padding: 0 10px;
+  border: none;
+  border-radius: 16px;
+  background: #fffbe6;
+  color: #302A24;
+  outline: none;
+  margin-left: 0;
+  transition: border 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px rgba(255, 224, 102, 0.1);
+  display: block;
+}
+
+.industry-symbol-input.center-text {
+  text-align: center;
 }
 
 .industry-symbol-input:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.1), inset 0 2px 4px rgba(0, 0, 0, 0.02);
-  background: #ffffff;
-  transform: translateY(-1px);
+  border: 1.5px solid #ffd43b;
+  box-shadow: 0 2px 12px rgba(255, 212, 59, 0.18);
+  background: #fffde7;
 }
 
 .center-text {
@@ -156,51 +164,62 @@
 }
 
 .industry-search-btn {
-  padding: 16px 32px;
-  background: linear-gradient(145deg, #007bff, #0056b3);
-  color: white;
+  width: 250px !important;
+  min-width: 250px !important;
+  max-width: 250px !important;
+  box-sizing: border-box;
+  height: 54px;
+  margin: 10px 0;
+  padding: 0;
+  font-size: 1.5rem;
+  background: linear-gradient(90deg, #ffe066 0%, #ffd43b 100%);
+  color: #302A24;
   border: none;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 700;
+  border-radius: 16px;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.05);
   cursor: pointer;
-  transition: all 0.3s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.2);
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  transition: background 0.2s, transform 0.1s;
+  letter-spacing: 0.02em;
+  display: block;
   text-align: center;
-  width: 100%;
-}
-
-.industry-search-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
+  line-height: 54px;
 }
 
 .industry-search-btn:hover {
-  background: linear-gradient(145deg, #0056b3, #004085);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
+  background: linear-gradient(90deg, #fff3bf 0%, #ffe066 100%);
+  transform: translateY(-2px) scale(1.03);
 }
 
-.industry-search-btn:hover::before {
-  left: 100%;
+/* Pipeline related styles from App.css */
+.pipeline-title {
+  display: flex;
+  padding: 20px 0px 0px 0px;
+  color: #302A24;
+  align-items: center;
+  gap: 12px;
+  font-size: 2rem;
+  font-family: 'JejuHallasan', 'Jeju Hallasan', cursive, sans-serif !important;
+  font-weight: normal;
+  margin-bottom: 24px;
+  text-align: left;
 }
 
-.industry-search-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.2);
+.pipeline-title img {
+  height: 38px;
+  width: auto;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.pipeline-graph {
+  height: 300px;
+  margin-bottom: 24px;
+  background: #fff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .error-message {

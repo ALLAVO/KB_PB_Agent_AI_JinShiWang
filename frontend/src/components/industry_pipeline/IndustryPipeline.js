@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import titlecloud from "../../assets/titlecloud.png";
 import { fetchIndustryTop3Articles } from "../../api/industry";
-import PipelineGraphSample from "./PipelineGraphSample";
 import IndustryArticleList from "./IndustryArticleList";
+import ArticleDetailModal from "./ArticleDetailModal";
 
 function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone }) {
   const [started, setStarted] = useState(false);
@@ -151,9 +151,9 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
           <div className="pipeline-title">
             <img src={titlecloud} alt="cloud" />산업 Pipeline
           </div>
-          <div className="pipeline-graph">
+          {/* <div className="pipeline-graph">
             <PipelineGraphSample />
-          </div>
+          </div> */}
           
           {/* 전 주에 핫한 기사 Top 3 섹션 */}
           <div style={{ marginTop: '24px', marginBottom: '24px' }}>
@@ -188,110 +188,7 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
           </div>
           
           {/* 기사 상세 모달 */}
-          {showModal && selectedArticle && (
-            <div style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              zIndex: 1000
-            }}>
-              <div style={{
-                backgroundColor: 'white',
-                padding: '24px',
-                borderRadius: '8px',
-                maxWidth: '80%',
-                maxHeight: '80%',
-                overflow: 'auto',
-                position: 'relative',
-                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-              }}>
-                <button 
-                  onClick={closeModal}
-                  style={{
-                    position: 'absolute',
-                    top: '12px',
-                    right: '12px',
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    fontSize: '20px',
-                    cursor: 'pointer',
-                    color: '#666'
-                  }}
-                >
-                  ×
-                </button>
-                
-                <div style={{ marginRight: '30px' }}>
-                  <h2 style={{
-                    fontSize: '20px',
-                    fontWeight: 'bold',
-                    marginBottom: '12px',
-                    color: '#333',
-                    lineHeight: '1.4'
-                  }}>
-                    {selectedArticle.article_title}
-                  </h2>
-                  
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    marginBottom: '16px',
-                    gap: '16px'
-                  }}>
-                    <span style={{
-                      fontSize: '14px',
-                      color: '#666',
-                      backgroundColor: '#f5f5f5',
-                      padding: '4px 8px',
-                      borderRadius: '4px'
-                    }}>
-                      {selectedArticle.date}
-                    </span>
-                    <span style={{
-                      fontSize: '14px',
-                      color: '#666',
-                      backgroundColor: '#e3f2fd',
-                      padding: '4px 8px',
-                      borderRadius: '4px'
-                    }}>
-                      {selectedArticle.stock_symbol}
-                    </span>
-                    <span style={{
-                      fontSize: '16px',
-                      fontWeight: 'bold',
-                      color: selectedArticle.score > 0 ? '#22c55e' : selectedArticle.score < 0 ? '#ef4444' : '#666',
-                      backgroundColor: '#f9f9f9',
-                      padding: '4px 8px',
-                      borderRadius: '4px'
-                    }}>
-                      감성점수: {selectedArticle.score > 0 ? '+' : ''}{selectedArticle.score}
-                    </span>
-                  </div>
-                  
-                  <div style={{
-                    fontSize: '15px',
-                    lineHeight: '1.6',
-                    color: '#444',
-                    textAlign: 'justify',
-                    maxHeight: '400px',
-                    overflowY: 'auto',
-                    padding: '16px',
-                    backgroundColor: '#fafafa',
-                    borderRadius: '6px',
-                    border: '1px solid #e0e0e0'
-                  }}>
-                    {selectedArticle.article}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          <ArticleDetailModal article={showModal && selectedArticle} onClose={closeModal} />
         </>
       )}
     </div>

@@ -21,7 +21,6 @@ import FiccTable1Year from "./components/market_pipeline/FiccTable1Year";
 import CompanyPipeline from "./components/company_pipeline/CompanyPipeline";
 import ClientPipeline from "./components/client_pipeline/ClientPipeline";
 import IndustryPipeline from "./components/industry_pipeline/IndustryPipeline";
-import PipelineGraphSample from "./components/industry_pipeline/PipelineGraphSample";
 
 function CloudDecorations() {
   return (
