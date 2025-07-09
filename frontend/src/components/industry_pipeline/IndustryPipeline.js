@@ -97,6 +97,8 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
   const handleSectorClick = (sector) => {
     setInputSymbol(sector);
     if (error) setError("");
+    // 버튼 클릭 시 바로 리포트 출력
+    handleSearch(sector, false);
   };
 
   useEffect(() => {
