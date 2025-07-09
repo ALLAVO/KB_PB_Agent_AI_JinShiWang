@@ -272,7 +272,8 @@
   position: relative;
   margin-left: 250px; /* left sidebar를 위한 margin */
   /* margin-right: 100px;  */
-  overflow-y: auto; /* main-panel만 스크롤 가능 */
+  overflow-y: auto; /* main-panel만 세로 스크롤 가능 */
+  overflow-x: hidden; /* 좌우 스크롤 금지 */
   height: 100vh; /* 전체 높이 */
 }
 
