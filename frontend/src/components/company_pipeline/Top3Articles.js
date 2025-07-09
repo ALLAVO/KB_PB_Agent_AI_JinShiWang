@@ -7,7 +7,7 @@ function Top3Articles({ loading, error, top3Articles, findKeywordsForArticle, fi
         : error && error !== '종목코드를 입력해주세요'
           ? error
         : top3Articles && top3Articles.top3_articles && top3Articles.top3_articles.length > 0 ? (
-          <ol style={{marginTop: '0px', marginLeft: '10px', padding: 0, listStyle: 'none'}}>
+          <ol style={{marginTop: '0px', marginLeft: '0px', padding: 0, listStyle: 'none'}}>
             {top3Articles.top3_articles.map((art, idx) => (
               <li key={idx} style={{
                 marginBottom: '20px',
@@ -15,7 +15,7 @@ function Top3Articles({ loading, error, top3Articles, findKeywordsForArticle, fi
                 // borderRadius: '10px',
                 // border: '1.5px solid #e0e0e0',
                 // boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
-                padding: '0px 20px',
+                padding: '0px 20px 0px 0px', // 오른쪽 20px, 왼쪽 0px
                 position: 'relative',
                 minHeight: '120px',
               }}>
@@ -81,13 +81,13 @@ function Top3Articles({ loading, error, top3Articles, findKeywordsForArticle, fi
                     </div>
                   </div>
                   {/* 오른쪽: 감성점수, 날짜 */}
-                  <div style={{display:'flex', flexDirection:'column', alignItems:'flex-end', minWidth:'160px', marginLeft:'5px', marginTop:'-5px'}}>
+                  <div style={{display:'flex', flexDirection:'column', alignItems:'flex-end', minWidth:'160px', marginRight:'0px', marginTop:'-5px'}}>
                     <div style={{
                       background:'#fff',
                       color: art.score > 0 ? '#d32f2f' : art.score < 0 ? '#1976d2' : '#302A24', // 양수: 빨간, 음수: 파란, 0: 기본
                       fontWeight:'bold',
                       fontSize:'13px',
-                      borderRadius:'18px',
+                      borderRadius:'10px',
                       padding:'7px 20px',
                       // border:'1.5px solid #e0e0e0',
                       minWidth:'100px',

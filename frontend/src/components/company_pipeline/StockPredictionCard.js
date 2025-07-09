@@ -36,7 +36,7 @@ function StockPredictionCard({ currentSymbol, getNextWeekInfo, loading, error, p
         maxWidth: '900px',
         fontSize: '15px',
         color: '#222',
-        lineHeight: '1.2',
+        lineHeight: '1.5',
         fontWeight: 400,
         boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
         border: 'none',
