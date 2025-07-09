@@ -79,6 +79,7 @@ function CompanyInfo({ symbol }) {
           fontSize: '2.8rem',
           fontWeight: 'bold',
           color: '#222',
+          marginLeft: '10px',
           marginRight: '32px',
           flex: 'none',
           textAlign: 'left'
@@ -88,7 +89,7 @@ function CompanyInfo({ symbol }) {
         </div>
         {/* 우측: 기업 정보 */}
         <div style={{ flex: 1, minWidth: 0, textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
-          <div style={{ fontSize: '1.15rem', color: '#111', marginBottom: '18px', lineHeight: 1.7, textAlign: 'left', display: 'flex', flexWrap: 'wrap', gap: '32px' }}>
+          <div style={{ fontSize: '1.0rem', color: '#302A24', marginBottom: '18px', lineHeight: 1.7, textAlign: 'left', display: 'flex', flexWrap: 'wrap', gap: '32px' }}>
             <div><strong>기업명:</strong> {companyData.company_name || '정보 없음'}</div>
             <div><strong>종목코드:</strong> {companyData.stock_symbol || '정보 없음'}</div>
             <div><strong>산업:</strong> {companyData.industry || '정보 없음'}</div>
@@ -99,7 +100,7 @@ function CompanyInfo({ symbol }) {
       </div>
       {/* 아래쪽: 사업 개요 */}
       {companyData.business_summary && (
-        <div style={{ fontSize: '1.1rem', color: '#222', marginTop: '15px', marginBottom: '12px', lineHeight: 1.2, textAlign: 'left' }}>
+        <div style={{ fontSize: '1.0rem', color: '#302A24', marginLeft : '10px', marginTop: '15px', marginBottom: '12px', lineHeight: 1.2, textAlign: 'left' }}>
           <strong>사업 개요:</strong>
           <div style={{ marginTop: '12px', whiteSpace: 'pre-line', textAlign: 'left' }}>{companyData.business_summary}</div>
         </div>
