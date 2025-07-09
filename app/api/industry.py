@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from app.services.industry_agent.clustering import get_industry_top3_articles
+from app.services.clustering import get_industry_top3_articles
 
 router = APIRouter()
 
