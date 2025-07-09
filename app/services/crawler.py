@@ -7,6 +7,7 @@ from app.core.config import settings
 import pandas as pd
 from datetime import datetime, timedelta
 from typing import Dict, List
+import yfinance as yf
 
 # 요청 간 최소 대기시간 (초 단위)
 RATE_LIMIT_SLEEP = 10
@@ -664,3 +665,90 @@ def get_commodity_prices_6months(fred_api_key: str, end_date: str) -> dict:
         }
     except Exception as e:
         return {'error': f'Error fetching 6-month commodity prices from FRED: {e}'}
+
+def get_enhanced_stock_info(ticker: str) -> Dict:
+    """
+    stooq(데이터리더)로 불러올 수 있는 정보는 stooq로, 시가총액/유동주식수 등만 yfinance로 가져옵니다.
+    """
+    import numpy as np
+    try:
+        # stooq용 티커 변환
+        stooq_ticker = ticker if ticker.endswith('.US') else ticker + '.US'
+        # 1년치 데이터
+        df_1y = web.DataReader(stooq_ticker, 'stooq', start=(datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d'), end=datetime.now().strftime('%Y-%m-%d'))
+        df_1y = df_1y.sort_index()
+        # 1개월치 데이터
+        df_1m = web.DataReader(stooq_ticker, 'stooq', start=(datetime.now() - timedelta(days=31)).strftime('%Y-%m-%d'), end=datetime.now().strftime('%Y-%m-%d'))
+        df_1m = df_1m.sort_index()
+        # 60일치 데이터
+        df_60d = web.DataReader(stooq_ticker, 'stooq', start=(datetime.now() - timedelta(days=60)).strftime('%Y-%m-%d'), end=datetime.now().strftime('%Y-%m-%d'))
+        df_60d = df_60d.sort_index()
+        if df_1y.empty or df_1m.empty or df_60d.empty:
+            return {"error": f"No historical data found for {ticker} (stooq)"}
+        # 현재가 (가장 최근 종가)
+        current_price = df_1y['Close'].iloc[-1] if not df_1y.empty else None
+        # 52주 최고가/최저가
+        week_52_high = df_1y['High'].max() if not df_1y.empty else None
+        week_52_low = df_1y['Low'].min() if not df_1y.empty else None
+        # 60일 평균거래량
+        avg_volume_60d = df_60d['Volume'].mean() if not df_60d.empty else None
+        # 1개월 변동성 (표준편차 기반, 연환산)
+        if len(df_1m) > 1:
+            returns_1m = df_1m['Close'].pct_change().dropna()
+            volatility_1m = returns_1m.std() * (252 ** 0.5) * 100
+        else:
+            volatility_1m = None
+        # 1년 변동성 (연환산)
+        if len(df_1y) > 1:
+            returns_1y = df_1y['Close'].pct_change().dropna()
+            volatility_1y = returns_1y.std() * (252 ** 0.5) * 100
+        else:
+            volatility_1y = None
+        # 시가총액, 유동주식수 등은 yfinance로만 가능
+        market_cap = None
+        shares_outstanding = None
+        float_shares = None
+        
+        try:
+            stock = yf.Ticker(ticker)
+            info = stock.info
+            
+            # 다양한 키들을 시도해보기
+            market_cap = (info.get('marketCap') or 
+                         info.get('market_cap') or 
+                         info.get('marketCap') or
+                         info.get('enterpriseValue'))
+            
+            shares_outstanding = (info.get('sharesOutstanding') or 
+                                info.get('shares_outstanding') or
+                                info.get('impliedSharesOutstanding') or
+                                info.get('commonStockSharesOutstanding'))
+            
+            float_shares = (info.get('floatShares') or 
+                           info.get('float_shares') or
+                           info.get('publicFloat'))
+            
+            # 디버깅: 사용 가능한 키들 출력
+            print(f"🔍 yfinance info keys for {ticker}: {list(info.keys())[:20]}")
+            print(f"📊 market_cap: {market_cap}, shares_outstanding: {shares_outstanding}, float_shares: {float_shares}")
+            
+        except Exception as e:
+            print(f"❌ yfinance error for {ticker}: {e}")
+            market_cap = None
+            shares_outstanding = None
+            float_shares = None
+        result = {
+            "ticker": ticker,
+            "current_price": round(current_price, 2) if current_price else None,
+            "week_52_high": round(week_52_high, 2) if week_52_high else None,
+            "week_52_low": round(week_52_low, 2) if week_52_low else None,
+            "avg_volume_60d": round(avg_volume_60d, 0) if avg_volume_60d else None,
+            "volatility_1m": round(volatility_1m, 2) if volatility_1m else None,
+            "volatility_1y": round(volatility_1y, 2) if volatility_1y else None,
+            "market_cap": market_cap,
+            "shares_outstanding": shares_outstanding,
+            "float_shares": float_shares
+        }
+        return result
+    except Exception as e:
+        return {"error": f"Error fetching enhanced stock info for {ticker}: {e}"}

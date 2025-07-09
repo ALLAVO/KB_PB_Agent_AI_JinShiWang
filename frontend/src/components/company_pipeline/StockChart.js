@@ -10,7 +10,7 @@ import {
   Legend, 
   ResponsiveContainer 
 } from 'recharts';
-import { fetchCombinedStockChart, fetchStockChartSummary } from '../../api/stockChart';
+import { fetchCombinedStockChart, fetchStockChartSummary, fetchEnhancedStockInfo } from '../../api/stockChart';
 import './StockChart.css';
 
 const StockChart = ({ symbol, startDate, endDate }) => {
@@ -77,18 +77,20 @@ const StockChart = ({ symbol, startDate, endDate }) => {
         types: fixedChartTypes, 
       });
       
-      // 차트 데이터와 요약 정보를 동시에 가져오기
-      const [data, summaryData] = await Promise.all([
+      // 차트 데이터, 요약 정보, 상세 정보를 동시에 가져오기
+      const [data, summaryData, enhancedData] = await Promise.all([
         fetchCombinedStockChart(
           symbol, 
           calcStartDate, 
           calcEndDate, 
           fixedChartTypes,
         ),
-        fetchStockChartSummary(symbol, calcStartDate, calcEndDate)
+        fetchStockChartSummary(symbol, calcStartDate, calcEndDate),
+        fetchEnhancedStockInfo(symbol)
       ]);
       
       console.log('📦 Received chart data:', data);
+      console.log('📈 Received enhanced data:', enhancedData);
       
       // 차트 데이터 변환
       const transformedData = data.dates.map((date, index) => {
@@ -112,8 +114,14 @@ const StockChart = ({ symbol, startDate, endDate }) => {
       
       console.log('🎯 Transformed data sample:', transformedData.slice(0, 3));
       
+      // 상세 정보를 요약 정보에 병합
+      const mergedSummary = {
+        ...summaryData,
+        ...enhancedData
+      };
+      
       setChartData(transformedData);
-      setChartSummary(summaryData);
+      setChartSummary(mergedSummary);
     } catch (err) {
       setError('차트 데이터를 불러오는데 실패했습니다: ' + err.message);
       console.error('Chart data loading error:', err);
@@ -140,6 +148,32 @@ const StockChart = ({ symbol, startDate, endDate }) => {
   // 주가 포맷터
   const formatPrice = (value) => {
     return `$${value}`;
+  };
+
+  // 시가총액 포맷터
+  const formatMarketCap = (value) => {
+    if (value >= 1000000000000) {
+      return `$${(value / 1000000000000).toFixed(2)}T`;
+    } else if (value >= 1000000000) {
+      return `$${(value / 1000000000).toFixed(2)}B`;
+    } else if (value >= 1000000) {
+      return `$${(value / 1000000).toFixed(2)}M`;
+    } else if (value >= 1000) {
+      return `$${(value / 1000).toFixed(2)}K`;
+    }
+    return `$${value}`;
+  };
+
+  // 주식수 포맷터
+  const formatShares = (value) => {
+    if (value >= 1000000000) {
+      return `${(value / 1000000000).toFixed(2)}B`;
+    } else if (value >= 1000000) {
+      return `${(value / 1000000).toFixed(2)}M`;
+    } else if (value >= 1000) {
+      return `${(value / 1000).toFixed(2)}K`;
+    }
+    return value;
   };
 
   // 커스텀 툴팁
@@ -173,8 +207,8 @@ const StockChart = ({ symbol, startDate, endDate }) => {
       {/* 차트 요약 정보 */}
       {chartSummary && (
         <div className="chart-summary">
-          <div className="summary-grid summary-grid-2rows">
-            {/* 첫 번째 행: 기간, 시작가, 종가 */}
+          <div className="summary-grid summary-grid-4rows">
+            {/* 첫 번째 행: 기간, 현재가, 52주 최고가 */}
             <div className="summary-item">
               <span className="summary-label">기간:</span>
               <span className="summary-value period-dropdown-wrapper" style={{ position: 'relative' }}>
@@ -206,27 +240,48 @@ const StockChart = ({ symbol, startDate, endDate }) => {
               </span>
             </div>
             <div className="summary-item">
-              <span className="summary-label">시작가:</span>
-              <span className="summary-value">${chartSummary.start_price}</span>
+              <span className="summary-label">현재가:</span>
+              <span className="summary-value">${chartSummary.current_price || chartSummary.end_price}</span>
             </div>
             <div className="summary-item">
-              <span className="summary-label">종가:</span>
-              <span className="summary-value">${chartSummary.end_price}</span>
+              <span className="summary-label">52주 최고가:</span>
+              <span className="summary-value">${chartSummary.week_52_high || 'N/A'}</span>
             </div>
-            {/* 두 번째 행: 변화, 최고가, 최저가 */}
+            
+            {/* 두 번째 행: 평균거래량(60일), 1M변동성, 52주 최저가 */}
+            <div className="summary-item">
+              <span className="summary-label">평균거래량(60일):</span>
+              <span className="summary-value">{chartSummary.avg_volume_60d ? formatVolume(chartSummary.avg_volume_60d) : 'N/A'}</span>
+            </div>
+            <div className="summary-item">
+              <span className="summary-label">1M변동성:</span>
+              <span className="summary-value">{chartSummary.volatility_1m ? `${chartSummary.volatility_1m}%` : 'N/A'}</span>
+            </div>
+            <div className="summary-item">
+              <span className="summary-label">52주 최저가:</span>
+              <span className="summary-value">${chartSummary.week_52_low || 'N/A'}</span>
+            </div>
+            
+            {/* 세 번째 행: 시가총액, 1Y변동성, 변화 */}
+            <div className="summary-item">
+              <span className="summary-label">시가총액:</span>
+              <span className="summary-value">{chartSummary.market_cap ? formatMarketCap(chartSummary.market_cap) : 'N/A'}</span>
+            </div>
+            <div className="summary-item">
+              <span className="summary-label">1Y변동성:</span>
+              <span className="summary-value">{chartSummary.volatility_1y ? `${chartSummary.volatility_1y}%` : 'N/A'}</span>
+            </div>
             <div className="summary-item">
               <span className="summary-label">변화:</span>
               <span className={`summary-value ${chartSummary.change >= 0 ? 'positive' : 'negative'}`}>
                 {chartSummary.change >= 0 ? '+' : ''}${chartSummary.change} ({chartSummary.change_pct >= 0 ? '+' : ''}{chartSummary.change_pct}%)
               </span>
             </div>
+            
+            {/* 네 번째 행: 유동주식수 */}
             <div className="summary-item">
-              <span className="summary-label">최고가:</span>
-              <span className="summary-value">${chartSummary.high}</span>
-            </div>
-            <div className="summary-item">
-              <span className="summary-label">최저가:</span>
-              <span className="summary-value">${chartSummary.low}</span>
+              <span className="summary-label">유동주식수:</span>
+              <span className="summary-value">{chartSummary.float_shares ? formatShares(chartSummary.float_shares) : 'N/A'}</span>
             </div>
           </div>
         </div>

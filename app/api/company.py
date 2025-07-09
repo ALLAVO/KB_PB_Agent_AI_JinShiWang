@@ -1,4 +1,3 @@
-
 # 기업 정보 관련 API
 from fastapi import APIRouter, Query
 from typing import Optional
@@ -8,7 +7,8 @@ from app.services.sentiment import get_weekly_sentiment_scores_by_stock_symbol
 from app.services.crawler import (
     get_company_profile_from_alphavantage,
     get_financial_statements_from_sec,
-    get_weekly_stock_indicators_from_stooq
+    get_weekly_stock_indicators_from_stooq,
+    get_enhanced_stock_info
 )
 from app.core.config import settings
 
@@ -61,6 +61,23 @@ def get_company_info(
         "income_statements": financials,
         "weekly_indicators": indicators
     }
+
+# 상세 주식 정보 API
+@router.get("/companies/{stock_symbol}/enhanced-info")
+def get_company_enhanced_info(stock_symbol: str):
+    """
+    상세한 주식 정보를 반환합니다.
+    현재가, 52주 최고가/최저가, 시가총액, 유동주식수, 변동성 등
+    """
+    try:
+        result = get_enhanced_stock_info(stock_symbol)
+        
+        if "error" in result:
+            return {"success": False, "error": result["error"]}
+        
+        return {"success": True, "data": result}
+    except Exception as e:
+        return {"success": False, "error": f"Internal server error: {str(e)}"}
 
 def safe_float(val):
     try:
