@@ -75,8 +75,8 @@ function CompanyInfo({ symbol }) {
           <div style={{ fontSize: '1.0rem', color: '#302A24', marginLeft: '20px', marginBottom: '18px', lineHeight: 1.5, textAlign: 'left', display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
             <div><strong>기업명:</strong> {companyData.company_name || '정보 없음'}</div>
             {/* <div><strong>종목코드:</strong> {companyData.stock_symbol || '정보 없음'}</div> */}
-            <div><strong>산업:</strong> {companyData.industry || '정보 없음'}</div>
             <div><strong>섹터:</strong> {companyData.sector || '정보 없음'}</div>
+            <div><strong>산업:</strong> {companyData.industry || '정보 없음'}</div>
             <div><strong>주소:</strong> {companyData.address || '정보 없음'}</div>
           </div>
         </div>

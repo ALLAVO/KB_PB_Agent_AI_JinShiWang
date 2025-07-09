@@ -9,7 +9,7 @@ import {
   Legend, 
   ResponsiveContainer 
 } from 'recharts';
-import { fetchCombinedReturnChart } from '../api/returnAnalysis';
+import { fetchCombinedReturnChart } from '../../api/returnAnalysis';
 
 const ReturnAnalysisChart = ({ symbol, startDate, endDate }) => {
   const [chartData, setChartData] = useState([]);

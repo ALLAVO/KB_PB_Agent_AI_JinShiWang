@@ -9,6 +9,7 @@ import { fetchPredictionSummary } from '../../api/prediction';
 import Top3Articles from './Top3Articles';
 import ArticleDetailModal from './ArticleDetailModal';
 import StockChart from './StockChart';
+import ReturnAnalysisChart from './ReturnAnalysisChart';
 import './StockChart.css';
 import './Top3Articles.css';
 
@@ -237,6 +238,17 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
           
           {currentSymbol && startDate && endDate && (
             <StockChart 
+              symbol={currentSymbol}
+              startDate={startDate}
+              endDate={endDate}
+            />
+          )}
+          <div className="pipeline-title">
+            <img src={titlecloud} alt="cloud" /> {currentSymbol ? `${currentSymbol} 지수 대비 수익률 분석` : '지수 대비 수익률 분석'}
+          </div>
+          {/* 주가 차트 아래에 ReturnAnalysisChart 분리 렌더링 */}
+          {currentSymbol && startDate && endDate && (
+            <ReturnAnalysisChart 
               symbol={currentSymbol}
               startDate={startDate}
               endDate={endDate}
