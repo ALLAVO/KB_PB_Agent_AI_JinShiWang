@@ -433,6 +433,7 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
                 loading={loading}
                 error={treasuryData1Year?.error || fxData1Year?.error}
               />
+              <div style={{ height: '50px' }} />
             </>
           )}
         </>
