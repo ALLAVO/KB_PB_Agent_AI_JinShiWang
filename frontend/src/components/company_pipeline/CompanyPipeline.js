@@ -8,8 +8,8 @@ import { fetchWeeklyKeywords } from '../../api/keyword';
 import { fetchPredictionSummary } from '../../api/prediction';
 import Top3Articles from './Top3Articles';
 import ArticleDetailModal from './ArticleDetailModal';
-// import StockChart from './StockChart';
-// import './StockChart.css';
+import StockChart from './StockChart';
+import './StockChart.css';
 import './Top3Articles.css';
 
 function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone }) {
@@ -235,13 +235,13 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
           </div>
           {/* 주가 차트 컴포넌트 추가 - currentSymbol 사용 */}
           
-          {/* {currentSymbol && startDate && endDate && (
+          {currentSymbol && startDate && endDate && (
             <StockChart 
               symbol={currentSymbol}
               startDate={startDate}
               endDate={endDate}
             />
-          )} */}
+          )}
          
           <div className="pipeline-title">
             <img src={titlecloud} alt="cloud" /> {` ${getNextWeekInfo()} 진시황의 혜안`}
