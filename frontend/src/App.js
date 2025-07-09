@@ -21,6 +21,7 @@ import FiccTable1Year from "./components/market_pipeline/FiccTable1Year";
 import CompanyPipeline from "./components/company_pipeline/CompanyPipeline";
 import ClientPipeline from "./components/client_pipeline/ClientPipeline";
 import IndustryPipeline from "./components/industry_pipeline/IndustryPipeline";
+import HotArticles from "./components/market_pipeline/HotArticles";
 
 function CloudDecorations() {
   return (
@@ -432,6 +433,14 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
                 fxData1Year={fxData1Year}
                 loading={loading}
                 error={treasuryData1Year?.error || fxData1Year?.error}
+              />
+              {/* 핫한 기사 섹션 추가 */}
+              <HotArticles 
+                year={year}
+                month={month}
+                weekStr={weekStr}
+                period={period}
+                autoStart={true}
               />
             </>
           )}

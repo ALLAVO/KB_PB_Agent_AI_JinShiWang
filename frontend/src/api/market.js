@@ -149,3 +149,28 @@ export const fetchFx1YearChart = async (endDate) => {
     throw error;
   }
 };
+
+// 시장 핫한 기사 TOP 3 가져오기
+export const fetchMarketHotArticles = async (startDate) => {
+  try {
+    const url = new URL(`${API_BASE_URL}/market/hot-articles`);
+    url.searchParams.append('start_date', startDate);
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching market hot articles:', error);
+    throw error;
+  }
+};
