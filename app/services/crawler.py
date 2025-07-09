@@ -313,17 +313,17 @@ def get_nasdaq_index_data(start_date: str, end_date: str) -> dict:
 
 def calculate_absolute_and_relative_returns(ticker: str, start_date: str, end_date: str) -> dict:
     """
-    개별 주식의 절대수익률과 나스닥 대비 상대수익률을 계산합니다.
+    개별 주식의 절대수익률과 S&P500 대비 상대수익률을 계산합니다.
     start_date, end_date: 'YYYY-MM-DD'
     반환: {
         'dates': [...],
         'stock_prices': [...],
-        'nasdaq_prices': [...],
+        'sp500_prices': [...],
         'stock_index': [...],      # 기준일=100으로 정규화
-        'nasdaq_index': [...],     # 기준일=100으로 정규화
+        'sp500_index': [...],     # 기준일=100으로 정규화
         'relative_index': [...],   # 상대지수
         'stock_returns': [...],    # 수익률(%)
-        'nasdaq_returns': [...],   # 수익률(%)
+        'sp500_returns': [...],   # 수익률(%)
         'relative_returns': [...]  # 상대수익률(%)
     }
     """
@@ -333,50 +333,50 @@ def calculate_absolute_and_relative_returns(ticker: str, start_date: str, end_da
         if "error" in stock_data:
             return stock_data
         
-        # 나스닥 데이터 가져오기
-        nasdaq_data = get_nasdaq_index_data(start_date, end_date)
-        if "error" in nasdaq_data:
-            return nasdaq_data
+        # S&P500 데이터 가져오기 (기존 나스닥에서 S&P500으로 변경)
+        sp500_data = get_index_chart_data('^SPX', start_date, end_date)
+        if "error" in sp500_data:
+            return sp500_data
         
         # 날짜 매칭 (두 데이터의 교집합)
         stock_dates = set(stock_data['dates'])
-        nasdaq_dates = set(nasdaq_data['dates'])
-        common_dates = sorted(list(stock_dates & nasdaq_dates))
+        sp500_dates = set(sp500_data['dates'])
+        common_dates = sorted(list(stock_dates & sp500_dates))
         
         if not common_dates:
-            return {"error": "No common dates between stock and NASDAQ data"}
+            return {"error": "No common dates between stock and S&P500 data"}
         
         # 공통 날짜에 해당하는 데이터만 추출
         stock_prices = []
-        nasdaq_prices = []
+        sp500_prices = []
         
         for date in common_dates:
             stock_idx = stock_data['dates'].index(date)
-            nasdaq_idx = nasdaq_data['dates'].index(date)
+            sp500_idx = sp500_data['dates'].index(date)
             stock_prices.append(stock_data['closes'][stock_idx])
-            nasdaq_prices.append(nasdaq_data['nasdaq_closes'][nasdaq_idx])
+            sp500_prices.append(sp500_data['closes'][sp500_idx])
         
         # 지수 계산 (기준일=100)
         stock_index = [(price / stock_prices[0]) * 100 for price in stock_prices]
-        nasdaq_index = [(price / nasdaq_prices[0]) * 100 for price in nasdaq_prices]
+        sp500_index = [(price / sp500_prices[0]) * 100 for price in sp500_prices]
         
         # 상대지수 계산
-        relative_index = [(s_idx / n_idx) * 100 for s_idx, n_idx in zip(stock_index, nasdaq_index)]
+        relative_index = [(s_idx / b_idx) * 100 for s_idx, b_idx in zip(stock_index, sp500_index)]
         
         # 수익률 계산 (%)
         stock_returns = [((price / stock_prices[0]) - 1) * 100 for price in stock_prices]
-        nasdaq_returns = [((price / nasdaq_prices[0]) - 1) * 100 for price in nasdaq_prices]
+        sp500_returns = [((price / sp500_prices[0]) - 1) * 100 for price in sp500_prices]
         relative_returns = [((rel_idx / 100) - 1) * 100 for rel_idx in relative_index]
         
         return {
             'dates': common_dates,
             'stock_prices': stock_prices,
-            'nasdaq_prices': nasdaq_prices,
+            'sp500_prices': sp500_prices,
             'stock_index': stock_index,
-            'nasdaq_index': nasdaq_index,
+            'sp500_index': sp500_index,
             'relative_index': relative_index,
             'stock_returns': stock_returns,
-            'nasdaq_returns': nasdaq_returns,
+            'sp500_returns': sp500_returns,
             'relative_returns': relative_returns
         }
         
@@ -396,7 +396,7 @@ def get_return_analysis_summary(ticker: str, start_date: str, end_date: str) -> 
             return {"error": "No return data available"}
         
         stock_final_return = data['stock_returns'][-1]
-        nasdaq_final_return = data['nasdaq_returns'][-1]
+        sp500_final_return = data['sp500_returns'][-1]
         relative_final_return = data['relative_returns'][-1]
         
         # 변동성 계산 (일간 수익률의 표준편차 × √252)
@@ -412,15 +412,99 @@ def get_return_analysis_summary(ticker: str, start_date: str, end_date: str) -> 
             "ticker": ticker,
             "period": f"{start_date} ~ {end_date}",
             "stock_return": round(stock_final_return, 2),
-            "nasdaq_return": round(nasdaq_final_return, 2),
+            "sp500_return": round(sp500_final_return, 2),
             "relative_return": round(relative_final_return, 2),
             "stock_volatility": round(stock_volatility, 2),
-            "outperformance": round(stock_final_return - nasdaq_final_return, 2),
+            "outperformance": round(stock_final_return - sp500_final_return, 2),
             "data_points": len(data['dates'])
         }
         
     except Exception as e:
         return {"error": f"Error generating return analysis summary: {e}"}
+
+def get_return_analysis_table(ticker: str, start_date: str, end_date: str) -> dict:
+    """
+    수익률 분석 표 데이터를 반환합니다.
+    절대수익률과 상대수익률을 기간별로 제공합니다.
+    """
+    try:
+        data = calculate_absolute_and_relative_returns(ticker, start_date, end_date)
+        if "error" in data:
+            return data
+        
+        if not data['stock_returns']:
+            return {"error": "No return data available"}
+        
+        # 최종 수익률 계산
+        stock_final_return = data['stock_returns'][-1]
+        sp500_final_return = data['sp500_returns'][-1]
+        relative_final_return = data['relative_returns'][-1]
+        
+        # 1개월, 3개월, 6개월, 12개월 수익률 계산
+        dates = data['dates']
+        stock_returns = data['stock_returns']
+        sp500_returns = data['sp500_returns']
+        relative_returns = data['relative_returns']
+        
+        # 현재 날짜에서 역순으로 기간별 수익률 계산
+        periods = {
+            '1M': 22,    # 약 1개월 (22 영업일)
+            '3M': 66,    # 약 3개월 (66 영업일)
+            '6M': 132,   # 약 6개월 (132 영업일)
+            '12M': 252   # 약 12개월 (252 영업일)
+        }
+        
+        table_data = []
+        
+        for period_name, days_back in periods.items():
+            if len(stock_returns) > days_back:
+                # 해당 기간의 시작점과 끝점 인덱스
+                start_idx = len(stock_returns) - days_back - 1
+                end_idx = len(stock_returns) - 1
+                
+                # 기간별 수익률 계산 (시작점 대비 끝점)
+                stock_start_price = data['stock_prices'][start_idx]
+                stock_end_price = data['stock_prices'][end_idx]
+                stock_period_return = ((stock_end_price / stock_start_price) - 1) * 100
+                
+                sp500_start_price = data['sp500_prices'][start_idx]
+                sp500_end_price = data['sp500_prices'][end_idx]
+                sp500_period_return = ((sp500_end_price / sp500_start_price) - 1) * 100
+                
+                # 상대수익률 = 개별주식수익률 - 벤치마크수익률
+                relative_period_return = stock_period_return - sp500_period_return
+                
+                table_data.append({
+                    'period': period_name,
+                    'absolute_return': round(stock_period_return, 2),
+                    'relative_return': round(relative_period_return, 2),
+                    'benchmark_return': round(sp500_period_return, 2),
+                    'outperformance': round(stock_period_return - sp500_period_return, 2)
+                })
+            else:
+                # 데이터가 부족한 경우에도 기본값을 넣어서 프론트엔드에서 '-'로 표시
+                table_data.append({
+                    'period': period_name,
+                    'absolute_return': None,
+                    'relative_return': None,
+                    'benchmark_return': None,
+                    'outperformance': None
+                })
+        
+        return {
+            "ticker": ticker,
+            "period": f"{start_date} ~ {end_date}",
+            "table_data": table_data,
+            "current_data": {
+                "absolute_return": round(stock_final_return, 2),
+                "relative_return": round(relative_final_return, 2),
+                "benchmark_return": round(sp500_final_return, 2),
+                "outperformance": round(stock_final_return - sp500_final_return, 2)
+            }
+        }
+        
+    except Exception as e:
+        return {"error": f"Error generating return analysis table: {e}"}
 
 
 #### 04 . 시황정보 : 증시, 채권, 환율 #####

@@ -262,7 +262,7 @@ const StockChart = ({ symbol, startDate, endDate }) => {
       {/* 차트 */}
       <div className="stock-chart-wrapper">
         {chartData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={400}>
+          <ResponsiveContainer width="103%" height={400}>
             <ComposedChart data={chartData} margin={{ top: 20, right: 80, bottom: 20, left: 20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis 
