@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Query
 from typing import Optional
 from app.services.crawler import get_us_indices_6months_chart, get_us_indices_1year_chart, get_us_treasury_yields_6months, get_us_treasury_yields_1year, get_kr_fx_rates_6months, get_kr_fx_rates_1year
+from app.services.clustering import get_market_hot_articles
 from app.core.config import settings
 
 router = APIRouter()
@@ -61,3 +62,13 @@ def get_kr_fx_rates_1year_api(
     USD/KRW, EUR/USD 1년치 일별 환율 데이터를 반환합니다.
     """
     return get_kr_fx_rates_1year(end_date)
+
+@router.get("/market/hot-articles")
+def get_market_hot_articles_api(
+    start_date: str = Query(..., description="기준 날짜 (YYYY-MM-DD), 해당 날짜가 포함된 주의 일요일부터 기사를 검색합니다")
+):
+    """
+    특정 날짜의 주차에서 모든 섹터를 대상으로 클러스터링을 통한 상위 3개 핫한 기사를 반환합니다.
+    감성점수, 키워드, 요약이 포함됩니다.
+    """
+    return get_market_hot_articles(start_date)
