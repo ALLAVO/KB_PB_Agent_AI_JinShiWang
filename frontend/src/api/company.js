@@ -3,7 +3,7 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:800
 
 export const fetchCompanyFinancialAnalysis = async (symbol, startDate = null, endDate = null) => {
   try {
-    let url = `${API_BASE_URL}/api/v1/companies/${symbol}/financial-analysis`;
+    let url = `${API_BASE_URL}/companies/${symbol}/financial-analysis`;
     const params = new URLSearchParams();
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);

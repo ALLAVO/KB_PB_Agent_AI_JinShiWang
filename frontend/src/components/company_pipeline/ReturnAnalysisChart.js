@@ -161,37 +161,111 @@ const ReturnAnalysisChart = ({ symbol, startDate, endDate }) => {
       
       {/* 수익률 분석 표 */}
       {tableData && (
-        <div className="return-analysis-table">
-          <h3>주가수익률(%)</h3>
-          <table className="return-table">
-            <thead>
-              <tr>
-                <th></th>
-                {['1M', '3M', '6M', '12M'].map((period) => (
-                  <th key={period}>{period}</th>
+        <div style={{ marginTop: '16px', marginBottom: '16px' }}>
+          <table style={{
+            width: '100%',
+            borderCollapse: 'separate',
+            borderSpacing: 0,
+            background: 'white',
+            borderRadius: '10px',
+            overflow: 'hidden',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+          }}>
+            <thead style={{ background: 'rgba(234,227,215,0.7)', borderRadius: '6px 6px 0 0' }}>
+              <tr style={{ background: 'rgba(234,227,215,0.7)', height: 40 }}>
+                <th style={{
+                  padding: '24px 0 24px 0',
+                  textAlign: 'center',
+                  fontWeight: 500,
+                  fontSize: '1.2rem',
+                  color: '#363532',
+                  border: 'none',
+                  letterSpacing: '-1px',
+                  minWidth: 80,
+                  borderTopLeftRadius: '6px',
+                  borderBottom: '1.5px solid #e5dfd3',
+                }}></th>
+                {['1M', '3M', '6M', '12M'].map((period, idx) => (
+                  <th key={period} style={{
+                    padding: '24px 0 24px 0',
+                    textAlign: 'center',
+                    fontWeight: 500,
+                    fontSize: '1.2rem',
+                    color: '#363532',
+                    border: 'none',
+                    letterSpacing: '-1px',
+                    minWidth: 80,
+                    borderBottom: '1.5px solid #e5dfd3',
+                    borderTopRightRadius: idx === 3 ? '6px' : 0,
+                  }}>{period}</th>
                 ))}
               </tr>
             </thead>
-            <tbody>
-              <tr>
-                <td><strong>절대수익률</strong></td>
-                {['1M', '3M', '6M', '12M'].map((period) => {
+            <tbody style={{ background: '#fff', borderRadius: '0 0 6px 6px' }}>
+              <tr style={{
+                background: '#fff',
+                borderBottom: '1.5px solid #ede9e2',
+                height: 44
+              }}>
+                <td style={{
+                  padding: '6px 0',
+                  textAlign: 'center',
+                  fontWeight: 500,
+                  fontSize: '1.2rem',
+                  color: '#363532',
+                  letterSpacing: '-1px',
+                  borderBottomLeftRadius: '6px',
+                }}><strong>절대수익률</strong></td>
+                {['1M', '3M', '6M', '12M'].map((period, idx) => {
                   const row = tableData.table_data.find(r => r.period === period);
                   const value = row?.absolute_return;
+                  let color = '#363532';
+                  if (value > 0) color = '#ef4444';
+                  else if (value < 0) color = '#2563eb';
                   return (
-                    <td key={period} className={value !== null && value !== undefined ? getReturnColor(value) : 'return-neutral'}>
+                    <td key={period} style={{
+                      padding: '6px 0',
+                      textAlign: 'center',
+                      fontWeight: 500,
+                      fontSize: '1.2rem',
+                      color: value !== null && value !== undefined ? color : '#363532',
+                      letterSpacing: '-1px',
+                      borderBottomRightRadius: idx === 3 ? '6px' : 0,
+                    }}>
                       {value !== null && value !== undefined ? value.toFixed(1) : '-'}
                     </td>
                   );
                 })}
               </tr>
-              <tr>
-                <td><strong>상대수익률</strong></td>
-                {['1M', '3M', '6M', '12M'].map((period) => {
+              <tr style={{
+                background: '#fff',
+                height: 44
+              }}>
+                <td style={{
+                  padding: '6px 0',
+                  textAlign: 'center',
+                  fontWeight: 500,
+                  fontSize: '1.2rem',
+                  color: '#363532',
+                  letterSpacing: '-1px',
+                  borderBottomLeftRadius: '6px',
+                }}><strong>상대수익률</strong></td>
+                {['1M', '3M', '6M', '12M'].map((period, idx) => {
                   const row = tableData.table_data.find(r => r.period === period);
                   const value = row?.relative_return;
+                  let color = '#363532';
+                  if (value > 0) color = '#ef4444';
+                  else if (value < 0) color = '#2563eb';
                   return (
-                    <td key={period} className={value !== null && value !== undefined ? getReturnColor(value) : 'return-neutral'}>
+                    <td key={period} style={{
+                      padding: '6px 0',
+                      textAlign: 'center',
+                      fontWeight: 500,
+                      fontSize: '1.2rem',
+                      color: value !== null && value !== undefined ? color : '#363532',
+                      letterSpacing: '-1px',
+                      borderBottomRightRadius: idx === 3 ? '6px' : 0,
+                    }}>
                       {value !== null && value !== undefined ? value.toFixed(1) : '-'}
                     </td>
                   );
