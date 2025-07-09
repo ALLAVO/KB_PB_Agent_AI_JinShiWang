@@ -64,6 +64,38 @@ export const fetchReturnAnalysisSummary = async (symbol, startDate, endDate) => 
   }
 };
 
+// 수익률 분석 표 데이터 가져오기
+export const fetchReturnAnalysisTable = async (symbol, startDate, endDate) => {
+  try {
+    const url = new URL(`${API_BASE_URL}/return-analysis/table`);
+    url.searchParams.append('symbol', symbol);
+    url.searchParams.append('start_date', startDate);
+    url.searchParams.append('end_date', endDate);
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (data.success) {
+      return data.data;
+    } else {
+      throw new Error(data.error || 'Failed to fetch return analysis table');
+    }
+  } catch (error) {
+    console.error('Error fetching return analysis table:', error);
+    throw error;
+  }
+};
+
 // 결합된 차트 데이터 가져오기
 export const fetchCombinedReturnChart = async (symbol, startDate, endDate) => {
   try {

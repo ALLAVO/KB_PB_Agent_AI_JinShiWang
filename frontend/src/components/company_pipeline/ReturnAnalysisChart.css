@@ -53,3 +53,93 @@
 .return-chart-tooltip p {
   margin: 2px 0;
 }
+
+/* Return Analysis Table Styles */
+.return-analysis-table {
+  margin-top: 20px;
+  padding: 16px;
+  background-color: rgba(239, 195, 82, 0.1);
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.return-analysis-table h3 {
+  margin: 0 0 16px 0;
+  color: #302a24;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.return-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #ffffff;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.return-table th,
+.return-table td {
+  padding: 12px 16px;
+  text-align: center;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.return-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #495057;
+  font-size: 14px;
+}
+
+.return-table td {
+  color: #666;
+  font-size: 14px;
+}
+
+.return-table tr:hover {
+  background-color: #f8f9fa;
+}
+
+.return-table tr:last-child td {
+  border-bottom: none;
+}
+
+.return-positive {
+  color: #28a745;
+  font-weight: 600;
+}
+
+.return-negative {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+.return-neutral {
+  color: #6c757d;
+  font-weight: 600;
+}
+
+.table-loading,
+.table-error {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+}
+
+.table-error {
+  color: #d32f2f;
+}
+
+.table-subtitle {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.table-subtitle strong {
+  color: #302a24;
+}

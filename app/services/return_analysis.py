@@ -1,5 +1,5 @@
 from typing import Dict
-from app.services.crawler import calculate_absolute_and_relative_returns, get_return_analysis_summary
+from app.services.crawler import calculate_absolute_and_relative_returns, get_return_analysis_summary, get_return_analysis_table
 
 class ReturnAnalysisService:
     """수익률 분석 관련 서비스"""
@@ -41,6 +41,24 @@ class ReturnAnalysisService:
             return {"error": f"Error in analysis summary service: {e}"}
 
     @staticmethod
+    def get_analysis_table(ticker: str, start_date: str, end_date: str) -> Dict:
+        """
+        수익률 분석 표 데이터를 반환합니다.
+        
+        Args:
+            ticker: 종목 코드
+            start_date: 시작일 (YYYY-MM-DD)
+            end_date: 종료일 (YYYY-MM-DD)
+        
+        Returns:
+            Dict: 분석 표 데이터
+        """
+        try:
+            return get_return_analysis_table(ticker, start_date, end_date)
+        except Exception as e:
+            return {"error": f"Error in analysis table service: {e}"}
+
+    @staticmethod
     def get_combined_chart_data(ticker: str, start_date: str, end_date: str) -> Dict:
         """
         차트용 결합된 수익률 데이터를 반환합니다.
@@ -62,9 +80,14 @@ class ReturnAnalysisService:
             if "error" in summary_data:
                 return summary_data
             
+            table_data = get_return_analysis_table(ticker, start_date, end_date)
+            if "error" in table_data:
+                return table_data
+            
             return {
                 "chart_data": comparison_data,
                 "summary": summary_data,
+                "table_data": table_data,
                 "ticker": ticker,
                 "period": f"{start_date} ~ {end_date}"
             }
