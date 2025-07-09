@@ -668,7 +668,7 @@ def get_commodity_prices_6months(fred_api_key: str, end_date: str) -> dict:
 
 def get_enhanced_stock_info(ticker: str) -> Dict:
     """
-    stooq(데이터리더)로 불러올 수 있는 정보는 stooq로, 시가총액/유동주식수 등만 yfinance로 가져옵니다.
+    stooq(데이터리더)로 불러올 수 있는 정보는 stooq로, 시가총액/유동주식수 등은 Alpha Vantage로 가져옵니다.
     """
     import numpy as np
     try:
@@ -704,36 +704,37 @@ def get_enhanced_stock_info(ticker: str) -> Dict:
             volatility_1y = returns_1y.std() * (252 ** 0.5) * 100
         else:
             volatility_1y = None
-        # 시가총액, 유동주식수 등은 yfinance로만 가능
+        # 시가총액, 유동주식수 등은 Alpha Vantage로 가져오기
         market_cap = None
         shares_outstanding = None
         float_shares = None
-        
         try:
-            stock = yf.Ticker(ticker)
-            info = stock.info
-            
-            # 다양한 키들을 시도해보기
-            market_cap = (info.get('marketCap') or 
-                         info.get('market_cap') or 
-                         info.get('marketCap') or
-                         info.get('enterpriseValue'))
-            
-            shares_outstanding = (info.get('sharesOutstanding') or 
-                                info.get('shares_outstanding') or
-                                info.get('impliedSharesOutstanding') or
-                                info.get('commonStockSharesOutstanding'))
-            
-            float_shares = (info.get('floatShares') or 
-                           info.get('float_shares') or
-                           info.get('publicFloat'))
-            
-            # 디버깅: 사용 가능한 키들 출력
-            print(f"🔍 yfinance info keys for {ticker}: {list(info.keys())[:20]}")
-            print(f"📊 market_cap: {market_cap}, shares_outstanding: {shares_outstanding}, float_shares: {float_shares}")
-            
+            api_key = settings.ALPHAVANTAGE_API_KEY
+            url = f"https://www.alphavantage.co/query?function=OVERVIEW&symbol={ticker}&apikey={api_key}"
+            print(f"🔍 Alpha Vantage URL: {url[:50]}...{url[-20:]}")  # API 키 부분 숨기기
+            resp = requests.get(url)
+            print(f"📡 Alpha Vantage response status: {resp.status_code}")
+            if resp.status_code == 200:
+                data = resp.json()
+                print(f"📊 Alpha Vantage data keys: {list(data.keys())[:10]}")
+                # Alpha Vantage는 데이터가 없으면 빈 dict 반환
+                if data and 'Note' not in data and 'Error Message' not in data:
+                    # 안전한 숫자 변환
+                    def safe_int_convert(value):
+                        if value and str(value).replace(',', '').replace('.', '').isdigit():
+                            return int(str(value).replace(',', ''))
+                        return None
+                    
+                    print(f"💰 Raw values - MarketCap: {data.get('MarketCapitalization')}, Shares: {data.get('SharesOutstanding')}, Float: {data.get('SharesFloat')}")
+                    market_cap = safe_int_convert(data.get('MarketCapitalization'))
+                    shares_outstanding = safe_int_convert(data.get('SharesOutstanding'))
+                    float_shares = safe_int_convert(data.get('SharesFloat'))
+                    print(f"✅ Converted values - MarketCap: {market_cap}, Shares: {shares_outstanding}, Float: {float_shares}")
+                else:
+                    print(f"❌ Alpha Vantage error response: {data}")
+            # else: 그대로 None 유지
         except Exception as e:
-            print(f"❌ yfinance error for {ticker}: {e}")
+            print(f"❌ Alpha Vantage error for {ticker}: {e}")
             market_cap = None
             shares_outstanding = None
             float_shares = None

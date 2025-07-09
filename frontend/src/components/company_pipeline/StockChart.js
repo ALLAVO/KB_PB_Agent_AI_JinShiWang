@@ -208,37 +208,7 @@ const StockChart = ({ symbol, startDate, endDate }) => {
       {chartSummary && (
         <div className="chart-summary">
           <div className="summary-grid summary-grid-4rows">
-            {/* 첫 번째 행: 기간, 현재가, 52주 최고가 */}
-            <div className="summary-item">
-              <span className="summary-label">기간:</span>
-              <span className="summary-value period-dropdown-wrapper" style={{ position: 'relative' }}>
-                <button
-                  className="period-dropdown-btn"
-                  onClick={() => setShowPeriodOptions((prev) => !prev)}
-                  style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, color: '#2563eb', fontWeight: 'bold' }}
-                >
-                  {periodOptions.find(opt => opt.value === selectedPeriod)?.label || chartSummary.period}
-                  <span style={{ marginLeft: 4 }}>▼</span>
-                </button>
-                {showPeriodOptions && (
-                  <div className="period-dropdown-menu" style={{ position: 'absolute', zIndex: 10, background: '#fff', border: '1px solid #ddd', borderRadius: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginTop: 4, minWidth: 120, width: 140 }}>
-                    {periodOptions.map(option => (
-                      <button
-                        key={option.value}
-                        className={`control-btn period-btn${selectedPeriod === option.value ? ' active' : ''}`}
-                        style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 16px', background: 'none', border: 'none', color: selectedPeriod === option.value ? '#2563eb' : '#222', fontWeight: selectedPeriod === option.value ? 'bold' : 'normal', cursor: 'pointer' }}
-                        onClick={() => {
-                          setSelectedPeriod(option.value);
-                          setShowPeriodOptions(false);
-                        }}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </span>
-            </div>
+            {/* 첫 번째 행: 현재가, 52주 최고가 */}
             <div className="summary-item">
               <span className="summary-label">현재가:</span>
               <span className="summary-value">${chartSummary.current_price || chartSummary.end_price}</span>
@@ -247,7 +217,6 @@ const StockChart = ({ symbol, startDate, endDate }) => {
               <span className="summary-label">52주 최고가:</span>
               <span className="summary-value">${chartSummary.week_52_high || 'N/A'}</span>
             </div>
-            
             {/* 두 번째 행: 평균거래량(60일), 1M변동성, 52주 최저가 */}
             <div className="summary-item">
               <span className="summary-label">평균거래량(60일):</span>
@@ -261,8 +230,7 @@ const StockChart = ({ symbol, startDate, endDate }) => {
               <span className="summary-label">52주 최저가:</span>
               <span className="summary-value">${chartSummary.week_52_low || 'N/A'}</span>
             </div>
-            
-            {/* 세 번째 행: 시가총액, 1Y변동성, 변화 */}
+            {/* 세 번째 행: 시가총액, 1Y변동성 */}
             <div className="summary-item">
               <span className="summary-label">시가총액:</span>
               <span className="summary-value">{chartSummary.market_cap ? formatMarketCap(chartSummary.market_cap) : 'N/A'}</span>
@@ -271,13 +239,6 @@ const StockChart = ({ symbol, startDate, endDate }) => {
               <span className="summary-label">1Y변동성:</span>
               <span className="summary-value">{chartSummary.volatility_1y ? `${chartSummary.volatility_1y}%` : 'N/A'}</span>
             </div>
-            <div className="summary-item">
-              <span className="summary-label">변화:</span>
-              <span className={`summary-value ${chartSummary.change >= 0 ? 'positive' : 'negative'}`}>
-                {chartSummary.change >= 0 ? '+' : ''}${chartSummary.change} ({chartSummary.change_pct >= 0 ? '+' : ''}{chartSummary.change_pct}%)
-              </span>
-            </div>
-            
             {/* 네 번째 행: 유동주식수 */}
             <div className="summary-item">
               <span className="summary-label">유동주식수:</span>
@@ -286,9 +247,20 @@ const StockChart = ({ symbol, startDate, endDate }) => {
           </div>
         </div>
       )}
-      {/* 컨트롤 섹션 */}
+      {/* 기간 버튼 컨트롤 섹션 */}
       <div className="stock-chart-controls" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '24px' }}>
-        {/* 차트 타입 버튼 제거됨 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {periodOptions.map(option => (
+            <button
+              key={option.value}
+              className={`control-btn period-btn${selectedPeriod === option.value ? ' active' : ''}`}
+              style={{ marginRight: 8, padding: '4px 12px', background: selectedPeriod === option.value ? '#2563eb' : '#f3f4f6', color: selectedPeriod === option.value ? '#fff' : '#222', border: 'none', borderRadius: 4, fontWeight: selectedPeriod === option.value ? 'bold' : 'normal', cursor: 'pointer' }}
+              onClick={() => setSelectedPeriod(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
       </div>
       {/* 차트 */}
       <div className="stock-chart-wrapper">
