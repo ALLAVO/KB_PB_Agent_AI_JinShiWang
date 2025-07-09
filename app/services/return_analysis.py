@@ -7,8 +7,8 @@ class ReturnAnalysisService:
     @staticmethod
     def get_return_comparison(ticker: str, start_date: str, end_date: str) -> Dict:
         """
-        개별 주식과 나스닥의 수익률 비교 데이터를 반환합니다.
-        
+        개별 주식과 S&P 500의 수익률 비교 데이터를 반환합니다.
+
         Args:
             ticker: 종목 코드
             start_date: 시작일 (YYYY-MM-DD)

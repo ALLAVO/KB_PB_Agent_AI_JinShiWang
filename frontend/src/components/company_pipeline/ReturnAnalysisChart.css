@@ -1,0 +1,55 @@
+/* Return Analysis Chart Styles */
+.return-chart-container {
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: -30px;
+}
+
+.return-chart-wrapper {
+  background: none;
+  background-color: transparent;
+  border-radius: 6px;
+  padding: 0;
+}
+
+.return-chart-loading,
+.return-chart-error {
+  height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 1rem;
+}
+
+.return-chart-error {
+  color: #d32f2f;
+}
+
+.no-return-data {
+  height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 1rem;
+}
+
+.return-chart-tooltip {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.return-chart-tooltip .tooltip-label {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #302a24;
+}
+
+.return-chart-tooltip p {
+  margin: 2px 0;
+}
