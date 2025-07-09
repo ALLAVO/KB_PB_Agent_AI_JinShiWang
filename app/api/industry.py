@@ -8,7 +8,7 @@ class IndustryRequest(BaseModel):
     sector: str
     start_date: str
 
-@router.post("/industry/top3_articles")
+@router.post("/top3_articles")
 def get_industry_top3_articles_endpoint(request: IndustryRequest):
     """
     산업 섹터와 시작일을 받아 클러스터링 기반 상위 3개 기사를 반환합니다.
