@@ -18,8 +18,7 @@ from app.services.sentiment import preprocess_text, check_db_connection
 router = APIRouter()
 
 
-@router.get(
-    "/sentiment/top3_articles",
+@router.get("/sentiment/top3_articles",
     summary="특정 종목의 전체 기사 중 감성점수 평균에 가장 가까운 top3 기사를 감성점수와 함께 반환",
     description="stock_symbol, start_date, end_date를 받아 전체 기사 중 감성점수 평균에 가장 가까운 top3 기사를 반환합니다.",
     tags=["article analyze"]
