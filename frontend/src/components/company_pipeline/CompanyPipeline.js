@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import StockPredictionCard from './StockPredictionCard';
 import CompanyInfo from './CompanyInfo';
+import FinancialMetrics from './FinancialMetrics';
 import titlecloud from '../../assets/titlecloud.png';
 import { fetchTop3Articles } from '../../api/sentiment';
 import { fetchWeeklySummaries } from '../../api/summarize';
 import { fetchWeeklyKeywords } from '../../api/keyword';
 import { fetchPredictionSummary } from '../../api/prediction';
+import { fetchFinancialMetrics } from '../../api/financialMetrics';
 import Top3Articles from './Top3Articles';
 import ArticleDetailModal from './ArticleDetailModal';
 import StockChart from './StockChart';
@@ -22,6 +24,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
   const [summaries, setSummaries] = useState(null);
   const [keywords, setKeywords] = useState(null);
   const [prediction, setPrediction] = useState(null);
+  const [financialMetrics, setFinancialMetrics] = useState(null);
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [currentSymbol, setCurrentSymbol] = useState(""); // 현재 처리 중인 심볼 저장
@@ -144,6 +147,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
     setSummaries(null);
     setKeywords(null);
     setPrediction(null);
+    setFinancialMetrics(null);
     
     // 리포트 제목 설정
     if (onSetReportTitle) {
@@ -153,21 +157,24 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
     // 실제 API 호출 파라미터 확인
     console.log('API 호출', { symbol: cleanSymbol, startDate, endDate });
     try {
-      // 네 API를 병렬로 호출 - cleanSymbol을 사용
-      const [articlesData, summariesData, keywordsData, predictionData] = await Promise.all([
+      // 다섯 API를 병렬로 호출 - cleanSymbol을 사용
+      const [articlesData, summariesData, keywordsData, predictionData, financialData] = await Promise.all([
         fetchTop3Articles({ symbol: cleanSymbol, startDate, endDate }),
         fetchWeeklySummaries({ symbol: cleanSymbol, startDate, endDate }),
         fetchWeeklyKeywords({ symbol: cleanSymbol, startDate, endDate }),
-        fetchPredictionSummary({ symbol: cleanSymbol, startDate, endDate })
+        fetchPredictionSummary({ symbol: cleanSymbol, startDate, endDate }),
+        fetchFinancialMetrics({ symbol: cleanSymbol, endDate })
       ]);
       setTop3Articles(articlesData);
       setSummaries(summariesData);
       setKeywords(keywordsData);
       setPrediction(predictionData);
+      setFinancialMetrics(financialData);
       console.log('기사 데이터:', articlesData);
       console.log('요약 데이터:', summariesData);
       console.log('키워드 데이터:', keywordsData);
       console.log('예측 데이터:', predictionData);
+      console.log('재무지표 데이터:', financialData);
     } catch (e) {
       console.error('API 호출 오류:', e);
       setError('데이터를 불러오지 못했습니다.');
@@ -230,30 +237,40 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
           <div className="pipeline-title">
             <img src={titlecloud} alt="cloud" /> {currentSymbol ? `${currentSymbol} 기업 정보` : '기업 정보'}
           </div>
-          <CompanyInfo symbol={currentSymbol} />
+          {/* <CompanyInfo symbol={currentSymbol} /> */}
+          
+          <div className="pipeline-title">
+            <img src={titlecloud} alt="cloud" /> {currentSymbol ? `${currentSymbol} 재무지표` : '재무지표'}
+          </div>
+          <FinancialMetrics 
+            loading={loading}
+            error={error}
+            financialMetrics={financialMetrics}
+          />
+          
           <div className="pipeline-title">
             <img src={titlecloud} alt="cloud" /> {currentSymbol ? `${currentSymbol} 주가 동향` : '주가 동향'}
           </div>
           {/* 주가 차트 컴포넌트 추가 - currentSymbol 사용 */}
           
-          {currentSymbol && startDate && endDate && (
+          {/* {currentSymbol && startDate && endDate && (
             <StockChart 
               symbol={currentSymbol}
               startDate={startDate}
               endDate={endDate}
             />
-          )}
+          )} */}
           <div className="pipeline-title">
             <img src={titlecloud} alt="cloud" /> {currentSymbol ? `${currentSymbol} 지수 대비 수익률 분석` : '지수 대비 수익률 분석'}
           </div>
           {/* 주가 차트 아래에 ReturnAnalysisChart 분리 렌더링 */}
-          {currentSymbol && startDate && endDate && (
+          {/* {currentSymbol && startDate && endDate && (
             <ReturnAnalysisChart 
               symbol={currentSymbol}
               startDate={startDate}
               endDate={endDate}
             />
-          )}
+          )} */}
          
           <div className="pipeline-title">
             <img src={titlecloud} alt="cloud" /> {` ${getNextWeekInfo()} 진시황의 혜안`}

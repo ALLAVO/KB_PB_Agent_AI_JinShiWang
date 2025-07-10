@@ -837,3 +837,166 @@ def get_enhanced_stock_info(ticker: str) -> Dict:
         return result
     except Exception as e:
         return {"error": f"Error fetching enhanced stock info for {ticker}: {e}"}
+
+def get_financial_metrics_from_sec(ticker: str, end_date: str = None) -> dict:
+    """
+    SEC XBRL companyfacts API에서 재무지표를 추출합니다.
+    - 매출액, 영업이익, 영업이익률, 순이익
+    - 당해연도, 전연도 데이터
+    end_date: 'YYYY-MM-DD' 형식, 이 날짜를 기준으로 연도 계산
+    """
+    from datetime import datetime
+    
+    cik = get_cik_for_ticker(ticker)
+    if not cik:
+        return {"error": f"CIK not found for ticker {ticker}"}
+
+    company_facts_url = f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
+    try:
+        resp = requests.get(
+            company_facts_url,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; MyApp/1.0; +contact@email.com)"}
+        )
+        time.sleep(RATE_LIMIT_SLEEP)
+        if resp.status_code != 200:
+            return {"error": f"Failed to fetch company facts for CIK {cik}: Status {resp.status_code}"}
+        
+        data = resp.json()
+        us_gaap = data.get('facts', {}).get('us-gaap', {})
+        
+        # 디버깅: 사용 가능한 태그들 확인
+        print(f"🔍 Available US-GAAP tags for {ticker}: {list(us_gaap.keys())[:20]}...")
+        
+        # end_date를 기준으로 현재 연도와 전년도 계산
+        if end_date:
+            try:
+                end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+                current_year = end_dt.year
+            except ValueError:
+                current_year = datetime.now().year
+        else:
+            current_year = datetime.now().year
+        previous_year = current_year - 1
+        
+        print(f"📅 Target years: current={current_year}, previous={previous_year}")
+        
+        # 필요한 재무지표 태그들 (더 많은 옵션 추가)
+        revenue_tags = [
+            # 일반 기업용
+            'Revenues', 
+            'SalesRevenueNet', 
+            'RevenueFromContractWithCustomerExcludingAssessedTax',
+            'RevenueFromContractWithCustomerIncludingAssessedTax',
+            'SalesRevenueGoodsNet',
+            'SalesRevenueServicesNet',
+            'RevenueFromRelatedParties',
+            # 금융업용 (추가)
+            'RevenuesNetOfInterestExpense',
+            'BrokerageCommissionsRevenue',
+            'InvestmentBankingRevenue',
+            'PrincipalTransactionsRevenue'
+        ]
+        operating_income_tags = [
+            'OperatingIncomeLoss',
+            'IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest',
+            'IncomeLossFromContinuingOperations'
+        ]
+        net_income_tags = [
+            'NetIncomeLoss',
+            'NetIncomeLossAvailableToCommonStockholdersBasic',
+            'ProfitLoss'
+        ]
+        
+        def get_latest_value_for_year(tag_list, year):
+            """특정 연도의 가장 최신 값을 가져옵니다."""
+            print(f"🔍 Searching for year {year} in tags: {tag_list}")
+            
+            for tag in tag_list:
+                if tag in us_gaap:
+                    print(f"✅ Found tag: {tag}")
+                    facts = us_gaap[tag].get('units', {})
+                    print(f"📊 Available units for {tag}: {list(facts.keys())}")
+                    
+                    unit = 'USD' if 'USD' in facts else (list(facts.keys())[0] if facts else None)
+                    if unit:
+                        fact_list = facts[unit]
+                        print(f"📈 Total facts for {tag} in {unit}: {len(fact_list)}")
+                        
+                        # 모든 날짜 출력 (최근 10개만)
+                        all_dates = [f.get('end', 'No end date') for f in fact_list]
+                        print(f"📅 Recent dates for {tag}: {sorted(all_dates, reverse=True)[:10]}")
+                        
+                        # 해당 연도의 데이터만 필터링
+                        year_facts = [f for f in fact_list if 'end' in f and str(year) in f['end']]
+                        print(f"🎯 Facts for year {year}: {len(year_facts)}")
+                        
+                        if year_facts:
+                            # 가장 최신 날짜의 값 반환
+                            latest = max(year_facts, key=lambda f: f['end'])
+                            print(f"🎉 Found value for {tag} in {year}: {latest['val']} (date: {latest['end']})")
+                            return latest['val']
+                        else:
+                            print(f"❌ No data found for {tag} in year {year}")
+                else:
+                    print(f"❌ Tag not found: {tag}")
+            
+            print(f"❌ No value found for any tag in year {year}")
+            return None
+        
+        # 각 연도별 데이터 수집
+        print(f"\n🔍 === Searching for REVENUE data ===")
+        current_revenue = get_latest_value_for_year(revenue_tags, current_year)
+        previous_revenue = get_latest_value_for_year(revenue_tags, previous_year)
+        
+        print(f"\n🔍 === Searching for OPERATING INCOME data ===")
+        current_operating_income = get_latest_value_for_year(operating_income_tags, current_year)
+        previous_operating_income = get_latest_value_for_year(operating_income_tags, previous_year)
+        
+        print(f"\n🔍 === Searching for NET INCOME data ===")
+        current_net_income = get_latest_value_for_year(net_income_tags, current_year)
+        previous_net_income = get_latest_value_for_year(net_income_tags, previous_year)
+        
+        print(f"\n📊 === FINAL RESULTS ===")
+        print(f"Revenue - Current: {current_revenue}, Previous: {previous_revenue}")
+        print(f"Operating Income - Current: {current_operating_income}, Previous: {previous_operating_income}")
+        print(f"Net Income - Current: {current_net_income}, Previous: {previous_net_income}")
+        
+        # 영업이익률 계산
+        current_operating_margin = None
+        previous_operating_margin = None
+        
+        if current_revenue and current_operating_income and current_revenue != 0:
+            current_operating_margin = (current_operating_income / current_revenue) * 100
+            print(f"✅ Calculated current operating margin: {current_operating_margin}%")
+            
+        if previous_revenue and previous_operating_income and previous_revenue != 0:
+            previous_operating_margin = (previous_operating_income / previous_revenue) * 100
+            print(f"✅ Calculated previous operating margin: {previous_operating_margin}%")
+        
+        result = {
+            "current_year": current_year,
+            "previous_year": previous_year,
+            "metrics": {
+                "revenue": {
+                    "current": current_revenue,
+                    "previous": previous_revenue
+                },
+                "operating_income": {
+                    "current": current_operating_income,
+                    "previous": previous_operating_income
+                },
+                "operating_margin": {
+                    "current": current_operating_margin,
+                    "previous": previous_operating_margin
+                },
+                "net_income": {
+                    "current": current_net_income,
+                    "previous": previous_net_income
+                }
+            }
+        }
+        
+        return result
+        
+    except Exception as e:
+        return {"error": f"Error fetching financial metrics: {e}"}

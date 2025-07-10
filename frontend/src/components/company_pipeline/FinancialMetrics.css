@@ -1,0 +1,126 @@
+.financial-metrics-container {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.metric-card {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 20px;
+  border-left: 4px solid #F8A70C;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.metric-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #302A24;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.metric-years {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.metric-year {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.year-label {
+  font-size: 14px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.metric-value {
+  font-size: 16px;
+  font-weight: bold;
+  color: #302A24;
+}
+
+.metric-change {
+  text-align: center;
+  margin-top: 8px;
+}
+
+.change-value {
+  font-size: 14px;
+  font-weight: bold;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.change-value.positive {
+  color: #d32f2f;
+  background: #ffebee;
+}
+
+.change-value.negative {
+  color: #1976d2;
+  background: #e3f2fd;
+}
+
+.loading-spinner {
+  text-align: center;
+  padding: 40px;
+  color: #6c757d;
+  font-size: 16px;
+}
+
+.error-message {
+  text-align: center;
+  padding: 40px;
+  color: #dc3545;
+  font-size: 16px;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 6px;
+}
+
+.no-data-message {
+  text-align: center;
+  padding: 40px;
+  color: #6c757d;
+  font-size: 16px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+}
+
+@media (max-width: 768px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .financial-metrics-container {
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .metric-card {
+    padding: 16px;
+  }
+}
