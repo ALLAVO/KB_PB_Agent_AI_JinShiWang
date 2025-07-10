@@ -365,7 +365,7 @@ def calculate_absolute_and_relative_returns(ticker: str, start_date: str, end_da
         
         # 수익률 계산 (%)
         stock_returns = [((price / stock_prices[0]) - 1) * 100 for price in stock_prices]
-        sp500_returns = [((price / sp500_prices[0]) - 1) * 100 for price in sp500_prices]
+        sp500_returns = [((price / sp500Prices[0]) - 1) * 100 for price in sp500_prices]
         relative_returns = [((rel_idx / 100) - 1) * 100 for rel_idx in relative_index]
         
         return {
@@ -837,3 +837,553 @@ def get_enhanced_stock_info(ticker: str) -> Dict:
         return result
     except Exception as e:
         return {"error": f"Error fetching enhanced stock info for {ticker}: {e}"}
+
+def get_financial_metrics_from_sec(ticker: str, end_date: str = None) -> dict:
+    """
+    SEC XBRL companyfacts API에서 재무지표를 추출합니다.
+    - 매출액, 영업이익, 영업이익률, 순이익
+    - 당해연도, 전연도 데이터
+    end_date: 'YYYY-MM-DD' 형식, 이 날짜를 기준으로 연도 계산
+    """
+    from datetime import datetime
+    
+    cik = get_cik_for_ticker(ticker)
+    if not cik:
+        return {"error": f"CIK not found for ticker {ticker}"}
+
+    company_facts_url = f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
+    try:
+        resp = requests.get(
+            company_facts_url,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; MyApp/1.0; +contact@email.com)"}
+        )
+        time.sleep(RATE_LIMIT_SLEEP)
+        if resp.status_code != 200:
+            return {"error": f"Failed to fetch company facts for CIK {cik}: Status {resp.status_code}"}
+        
+        data = resp.json()
+        us_gaap = data.get('facts', {}).get('us-gaap', {})
+        
+        # 디버깅: 사용 가능한 태그들 확인
+        print(f"🔍 Available US-GAAP tags for {ticker}: {list(us_gaap.keys())[:20]}...")
+        
+        # end_date를 기준으로 현재 연도와 전년도 계산
+        if end_date:
+            try:
+                end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+                current_year = end_dt.year
+            except ValueError:
+                current_year = datetime.now().year
+        else:
+            current_year = datetime.now().year
+        previous_year = current_year - 1
+        
+        print(f"📅 Target years: current={current_year}, previous={previous_year}")
+        
+        # 필요한 재무지표 태그들 (더 많은 옵션 추가)
+        revenue_tags = [
+            # 일반 기업용
+            'Revenues', 
+            'SalesRevenueNet', 
+            'RevenueFromContractWithCustomerExcludingAssessedTax',
+            'RevenueFromContractWithCustomerIncludingAssessedTax',
+            'SalesRevenueGoodsNet',
+            'SalesRevenueServicesNet',
+            'RevenueFromRelatedParties',
+            # 금융업용 (추가)
+            'RevenuesNetOfInterestExpense',
+            'BrokerageCommissionsRevenue',
+            'InvestmentBankingRevenue',
+            'PrincipalTransactionsRevenue'
+        ]
+        operating_income_tags = [
+            'OperatingIncomeLoss',
+            'IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest',
+            'IncomeLossFromContinuingOperations'
+        ]
+        net_income_tags = [
+            'NetIncomeLoss',
+            'NetIncomeLossAvailableToCommonStockholdersBasic',
+            'ProfitLoss'
+        ]
+        
+        def get_latest_value_for_year(tag_list, year):
+            """특정 연도의 가장 최신 값을 가져옵니다."""
+            print(f"🔍 Searching for year {year} in tags: {tag_list}")
+            
+            for tag in tag_list:
+                if tag in us_gaap:
+                    print(f"✅ Found tag: {tag}")
+                    facts = us_gaap[tag].get('units', {})
+                    print(f"📊 Available units for {tag}: {list(facts.keys())}")
+                    
+                    unit = 'USD' if 'USD' in facts else (list(facts.keys())[0] if facts else None)
+                    if unit:
+                        fact_list = facts[unit]
+                        print(f"📈 Total facts for {tag} in {unit}: {len(fact_list)}")
+                        
+                        # 모든 날짜 출력 (최근 10개만)
+                        all_dates = [f.get('end', 'No end date') for f in fact_list]
+                        print(f"📅 Recent dates for {tag}: {sorted(all_dates, reverse=True)[:10]}")
+                        
+                        # 해당 연도의 데이터만 필터링
+                        year_facts = [f for f in fact_list if 'end' in f and str(year) in f['end']]
+                        print(f"🎯 Facts for year {year}: {len(year_facts)}")
+                        
+                        if year_facts:
+                            # 가장 최신 날짜의 값 반환
+                            latest = max(year_facts, key=lambda f: f['end'])
+                            print(f"🎉 Found value for {tag} in {year}: {latest['val']} (date: {latest['end']})")
+                            return latest['val']
+                        else:
+                            print(f"❌ No data found for {tag} in year {year}")
+                else:
+                    print(f"❌ Tag not found: {tag}")
+            
+            print(f"❌ No value found for any tag in year {year}")
+            return None
+        
+        # 각 연도별 데이터 수집
+        print(f"\n🔍 === Searching for REVENUE data ===")
+        current_revenue = get_latest_value_for_year(revenue_tags, current_year)
+        previous_revenue = get_latest_value_for_year(revenue_tags, previous_year)
+        
+        print(f"\n🔍 === Searching for OPERATING INCOME data ===")
+        current_operating_income = get_latest_value_for_year(operating_income_tags, current_year)
+        previous_operating_income = get_latest_value_for_year(operating_income_tags, previous_year)
+        
+        print(f"\n🔍 === Searching for NET INCOME data ===")
+        current_net_income = get_latest_value_for_year(net_income_tags, current_year)
+        previous_net_income = get_latest_value_for_year(net_income_tags, previous_year)
+        
+        print(f"\n📊 === FINAL RESULTS ===")
+        print(f"Revenue - Current: {current_revenue}, Previous: {previous_revenue}")
+        print(f"Operating Income - Current: {current_operating_income}, Previous: {previous_operating_income}")
+        print(f"Net Income - Current: {current_net_income}, Previous: {previous_net_income}")
+        
+        # 영업이익률 계산
+        current_operating_margin = None
+        previous_operating_margin = None
+        
+        if current_revenue and current_operating_income and current_revenue != 0:
+            current_operating_margin = (current_operating_income / current_revenue) * 100
+            print(f"✅ Calculated current operating margin: {current_operating_margin}%")
+            
+        if previous_revenue and previous_operating_income and previous_revenue != 0:
+            previous_operating_margin = (previous_operating_income / previous_revenue) * 100
+            print(f"✅ Calculated previous operating margin: {previous_operating_margin}%")
+        
+        result = {
+            "current_year": current_year,
+            "previous_year": previous_year,
+            "metrics": {
+                "revenue": {
+                    "current": current_revenue,
+                    "previous": previous_revenue
+                },
+                "operating_income": {
+                    "current": current_operating_income,
+                    "previous": previous_operating_income
+                },
+                "operating_margin": {
+                    "current": current_operating_margin,
+                    "previous": previous_operating_margin
+                },
+                "net_income": {
+                    "current": current_net_income,
+                    "previous": previous_net_income
+                }
+            }
+        }
+        
+        return result
+        
+    except Exception as e:
+        return {"error": f"Error fetching financial metrics: {e}"}
+
+def get_valuation_metrics_from_sec(ticker: str, end_date: str = None) -> dict:
+    """
+    SEC XBRL companyfacts API에서 벨류에이션 지표를 추출합니다.
+    - EPS, P/E, P/B, ROE(%)
+    - 당해연도, 전연도 데이터
+    end_date: 'YYYY-MM-DD' 형식, 이 날짜를 기준으로 연도 계산
+    """
+    from datetime import datetime
+    
+    cik = get_cik_for_ticker(ticker)
+    if not cik:
+        return {"error": f"CIK not found for ticker {ticker}"}
+
+    company_facts_url = f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
+    try:
+        resp = requests.get(
+            company_facts_url,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; MyApp/1.0; +contact@email.com)"}
+        )
+        time.sleep(RATE_LIMIT_SLEEP)
+        if resp.status_code != 200:
+            return {"error": f"Failed to fetch company facts for CIK {cik}: Status {resp.status_code}"}
+        
+        data = resp.json()
+        us_gaap = data.get('facts', {}).get('us-gaap', {})
+        
+        # 디버깅: 사용 가능한 태그들 확인
+        print(f"🔍 Available US-GAAP tags for valuation of {ticker}: {list(us_gaap.keys())[:20]}...")
+        
+        # end_date를 기준으로 현재 연도와 전년도 계산
+        if end_date:
+            try:
+                end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+                current_year = end_dt.year
+            except ValueError:
+                current_year = datetime.now().year
+        else:
+            current_year = datetime.now().year
+        previous_year = current_year - 1
+        
+        print(f"📅 Valuation Target years: current={current_year}, previous={previous_year}")
+        
+        # 필요한 재무지표 태그들
+        # EPS 관련 태그들
+        eps_tags = [
+            'EarningsPerShareBasic',
+            'EarningsPerShareDiluted',
+            'IncomeLossFromContinuingOperationsPerBasicShare',
+            'IncomeLossFromContinuingOperationsPerDilutedShare'
+        ]
+        
+        # 순이익 관련 태그들 (EPS 계산용)
+        net_income_tags = [
+            'NetIncomeLoss',
+            'ProfitLoss',
+            'IncomeLossFromContinuingOperations',
+            'IncomeLossFromContinuingOperationsIncludingPortionAttributableToNoncontrollingInterest'
+        ]
+        
+        # 주식수 관련 태그들 (EPS 계산용) - 더 많은 태그 추가
+        shares_tags = [
+            'WeightedAverageNumberOfSharesOutstandingBasic',
+            'WeightedAverageNumberOfDilutedSharesOutstanding',
+            'CommonStockSharesOutstanding',
+            'CommonStockSharesIssued',
+            'SharesOutstanding',
+            'NumberOfSharesOutstanding',
+            'CommonStockSharesAuthorized',
+            'WeightedAverageSharesOutstandingBasic',
+            'WeightedAverageSharesOutstandingDiluted',
+            # 분기별/연말 기준 주식수
+            'CommonStockSharesOutstandingAtPeriodEnd',
+            'SharesIssuedAndOutstanding'
+        ]
+        
+        # 자기자본(Shareholders' Equity) 관련 태그들 (ROE, P/B 계산용) - 더 많은 태그 추가
+        equity_tags = [
+            'StockholdersEquity',
+            'StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest', 
+            'StockholdersEquityAndNoncontrollingInterests',
+            'PartnersCapitalIncludingPortionAttributableToNoncontrollingInterest',
+            'PartnersCapital',
+            'MembersEquity',
+            'TotalEquity',
+            'CommonStockholdersEquity',
+            'ShareholdersEquityCommonStockholders',
+            # 은행/금융업 특화 태그들
+            'BankShareholdersEquity',
+            'ShareholdersEquityBankHoldingCompany',
+            # REITs 특화 태그들
+            'ShareholdersEquityREIT',
+            'TotalShareholdersEquity'
+        ]
+        
+        # 주가 정보는 Stooq를 통해 조회
+        try:
+            # Stooq용 티커 변환
+            stooq_ticker = ticker if ticker.endswith('.US') else ticker + '.US'
+            
+            # 2년치 데이터 가져오기 (현재년도, 전년도 커버)
+            start_date = f"{previous_year}-01-01"
+            end_date = f"{current_year}-12-31"
+            
+            print(f"📈 Fetching stock data from Stooq for {stooq_ticker}: {start_date} to {end_date}")
+            df = web.DataReader(stooq_ticker, 'stooq', start=start_date, end=end_date)
+            
+            if not df.empty:
+                df = df.sort_index()
+                print(f"📊 Stock data range: {df.index[0]} to {df.index[-1]} ({len(df)} records)")
+                
+                # 현재 주가 (가장 최근)
+                current_price = df['Close'].iloc[-1]
+                print(f"💰 Current price: {current_price}")
+                
+                # 전년도 말 주가 (12월 말 또는 가장 가까운 날짜)
+                previous_year_data = df[df.index.year == previous_year]
+                if not previous_year_data.empty:
+                    previous_price = previous_year_data['Close'].iloc[-1]  # 전년도 마지막 거래일
+                    print(f"💰 Previous year price: {previous_price} (date: {previous_year_data.index[-1]})")
+                else:
+                    previous_price = None
+                    print(f"❌ No stock data found for previous year {previous_year}")
+                
+                # 주식수는 yfinance에서만 가져올 수 있음 (Stooq에는 없음)
+                try:
+                    stock = yf.Ticker(ticker)
+                    info = stock.info
+                    shares_outstanding = info.get('sharesOutstanding')
+                    print(f"📈 Shares outstanding: {shares_outstanding}")
+                except:
+                    shares_outstanding = None
+                    print(f"❌ Could not fetch shares outstanding from yfinance")
+            else:
+                print(f"❌ No stock data found for {stooq_ticker}")
+                current_price = None
+                previous_price = None
+                shares_outstanding = None
+                
+        except Exception as e:
+            print(f"⚠️ Error fetching stock data from Stooq: {e}")
+            current_price = None
+            previous_price = None
+            shares_outstanding = None
+        
+        def find_metric_value(tags, target_year, metric_name="Unknown"):
+            """주어진 태그들에서 특정 연도의 값을 찾는 함수 (개선된 디버깅 포함)"""
+            print(f"\n🔍 === Searching for {metric_name} in year {target_year} ===")
+            
+            for tag in tags:
+                if tag in us_gaap:
+                    print(f"✅ Found tag: {tag}")
+                    tag_data = us_gaap[tag]
+                    units = tag_data.get('units', {})
+                    print(f"📊 Available units for {tag}: {list(units.keys())}")
+                    
+                    for unit_type, unit_data in units.items():
+                        print(f"📈 Checking unit: {unit_type} ({len(unit_data)} entries)")
+                        
+                        # 해당 연도의 모든 데이터 찾기 (더 유연한 검색)
+                        year_entries = []
+                        for entry in unit_data:
+                            entry_year = entry.get('fy')
+                            entry_form = entry.get('form', 'Unknown')
+                            entry_end = entry.get('end', 'No date')
+                            entry_val = entry.get('val')
+                            entry_period = entry.get('fp', 'Unknown')  # FY=Annual, Q1,Q2,Q3,Q4=Quarterly
+                            
+                            # 해당 연도의 데이터만 수집 (연간 데이터 우선, 분기 데이터도 고려)
+                            if entry_year == target_year:
+                                year_entries.append({
+                                    'year': entry_year,
+                                    'form': entry_form,
+                                    'end': entry_end,
+                                    'val': entry_val,
+                                    'period': entry_period
+                                })
+                        
+                        print(f"🎯 Found {len(year_entries)} entries for year {target_year}")
+                        for entry in year_entries:
+                            print(f"   - Form: {entry['form']}, Period: {entry['period']}, End: {entry['end']}, Value: {entry['val']}")
+                        
+                        # 우선순위: Annual(FY) > Q4 > Q3 > Q2 > Q1, 10-K > 10-Q, 최신 날짜 우선
+                        if year_entries:
+                            # 1순위: Annual 데이터 중 10-K
+                            annual_k = [e for e in year_entries if e['period'] == 'FY' and e['form'] == '10-K']
+                            if annual_k:
+                                selected = max(annual_k, key=lambda x: x['end'])
+                                print(f"🎉 Selected Annual 10-K entry: {selected}")
+                                return selected['val']
+                            
+                            # 2순위: Annual 데이터 중 기타
+                            annual_other = [e for e in year_entries if e['period'] == 'FY']
+                            if annual_other:
+                                selected = max(annual_other, key=lambda x: x['end'])
+                                print(f"🎉 Selected Annual entry: {selected}")
+                                return selected['val']
+                            
+                            # 3순위: Q4 데이터 (연말과 가장 가까움)
+                            q4_data = [e for e in year_entries if e['period'] == 'Q4']
+                            if q4_data:
+                                selected = max(q4_data, key=lambda x: x['end'])
+                                print(f"🎉 Selected Q4 entry: {selected}")
+                                return selected['val']
+                            
+                            # 4순위: 10-K 폼 (기간 상관없이)
+                            k_forms = [e for e in year_entries if e['form'] == '10-K']
+                            if k_forms:
+                                selected = max(k_forms, key=lambda x: x['end'])
+                                print(f"🎉 Selected 10-K entry: {selected}")
+                                return selected['val']
+                            
+                            # 5순위: 10-Q 폼 중 최신
+                            q_forms = [e for e in year_entries if e['form'] == '10-Q']
+                            if q_forms:
+                                selected = max(q_forms, key=lambda x: x['end'])
+                                print(f"🎉 Selected 10-Q entry: {selected}")
+                                return selected['val']
+                            
+                            # 6순위: 기타 폼 중 최신
+                            selected = max(year_entries, key=lambda x: x['end'])
+                            print(f"🎉 Selected other form entry: {selected}")
+                            return selected['val']
+                else:
+                    print(f"❌ Tag not found: {tag}")
+            
+            print(f"❌ No value found for {metric_name} in year {target_year}")
+            return None
+        
+        # 각 지표별 현재년도, 전년도 값 추출
+        current_eps = find_metric_value(eps_tags, current_year, "EPS")
+        previous_eps = find_metric_value(eps_tags, previous_year, "EPS")
+        
+        current_net_income = find_metric_value(net_income_tags, current_year, "Net Income")
+        previous_net_income = find_metric_value(net_income_tags, previous_year, "Net Income")
+        
+        current_shares = find_metric_value(shares_tags, current_year, "Shares Outstanding")
+        previous_shares = find_metric_value(shares_tags, previous_year, "Shares Outstanding")
+        
+        current_equity = find_metric_value(equity_tags, current_year, "Shareholders Equity")
+        previous_equity = find_metric_value(equity_tags, previous_year, "Shareholders Equity")
+        
+        print(f"\n📊 === RAW DATA SUMMARY ===")
+        print(f"EPS - Current: {current_eps}, Previous: {previous_eps}")
+        print(f"Net Income - Current: {current_net_income}, Previous: {previous_net_income}")
+        print(f"Shares - Current: {current_shares}, Previous: {previous_shares}")
+        print(f"Equity - Current: {current_equity}, Previous: {previous_equity}")
+        print(f"Stock Price - Current: {current_price}, Previous: {previous_price}")
+        print(f"Shares Outstanding (yf): {shares_outstanding}")
+        
+        # EPS 계산 (직접 값이 없는 경우)
+        if current_eps is None and current_net_income and current_shares:
+            current_eps = current_net_income / current_shares
+            print(f"✅ Calculated current EPS: {current_eps}")
+        if previous_eps is None and previous_net_income and previous_shares:
+            previous_eps = previous_net_income / previous_shares
+            print(f"✅ Calculated previous EPS: {previous_eps}")
+        
+        # P/E 계산
+        current_pe = None
+        previous_pe = None
+        if current_eps and current_eps > 0 and current_price:
+            current_pe = current_price / current_eps
+            print(f"✅ Calculated current P/E: {current_pe} (Price: {current_price} / EPS: {current_eps})")
+        else:
+            print(f"❌ Cannot calculate current P/E - EPS: {current_eps}, Price: {current_price}")
+            
+        if previous_eps and previous_eps > 0 and previous_price:
+            previous_pe = previous_price / previous_eps
+            print(f"✅ Calculated previous P/E: {previous_pe} (Price: {previous_price} / EPS: {previous_eps})")
+        else:
+            print(f"❌ Cannot calculate previous P/E - EPS: {previous_eps}, Price: {previous_price}")
+        
+        # P/B 계산 (Book Value per Share = Equity / Shares Outstanding)
+        current_pb = None
+        previous_pb = None
+        
+        # 현재년도 P/B 계산
+        if current_equity and shares_outstanding and current_price:
+            book_value_per_share = current_equity / shares_outstanding
+            if book_value_per_share > 0:
+                current_pb = current_price / book_value_per_share
+                print(f"✅ Calculated current P/B: {current_pb} (Price: {current_price} / BVPS: {book_value_per_share})")
+            else:
+                print(f"❌ Current BVPS is not positive: {book_value_per_share}")
+        else:
+            print(f"❌ Cannot calculate current P/B - Equity: {current_equity}, Shares: {shares_outstanding}, Price: {current_price}")
+        
+        # 전년도 P/B 계산 - 전년도 자기자본과 전년도 말 주식수 사용
+        if previous_equity and previous_price:
+            # 전년도 주식수가 있으면 사용, 없으면 현재 주식수 사용 (일반적으로 큰 변화 없음)
+            shares_for_previous = previous_shares if previous_shares else shares_outstanding
+            
+            if shares_for_previous:
+                previous_book_value_per_share = previous_equity / shares_for_previous
+                if previous_book_value_per_share > 0:
+                    previous_pb = previous_price / previous_book_value_per_share
+                    print(f"✅ Calculated previous P/B: {previous_pb} (Price: {previous_price} / BVPS: {previous_book_value_per_share})")
+                    print(f"   📊 Used shares: {shares_for_previous} ({'from SEC' if previous_shares else 'from yfinance (current)'})")
+                else:
+                    print(f"❌ Previous BVPS is not positive: {previous_book_value_per_share}")
+            else:
+                print(f"❌ No shares data available for previous P/B calculation")
+        else:
+            print(f"❌ Cannot calculate previous P/B - Equity: {previous_equity}, Price: {previous_price}")
+            
+        # P/B 계산에 대한 추가 디버깅 정보
+        print(f"\n🔍 === P/B CALCULATION DEBUG ===")
+        print(f"Current Equity: {current_equity:,}" if current_equity else f"Current Equity: {current_equity}")
+        print(f"Previous Equity: {previous_equity:,}" if previous_equity else f"Previous Equity: {previous_equity}")
+        print(f"Current Shares (SEC): {current_shares:,}" if current_shares else f"Current Shares (SEC): {current_shares}")
+        print(f"Previous Shares (SEC): {previous_shares:,}" if previous_shares else f"Previous Shares (SEC): {previous_shares}")
+        print(f"Shares Outstanding (yf): {shares_outstanding:,}" if shares_outstanding else f"Shares Outstanding (yf): {shares_outstanding}")
+        print(f"Current Price: ${current_price}" if current_price else f"Current Price: {current_price}")
+        print(f"Previous Price: ${previous_price}" if previous_price else f"Previous Price: {previous_price}")
+        
+        # ROE 계산 (Return on Equity = Net Income / Shareholders' Equity * 100)
+        current_roe = None
+        previous_roe = None
+        if current_net_income and current_equity and current_equity > 0:
+            current_roe = (current_net_income / current_equity) * 100
+            print(f"✅ Calculated current ROE: {current_roe}% (NI: {current_net_income} / Equity: {current_equity})")
+        else:
+            print(f"❌ Cannot calculate current ROE - Net Income: {current_net_income}, Equity: {current_equity}")
+            
+        if previous_net_income and previous_equity and previous_equity > 0:
+            previous_roe = (previous_net_income / previous_equity) * 100
+            print(f"✅ Calculated previous ROE: {previous_roe}% (NI: {previous_net_income} / Equity: {previous_equity})")
+        else:
+            print(f"❌ Cannot calculate previous ROE - Net Income: {previous_net_income}, Equity: {previous_equity}")
+        
+        # 값 정리 (소수점 2자리)
+        def format_value(value):
+            if value is None:
+                return None
+            return round(float(value), 2)
+        
+        result = {
+            "ticker": ticker,
+            "current_year": current_year,
+            "previous_year": previous_year,
+            "metrics": {
+                "eps": {
+                    "current": format_value(current_eps),
+                    "previous": format_value(previous_eps)
+                },
+                "pe_ratio": {
+                    "current": format_value(current_pe),
+                    "previous": format_value(previous_pe)
+                },
+                "pb_ratio": {
+                    "current": format_value(current_pb),
+                    "previous": format_value(previous_pb)
+                },
+                "roe_percent": {
+                    "current": format_value(current_roe),
+                    "previous": format_value(previous_roe)
+                }
+            },
+            "raw_data": {
+                "current_price": format_value(current_price),
+                "previous_price": format_value(previous_price),
+                "shares_outstanding_yf": shares_outstanding,
+                "current_net_income": format_value(current_net_income),
+                "previous_net_income": format_value(previous_net_income),
+                "current_equity": format_value(current_equity),
+                "previous_equity": format_value(previous_equity),
+                "current_shares_sec": format_value(current_shares),
+                "previous_shares_sec": format_value(previous_shares),
+                # P/B 계산을 위한 추가 정보
+                "current_book_value_per_share": format_value(current_equity / shares_outstanding) if current_equity and shares_outstanding else None,
+                "previous_book_value_per_share": format_value(previous_equity / (previous_shares or shares_outstanding)) if previous_equity and (previous_shares or shares_outstanding) else None
+            }
+        }
+        
+        print(f"\n🎯 === FINAL VALUATION METRICS RESULT ===")
+        print(f"Ticker: {ticker}")
+        print(f"Years: {current_year} (current) / {previous_year} (previous)")
+        print(f"EPS: {result['metrics']['eps']['current']} / {result['metrics']['eps']['previous']}")
+        print(f"P/E: {result['metrics']['pe_ratio']['current']} / {result['metrics']['pe_ratio']['previous']}")
+        print(f"P/B: {result['metrics']['pb_ratio']['current']} / {result['metrics']['pb_ratio']['previous']}")
+        print(f"ROE: {result['metrics']['roe_percent']['current']}% / {result['metrics']['roe_percent']['previous']}%")
+        
+        return result
+        
+    except Exception as e:
+        return {"error": f"Error fetching valuation metrics: {e}"}
