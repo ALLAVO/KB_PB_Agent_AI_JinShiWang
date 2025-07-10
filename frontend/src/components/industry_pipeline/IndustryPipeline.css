@@ -297,3 +297,83 @@
   color: #666;
 }
 
+.industry-companies-section {
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+.industry-companies-loading {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.industry-companies-nodata {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.companies-table-container {
+  overflow-x: auto;
+  margin-top: 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.companies-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  min-width: 1200px;
+}
+
+.companies-table th {
+  background: linear-gradient(145deg, #fffbe6, #fff9db);
+  color: #302A24;
+  font-weight: 600;
+  padding: 12px 8px;
+  text-align: center;
+  border: 1px solid #e9cfa5;
+  font-size: 14px;
+}
+
+.companies-table td {
+  padding: 10px 8px;
+  text-align: center;
+  border: 1px solid #f0f0f0;
+  font-size: 13px;
+}
+
+.companies-table tbody tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+.companies-table tbody tr:hover {
+  background-color: #f5f5f5;
+}
+
+.companies-table .company-name {
+  text-align: left;
+  font-weight: 500;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.companies-table .ticker {
+  font-weight: 600;
+  color: #666;
+}
+
+.companies-table .positive {
+  color: #2e7d32;
+  font-weight: 500;
+}
+
+.companies-table .negative {
+  color: #d32f2f;
+  font-weight: 500;
+}
+
