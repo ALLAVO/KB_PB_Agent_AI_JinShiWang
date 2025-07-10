@@ -46,49 +46,27 @@ function FinancialMetrics({ loading, error, financialMetrics }) {
     return '-';
   };
 
-  // 증감률 계산
-  const calcChange = (current, previous) => {
-    if (current === null || previous === null || current === undefined || previous === undefined || previous === 0) return null;
-    return ((current - previous) / previous * 100);
-  };
-
-  // 증감률 색상
-  const getChangeColor = (value) => {
-    if (value === null) return '#363532';
-    if (value > 0) return '#d32f2f'; // 빨강(상승)
-    if (value < 0) return '#1976d2'; // 파랑(하락)
-    return '#363532';
-  };
-
   // 표 데이터 구성
   const rows = [
     {
       label: '매출액',
       current: formatValue(metrics.revenue.current),
       previous: formatValue(metrics.revenue.previous),
-      change: calcChange(metrics.revenue.current, metrics.revenue.previous),
-      isPercent: false
     },
     {
       label: '영업이익',
       current: formatValue(metrics.operating_income.current),
       previous: formatValue(metrics.operating_income.previous),
-      change: calcChange(metrics.operating_income.current, metrics.operating_income.previous),
-      isPercent: false
     },
     {
       label: '영업이익률',
       current: formatPercent(metrics.operating_margin.current),
       previous: formatPercent(metrics.operating_margin.previous),
-      change: calcChange(metrics.operating_margin.current, metrics.operating_margin.previous),
-      isPercent: true
     },
     {
       label: '순이익',
       current: formatValue(metrics.net_income.current),
       previous: formatValue(metrics.net_income.previous),
-      change: calcChange(metrics.net_income.current, metrics.net_income.previous),
-      isPercent: false
     }
   ];
 
@@ -100,7 +78,6 @@ function FinancialMetrics({ loading, error, financialMetrics }) {
             <th style={{ padding: '18px 0', textAlign: 'center', fontWeight: 500, fontSize: '1.1rem', color: '#363532', border: 'none', letterSpacing: '-1px', minWidth: 80, borderTopLeftRadius: '6px', borderBottom: '1.5px solid #e5dfd3' }}>지표</th>
             <th style={{ padding: '18px 0', textAlign: 'center', fontWeight: 500, fontSize: '1.1rem', color: '#363532', border: 'none', letterSpacing: '-1px', minWidth: 100, borderBottom: '1.5px solid #e5dfd3' }}>{current_year}년</th>
             <th style={{ padding: '18px 0', textAlign: 'center', fontWeight: 500, fontSize: '1.1rem', color: '#363532', border: 'none', letterSpacing: '-1px', minWidth: 100, borderBottom: '1.5px solid #e5dfd3' }}>{previous_year}년</th>
-            <th style={{ padding: '18px 0', textAlign: 'center', fontWeight: 500, fontSize: '1.1rem', color: '#363532', border: 'none', letterSpacing: '-1px', minWidth: 100, borderBottom: '1.5px solid #e5dfd3', borderTopRightRadius: '6px' }}>증감률</th>
           </tr>
         </thead>
         <tbody style={{ background: '#fff' }}>
@@ -109,9 +86,6 @@ function FinancialMetrics({ loading, error, financialMetrics }) {
               <td style={{ padding: '8px 0', textAlign: 'center', fontWeight: 500, fontSize: '1.1rem', color: '#363532', letterSpacing: '-1px', borderBottomLeftRadius: idx === rows.length - 1 ? '6px' : 0 }}>{row.label}</td>
               <td style={{ padding: '8px 0', textAlign: 'center', fontWeight: 400, fontSize: '1.1rem', color: '#363532', letterSpacing: '-1px' }}>{row.current}</td>
               <td style={{ padding: '8px 0', textAlign: 'center', fontWeight: 400, fontSize: '1.1rem', color: '#363532', letterSpacing: '-1px' }}>{row.previous}</td>
-              <td style={{ padding: '8px 0', textAlign: 'center', fontWeight: 500, fontSize: '1.1rem', color: getChangeColor(row.change), letterSpacing: '-1px', borderBottomRightRadius: idx === rows.length - 1 ? '6px' : 0 }}>
-                {row.change === null ? '-' : `${row.change > 0 ? '+' : ''}${row.change.toFixed(1)}${row.isPercent ? '%p' : '%'}`}
-              </td>
             </tr>
           ))}
         </tbody>

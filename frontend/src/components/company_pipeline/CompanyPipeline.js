@@ -242,28 +242,34 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
       {started && (
         <>
           <div className="pipeline-title">
-            <img src={titlecloud} alt="cloud" /> {currentSymbol ? `${currentSymbol} 기업 정보` : '기업 정보'}
+            <img src={titlecloud} alt="cloud" /> {currentSymbol ? `기업 정보` : '기업 정보'}
           </div>
-          {/* <CompanyInfo symbol={currentSymbol} /> */}
+          <CompanyInfo symbol={currentSymbol} />
           
-          <div className="pipeline-title">
-            <img src={titlecloud} alt="cloud" /> {currentSymbol ? `${currentSymbol} 재무지표` : '재무지표'}
+          <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', marginBottom: '24px' }}>
+            <div style={{ flex: 1 }}>
+              <div className="pipeline-title">
+                <img src={titlecloud} alt="cloud" /> {currentSymbol ? `재무지표` : '재무지표'}
+              </div>
+              <FinancialMetrics 
+                loading={loading}
+                error={error}
+                financialMetrics={financialMetrics}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div className="pipeline-title">
+                <img src={titlecloud} alt="cloud" /> {currentSymbol ? `벨류에이션 지표` : '벨류에이션 지표'}
+              </div>
+              <ValuationMetrics 
+                loading={loading}
+                error={error}
+                valuationMetrics={valuationMetrics}
+              />
+            </div>
           </div>
-          <FinancialMetrics 
-            loading={loading}
-            error={error}
-            financialMetrics={financialMetrics}
-          />
           <div className="pipeline-title">
-            <img src={titlecloud} alt="cloud" /> {currentSymbol ? `${currentSymbol} 벨류에이션 지표` : '벨류에이션 지표'}
-          </div>
-          <ValuationMetrics 
-            loading={loading}
-            error={error}
-            valuationMetrics={valuationMetrics}
-          />
-          <div className="pipeline-title">
-            <img src={titlecloud} alt="cloud" /> {currentSymbol ? `${currentSymbol} 주가 동향` : '주가 동향'}
+            <img src={titlecloud} alt="cloud" /> {currentSymbol ? `주가 동향` : '주가 동향'}
           </div>
           {/* 주가 차트 컴포넌트 추가 - currentSymbol 사용 */}
           
@@ -275,7 +281,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
             />
           )}
           <div className="pipeline-title">
-            <img src={titlecloud} alt="cloud" /> {currentSymbol ? `${currentSymbol} 지수 대비 수익률 분석` : '지수 대비 수익률 분석'}
+            <img src={titlecloud} alt="cloud" /> {currentSymbol ? `지수 대비 수익률 분석` : '지수 대비 수익률 분석'}
           </div>
           {/* 주가 차트 아래에 ReturnAnalysisChart 분리 렌더링 */}
           {currentSymbol && startDate && endDate && (
