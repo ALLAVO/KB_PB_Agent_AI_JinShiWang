@@ -50,7 +50,8 @@
 .valuation-td.label {
   font-weight: 500;
   color: #363532;
-  background: #f8f9fa;
+  /* background: #f8f9fa; */
+  background: #fff;
 }
 .valuation-td.value {
   font-weight: 500;

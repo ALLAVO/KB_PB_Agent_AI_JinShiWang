@@ -838,6 +838,27 @@ def get_enhanced_stock_info(ticker: str) -> Dict:
     except Exception as e:
         return {"error": f"Error fetching enhanced stock info for {ticker}: {e}"}
 
+def get_shares_outstanding_from_alphavantage(ticker: str, api_key: str) -> int:
+    """
+    Alpha Vantage Company Overview API를 통해 유동주식수(SharesOutstanding)를 반환합니다.
+    실패 시 None 반환.
+    """
+    url = f"https://www.alphavantage.co/query?function=OVERVIEW&symbol={ticker}&apikey={api_key}"
+    try:
+        resp = requests.get(url)
+        if resp.status_code == 200:
+            data = resp.json()
+            shares = data.get("SharesOutstanding")
+            if shares:
+                try:
+                    # 쉼표 제거 후 int 변환
+                    return int(str(shares).replace(",", ""))
+                except Exception:
+                    return None
+        return None
+    except Exception:
+        return None
+
 def get_financial_metrics_from_sec(ticker: str, end_date: str = None) -> dict:
     """
     SEC XBRL companyfacts API에서 재무지표를 추출합니다.
@@ -1009,7 +1030,8 @@ def get_valuation_metrics_from_sec(ticker: str, end_date: str = None) -> dict:
     end_date: 'YYYY-MM-DD' 형식, 이 날짜를 기준으로 연도 계산
     """
     from datetime import datetime
-    
+    import requests
+    import time
     cik = get_cik_for_ticker(ticker)
     if not cik:
         return {"error": f"CIK not found for ticker {ticker}"}
@@ -1023,7 +1045,6 @@ def get_valuation_metrics_from_sec(ticker: str, end_date: str = None) -> dict:
         time.sleep(RATE_LIMIT_SLEEP)
         if resp.status_code != 200:
             return {"error": f"Failed to fetch company facts for CIK {cik}: Status {resp.status_code}"}
-        
         data = resp.json()
         us_gaap = data.get('facts', {}).get('us-gaap', {})
         
@@ -1097,48 +1118,34 @@ def get_valuation_metrics_from_sec(ticker: str, end_date: str = None) -> dict:
         
         # 주가 정보는 Stooq를 통해 조회
         try:
-            # Stooq용 티커 변환
             stooq_ticker = ticker if ticker.endswith('.US') else ticker + '.US'
-            
-            # 2년치 데이터 가져오기 (현재년도, 전년도 커버)
             start_date = f"{previous_year}-01-01"
-            end_date = f"{current_year}-12-31"
-            
-            print(f"📈 Fetching stock data from Stooq for {stooq_ticker}: {start_date} to {end_date}")
-            df = web.DataReader(stooq_ticker, 'stooq', start=start_date, end=end_date)
-            
+            end_date_str = f"{current_year}-12-31"
+            print(f"📈 Fetching stock data from Stooq for {stooq_ticker}: {start_date} to {end_date_str}")
+            df = web.DataReader(stooq_ticker, 'stooq', start=start_date, end=end_date_str)
             if not df.empty:
                 df = df.sort_index()
-                print(f"📊 Stock data range: {df.index[0]} to {df.index[-1]} ({len(df)} records)")
-                
-                # 현재 주가 (가장 최근)
                 current_price = df['Close'].iloc[-1]
-                print(f"💰 Current price: {current_price}")
-                
-                # 전년도 말 주가 (12월 말 또는 가장 가까운 날짜)
                 previous_year_data = df[df.index.year == previous_year]
                 if not previous_year_data.empty:
-                    previous_price = previous_year_data['Close'].iloc[-1]  # 전년도 마지막 거래일
+                    previous_price = previous_year_data['Close'].iloc[-1]
                     print(f"💰 Previous year price: {previous_price} (date: {previous_year_data.index[-1]})")
                 else:
                     previous_price = None
                     print(f"❌ No stock data found for previous year {previous_year}")
-                
-                # 주식수는 yfinance에서만 가져올 수 있음 (Stooq에는 없음)
+                # Alpha Vantage로 shares_outstanding 가져오기
                 try:
-                    stock = yf.Ticker(ticker)
-                    info = stock.info
-                    shares_outstanding = info.get('sharesOutstanding')
-                    print(f"📈 Shares outstanding: {shares_outstanding}")
-                except:
+                    api_key = settings.ALPHAVANTAGE_API_KEY
+                    shares_outstanding = get_shares_outstanding_from_alphavantage(ticker, api_key)
+                    print(f"📈 Shares outstanding (Alpha Vantage): {shares_outstanding}")
+                except Exception as e:
                     shares_outstanding = None
-                    print(f"❌ Could not fetch shares outstanding from yfinance")
+                    print(f"❌ Could not fetch shares outstanding from Alpha Vantage: {e}")
             else:
                 print(f"❌ No stock data found for {stooq_ticker}")
                 current_price = None
                 previous_price = None
                 shares_outstanding = None
-                
         except Exception as e:
             print(f"⚠️ Error fetching stock data from Stooq: {e}")
             current_price = None
@@ -1288,7 +1295,7 @@ def get_valuation_metrics_from_sec(ticker: str, end_date: str = None) -> dict:
         else:
             print(f"❌ Cannot calculate current P/B - Equity: {current_equity}, Shares: {shares_outstanding}, Price: {current_price}")
         
-        # 전년도 P/B 계산 - 전년도 자기자본과 전년도 말 주식수 사용
+        # 전년도 P/B 계산 - 전년도 말 주식수 사용
         if previous_equity and previous_price:
             # 전년도 주식수가 있으면 사용, 없으면 현재 주식수 사용 (일반적으로 큰 변화 없음)
             shares_for_previous = previous_shares if previous_shares else shares_outstanding
