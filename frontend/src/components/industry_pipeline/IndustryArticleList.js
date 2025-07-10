@@ -49,9 +49,6 @@ function IndustryArticleList({ articles }) {
                   textOverflow: 'ellipsis',
                 }}>
                   {art.article_title}
-                  <span style={{ marginLeft: '10px', color: '#b48a3c', fontWeight: 'normal', fontSize: '14px' }}>
-                    [{art.stock_symbol}]
-                  </span>
                 </div>
                 <div style={{
                   display:'block',

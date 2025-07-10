@@ -73,7 +73,15 @@ function HotArticles({ year, month, weekStr, period, autoStart }) {
       {started && (
         <>
           <div className="pipeline-title">
-            <img src={titlecloud} alt="cloud" />이 주 핫한 기사 TOP 3
+            {/* 동적으로 월/주차 추출하여 제목 생성 */}
+            {(() => {
+              // period 예시: '05.13 - 05.19 (3주차)'
+              const monthMatch = period.match(/(\d{2})\./);
+              const weekMatch = period.match(/\((\d+주차)\)/);
+              const month = monthMatch ? parseInt(monthMatch[1], 10) : month;
+              const week = weekMatch ? weekMatch[1] : '';
+              return <><img src={titlecloud} alt="cloud" />{month}월 {week} 핵심 뉴스</>;
+            })()}
           </div>
           {/* 전 주에 핫한 기사 Top 3 섹션 */}
           <div className="industry-top3-section">

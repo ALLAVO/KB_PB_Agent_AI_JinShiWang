@@ -2,7 +2,7 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:800
 
 export const fetchAllClients = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/clients`);
+    const response = await fetch(`${API_BASE_URL}/clients`);
     if (!response.ok) {
       throw new Error(`API request failed: ${response.status}`);
     }
@@ -15,7 +15,7 @@ export const fetchAllClients = async () => {
 
 export const fetchClientDetail = async (clientId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/clients/${clientId}`);
+    const response = await fetch(`${API_BASE_URL}/clients/${clientId}`);
     if (!response.ok) {
       throw new Error(`API request failed: ${response.status}`);
     }
@@ -28,7 +28,7 @@ export const fetchClientDetail = async (clientId) => {
 
 export const fetchClientPortfolio = async (clientId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/clients/${clientId}/portfolio`);
+    const response = await fetch(`${API_BASE_URL}/clients/${clientId}/portfolio`);
     if (!response.ok) {
       throw new Error(`API request failed: ${response.status}`);
     }
@@ -41,7 +41,7 @@ export const fetchClientPortfolio = async (clientId) => {
 
 export const fetchClientSummary = async (clientId, periodEndDate = null) => {
   try {
-    let url = `${API_BASE_URL}/api/v1/clients/${clientId}/summary`;
+    let url = `${API_BASE_URL}/clients/${clientId}/summary`;
     if (periodEndDate) {
       url += `?period_end_date=${periodEndDate}`;
     }
@@ -59,7 +59,7 @@ export const fetchClientSummary = async (clientId, periodEndDate = null) => {
 
 export const fetchClientPerformance = async (clientId, periodEndDate) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/clients/${clientId}/performance/${periodEndDate}`);
+    const response = await fetch(`${API_BASE_URL}/clients/${clientId}/performance/${periodEndDate}`);
     if (!response.ok) {
       throw new Error(`API request failed: ${response.status}`);
     }
@@ -72,7 +72,7 @@ export const fetchClientPerformance = async (clientId, periodEndDate) => {
 
 export const fetchClientPortfolioChart = async (clientId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/clients/${clientId}/portfolio-chart`);
+    const response = await fetch(`${API_BASE_URL}/clients/${clientId}/portfolio-chart`);
     if (!response.ok) {
       throw new Error(`API request failed: ${response.status}`);
     }
