@@ -10,15 +10,14 @@ from app.services.sentiment import get_sentiment_score_for_article
 from app.services.keyword_extractor import extract_keywords, extract_named_entities, restore_named_entities, kw_model
 from app.services.summarize import summarize_top3_articles
 
-def prev_sunday(input_date_str: str) -> str:
+def week_start_sunday(input_date_str: str) -> str:
     """
-    주어진 날짜(input_date_str)의 이전 주 일요일(weekstart)을 YYYY-MM-DD 문자열로 반환합니다.
+    주어진 날짜(input_date_str)가 포함된 주의 일요일(weekstart)을 YYYY-MM-DD 문자열로 반환합니다.
     """
     dt = pd.to_datetime(input_date_str)
     days_to_curr_sunday = (dt.weekday() + 1) % 7
     curr_sunday = dt - timedelta(days=days_to_curr_sunday)
-    prev_sun = curr_sunday - timedelta(days=7)
-    return prev_sun.strftime("%Y-%m-%d")
+    return curr_sunday.strftime("%Y-%m-%d")
 
 ## 산업 Agent
 def get_articles_by_sector(sector: str, weekstart_sunday: str):
@@ -48,18 +47,18 @@ def get_articles_by_sector(sector: str, weekstart_sunday: str):
             conn.close()
         return []
 
-def get_industry_top3_articles(sector: str, start_date: str):
+def get_industry_top3_articles(sector: str, end_date: str):
     """
-    산업군과 시작일을 받아 클러스터링을 통한 상위 3개 대표 기사를 반환합니다.
+    산업군과 종료일을 받아 클러스터링을 통한 상위 3개 대표 기사를 반환합니다.
     """
-    prev_sun = prev_sunday(start_date)
+    week_sunday = week_start_sunday(end_date)
     
     # DB에서 해당 섹터의 기사들 가져오기
-    articles_data = get_articles_by_sector(sector, prev_sun)
+    articles_data = get_articles_by_sector(sector, week_sunday)
     
     if not articles_data:
-        print(f"❗ {sector} 섹터의 {prev_sun} 주차에 기사 데이터가 없습니다.")
-        return {"top3_articles": [], "week": prev_sun}
+        print(f"❗ {sector} 섹터의 {week_sunday} 주차에 기사 데이터가 없습니다.")
+        return {"top3_articles": [], "week": week_sunday}
     
     # 기사 제목 추출 및 클리닝
     valid_articles = []
@@ -78,7 +77,7 @@ def get_industry_top3_articles(sector: str, start_date: str):
     
     if len(titles) < 3:
         print(f"❗ {sector} 섹터의 기사가 충분하지 않습니다. (필요: 3개, 현재: {len(titles)}개)")
-        return {"top3_articles": [], "week": prev_sun}
+        return {"top3_articles": [], "week": week_sunday}
     
     # 1) 임베딩
     model = SentenceTransformer('all-mpnet-base-v2')
@@ -204,14 +203,14 @@ def get_industry_top3_articles(sector: str, start_date: str):
             final_article['summary'] = "요약을 생성할 수 없습니다."
         final_articles.append(final_article)
     
-    print(f"=== {sector} 섹터 {prev_sun} 주차 상위 3개 클러스터 대표 기사 ===")
+    print(f"=== {sector} 섹터 {week_sunday} 주차 상위 3개 클러스터 대표 기사 ===")
     for i, article in enumerate(final_articles, 1):
         print(f"[기사 {i}] 종목: {article['stock_symbol']}, 제목: {article['article_title']}")
         print(f"감성점수: {article['score']}, 키워드: {article['keywords'][:3]}")
     
     return {
         "top3_articles": final_articles,
-        "week": prev_sun
+        "week": week_sunday
     }
 
 ## 증시 Agent
@@ -242,18 +241,18 @@ def get_hot_articles_by_date(start_date: str):
             conn.close()
         return []
 
-def get_market_hot_articles(start_date: str):
+def get_market_hot_articles(end_date: str):
     """
     특정 날짜의 주차에서 모든 섹터의 기사를 대상으로 클러스터링을 통한 상위 3개 핫한 기사를 반환합니다.
     """
-    prev_sun = prev_sunday(start_date)
+    week_sunday = week_start_sunday(end_date)
     
     # DB에서 해당 주차의 모든 기사들 가져오기
-    articles_data = get_hot_articles_by_date(prev_sun)
+    articles_data = get_hot_articles_by_date(week_sunday)
     
     if not articles_data:
-        print(f"❗ {prev_sun} 주차에 기사 데이터가 없습니다.")
-        return {"top3_articles": [], "week": prev_sun}
+        print(f"❗ {week_sunday} 주차에 기사 데이터가 없습니다.")
+        return {"top3_articles": [], "week": week_sunday}
     
     # 기사 제목 추출 및 클리닝
     valid_articles = []
@@ -272,8 +271,8 @@ def get_market_hot_articles(start_date: str):
             titles.append(article_title.strip())
     
     if len(titles) < 3:
-        print(f"❗ {prev_sun} 주차의 기사가 충분하지 않습니다. (필요: 3개, 현재: {len(titles)}개)")
-        return {"top3_articles": [], "week": prev_sun}
+        print(f"❗ {week_sunday} 주차의 기사가 충분하지 않습니다. (필요: 3개, 현재: {len(titles)}개)")
+        return {"top3_articles": [], "week": week_sunday}
     
     # 1) 임베딩
     model = SentenceTransformer('all-mpnet-base-v2')
@@ -400,12 +399,12 @@ def get_market_hot_articles(start_date: str):
             final_article['summary'] = "요약을 생성할 수 없습니다."
         final_articles.append(final_article)
     
-    print(f"=== {prev_sun} 주차 시장 핫한 기사 TOP 3 ===")
+    print(f"=== {week_sunday} 주차 시장 핫한 기사 TOP 3 ===")
     for i, article in enumerate(final_articles, 1):
         print(f"[기사 {i}] 섹터: {article['sector']}, 종목: {article['stock_symbol']}, 제목: {article['article_title']}")
         print(f"감성점수: {article['score']}, 키워드: {article['keywords'][:3]}")
     
     return {
         "top3_articles": final_articles,
-        "week": prev_sun
+        "week": week_sunday
     }

@@ -35,11 +35,11 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
   // period에서 주차 시작일 및 종료일 추출
   const dateMatch = period.match(/(\d{2})\.(\d{2}) - (\d{2})\.(\d{2})/);
   let startDate = null;
-  let calculatedEndDate = null;
+  let endDate = null;
   if (dateMatch) {
     const y = year;
     startDate = `${y}-${dateMatch[1]}-${dateMatch[2]}`;
-    calculatedEndDate = `${y}-${dateMatch[3]}-${dateMatch[4]}`;
+    endDate = `${y}-${dateMatch[3]}-${dateMatch[4]}`;
   }
 
   const handleArticleClick = (article) => {
@@ -64,7 +64,7 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
   }, [autoIndustryTrigger, autoIndustryCategory]);
 
   const handleLoadCompanies = async (categoryToUse) => {
-    if (!calculatedEndDate) {
+    if (!endDate) {
       console.error('End date is required for companies data');
       return;
     }
@@ -73,7 +73,7 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
     try {
       const data = await fetchIndustryTop10Companies({
         sector: categoryToUse.trim(),
-        endDate: calculatedEndDate
+        endDate: endDate
       });
       setCompaniesData(data);
       setShowCompaniesTable(true);
@@ -102,10 +102,10 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
     }
     
     try {
-      console.log('산업 API 호출', { sector: categoryToUse.trim(), startDate });
+      console.log('산업 API 호출', { sector: categoryToUse.trim(), endDate });
       const data = await fetchIndustryTop3Articles({ 
         sector: categoryToUse.trim(), 
-        startDate: startDate 
+        endDate: endDate 
       });
       setIndustryData(data);
       console.log('산업 데이터:', data);
