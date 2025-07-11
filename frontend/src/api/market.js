@@ -151,10 +151,10 @@ export const fetchFx1YearChart = async (endDate) => {
 };
 
 // 시장 핫한 기사 TOP 3 가져오기
-export const fetchMarketHotArticles = async (startDate) => {
+export const fetchMarketHotArticles = async (endDate) => {
   try {
     const url = new URL(`${API_BASE_URL}/market/hot-articles`);
-    url.searchParams.append('start_date', startDate);
+    url.searchParams.append('end_date', endDate);
 
     const response = await fetch(url.toString(), {
       method: 'GET',

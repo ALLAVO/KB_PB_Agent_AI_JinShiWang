@@ -12,12 +12,12 @@ function HotArticles({ year, month, weekStr, period, autoStart }) {
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [showModal, setShowModal] = useState(false);
   
-  // period에서 주차 시작일 추출
+  // period에서 주차 종료일 추출
   const dateMatch = period.match(/(\d{2})\.(\d{2}) - (\d{2})\.(\d{2})/);
-  let startDate = null;
+  let endDate = null;
   if (dateMatch) {
     const y = year;
-    startDate = `${y}-${dateMatch[1]}-${dateMatch[2]}`;
+    endDate = `${y}-${dateMatch[3]}-${dateMatch[4]}`;
   }
 
   const handleArticleClick = (article) => {
@@ -44,8 +44,8 @@ function HotArticles({ year, month, weekStr, period, autoStart }) {
     setHotArticlesData(null);
     
     try {
-      console.log('시장 핫 기사 API 호출', { startDate });
-      const data = await fetchMarketHotArticles(startDate);
+      console.log('시장 핫 기사 API 호출', { endDate });
+      const data = await fetchMarketHotArticles(endDate);
       setHotArticlesData(data);
       console.log('시장 핫 기사 데이터:', data);
     } catch (e) {
