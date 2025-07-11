@@ -43,17 +43,9 @@ const ClientList = ({ clients, onClientSelect, year, month, weekStr }) => {
     );
   };
 
-  const getClientImage = (clientName) => {
-    try {
-      return require(`../../assets/client_profile/${clientName}.png`);
-    } catch (error) {
-      return require('../../assets/client_profile/default.png');
-    }
-  };
-
   return (
-    <div className="client-list-container">
-      <div className="client-list-header">
+    <div>
+      <div className="client-list-header" style={{ marginBottom: '16px' }}>
         <h2 className="client-list-title">
           <span className="title-icon">👥</span>
           고객 관리
@@ -64,69 +56,192 @@ const ClientList = ({ clients, onClientSelect, year, month, weekStr }) => {
         </div>
       </div>
 
-      <div className="client-grid">
-        {clients.map((client) => (
-          <div key={client.id} className="client-card">
-            <div className="client-card-header">
-              <div className="client-avatar">
-                <img 
-                  src={getClientImage(client.name)}
-                  alt={client.name}
-                  onError={(e) => {
-                    try {
-                      e.target.src = require('../../assets/client_profile/default.png');
-                    } catch (error) {
-                      // fallback: 기본 아바타 또는 빈 이미지
-                      e.target.style.display = 'none';
-                    }
-                  }}
-                />
-              </div>
-              <div className="client-basic-info">
-                <h3 className="client-name">{client.name}</h3>
-                <div className="client-demographics">
-                  <span className="client-sex">{client.sex}</span>
-                  <span className="client-age">{client.age}세</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="client-card-body">
-              <div className="client-investment-info">
-                <div className="investment-item">
-                  <span className="investment-label">위험성향:</span>
-                  {getRiskProfileBadge(client.risk_profile)}
-                </div>
-                <div className="investment-item">
-                  <span className="investment-label">투자기간:</span>
-                  {getInvestmentHorizonBadge(client.investment_horizon)}
-                </div>
-                <div className="investment-item total-amount">
-                  <span className="investment-label">총 투자금액:</span>
-                  <span className="amount-value">{formatAmount(client.total_amount)}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="client-card-footer">
-              <button 
-                className="client-detail-btn"
-                onClick={() => onClientSelect(client)}
-              >
-                <span className="btn-icon"></span>
-                상세 분석 보기
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {clients.length === 0 && (
+      {clients.length === 0 ? (
         <div className="no-clients-message">
           <div className="no-clients-icon">👥</div>
           <h3>등록된 고객이 없습니다</h3>
           <p>새로운 고객을 등록해주세요.</p>
         </div>
+      ) : (
+        <table style={{
+          width: '100%',
+          borderCollapse: 'separate',
+          borderSpacing: 0,
+          background: 'white',
+          borderRadius: '10px',
+          overflow: 'hidden',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+        }}>
+          <thead style={{ background: 'rgba(234,227,215,0.7)', borderRadius: '6px 6px 0 0' }}>
+            <tr style={{ background: 'rgba(234,227,215,0.7)', height: 60 }}>
+              <th style={{
+                padding: '24px 16px',
+                textAlign: 'center',
+                fontWeight: 500,
+                fontSize: '1.2rem',
+                color: '#363532',
+                border: 'none',
+                letterSpacing: '-1px',
+                minWidth: 100,
+                borderTopLeftRadius: '6px',
+                borderBottom: '1.5px solid #e5dfd3',
+              }}>고객명</th>
+              <th style={{
+                padding: '24px 16px',
+                textAlign: 'center',
+                fontWeight: 500,
+                fontSize: '1.2rem',
+                color: '#363532',
+                border: 'none',
+                letterSpacing: '-1px',
+                minWidth: 80,
+                borderBottom: '1.5px solid #e5dfd3',
+              }}>성별</th>
+              <th style={{
+                padding: '24px 16px',
+                textAlign: 'center',
+                fontWeight: 500,
+                fontSize: '1.2rem',
+                color: '#363532',
+                border: 'none',
+                letterSpacing: '-1px',
+                minWidth: 80,
+                borderBottom: '1.5px solid #e5dfd3',
+              }}>나이</th>
+              <th style={{
+                padding: '24px 16px',
+                textAlign: 'center',
+                fontWeight: 500,
+                fontSize: '1.2rem',
+                color: '#363532',
+                border: 'none',
+                letterSpacing: '-1px',
+                minWidth: 120,
+                borderBottom: '1.5px solid #e5dfd3',
+              }}>위험성향</th>
+              <th style={{
+                padding: '24px 16px',
+                textAlign: 'center',
+                fontWeight: 500,
+                fontSize: '1.2rem',
+                color: '#363532',
+                border: 'none',
+                letterSpacing: '-1px',
+                minWidth: 100,
+                borderBottom: '1.5px solid #e5dfd3',
+              }}>투자기간</th>
+              <th style={{
+                padding: '24px 16px',
+                textAlign: 'center',
+                fontWeight: 500,
+                fontSize: '1.2rem',
+                color: '#363532',
+                border: 'none',
+                letterSpacing: '-1px',
+                minWidth: 120,
+                borderTopRightRadius: '6px',
+                borderBottom: '1.5px solid #e5dfd3',
+              }}>투자금액</th>
+            </tr>
+          </thead>
+          <tbody style={{ background: '#fff', borderRadius: '0 0 6px 6px' }}>
+            {clients.map((client, idx) => (
+              <tr key={client.id} style={{
+                background: '#fff',
+                borderBottom: idx < clients.length - 1 ? '1.5px solid #ede9e2' : 'none',
+                height: 56
+              }}>
+                <td style={{
+                  padding: '12px 16px',
+                  textAlign: 'center',
+                  fontWeight: 500,
+                  fontSize: '1.1rem',
+                  color: '#363532',
+                  letterSpacing: '-1px',
+                  borderBottomLeftRadius: idx === clients.length - 1 ? '6px' : 0,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    {client.name}
+                    <button 
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      onClick={() => onClientSelect(client)}
+                      title="상세 분석 보기"
+                    >
+                      <img 
+                        src={require('../../assets/magnifier.png')}
+                        alt="상세 분석"
+                        style={{
+                          width: '16px',
+                          height: '16px',
+                          opacity: 0.7,
+                        }}
+                        onMouseOver={(e) => {
+                          e.target.style.opacity = 1;
+                        }}
+                        onMouseOut={(e) => {
+                          e.target.style.opacity = 0.7;
+                        }}
+                      />
+                    </button>
+                  </div>
+                </td>
+                <td style={{
+                  padding: '12px 16px',
+                  textAlign: 'center',
+                  fontWeight: 400,
+                  fontSize: '1.0rem',
+                  color: '#363532',
+                  letterSpacing: '-1px',
+                }}>{client.sex}</td>
+                <td style={{
+                  padding: '12px 16px',
+                  textAlign: 'center',
+                  fontWeight: 400,
+                  fontSize: '1.0rem',
+                  color: '#363532',
+                  letterSpacing: '-1px',
+                }}>{client.age}세</td>
+                <td style={{
+                  padding: '12px 16px',
+                  textAlign: 'center',
+                  fontWeight: 400,
+                  fontSize: '1.0rem',
+                  color: '#363532',
+                  letterSpacing: '-1px',
+                }}>
+                  {getRiskProfileBadge(client.risk_profile)}
+                </td>
+                <td style={{
+                  padding: '12px 16px',
+                  textAlign: 'center',
+                  fontWeight: 400,
+                  fontSize: '1.0rem',
+                  color: '#363532',
+                  letterSpacing: '-1px',
+                }}>
+                  {getInvestmentHorizonBadge(client.investment_horizon)}
+                </td>
+                <td style={{
+                  padding: '12px 16px',
+                  textAlign: 'center',
+                  fontWeight: 500,
+                  fontSize: '1.0rem',
+                  color: '#363532',
+                  letterSpacing: '-1px',
+                  borderBottomRightRadius: idx === clients.length - 1 ? '6px' : 0,
+                }}>{formatAmount(client.total_amount)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   );
