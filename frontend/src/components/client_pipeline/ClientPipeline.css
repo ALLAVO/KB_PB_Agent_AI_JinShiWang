@@ -15,13 +15,6 @@
   --kb-danger: #C4756E;
 }
 
-/* 컨테이너 */
-.client-pipeline-container {
-  padding: 20px;
-  background: var(--kb-cream);
-  min-height: 100vh;
-}
-
 /* 로딩 및 에러 상태 */
 .client-pipeline-loading,
 .client-detail-loading {
