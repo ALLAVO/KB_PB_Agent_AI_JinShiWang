@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 from app.services.ai_analysis_service import generate_performance_summary
 import numpy as np
+from pandas_datareader import data as pdr
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +74,7 @@ def get_all_clients() -> List[Dict]:
         with engine.connect() as conn:
             query = text("""
                 SELECT id, name, sex, age, risk_profile, investment_horizon, total_amount
-                FROM virtual_clients_v4
+                FROM virtual_clients_listpage
                 ORDER BY id
             """)
             result = conn.execute(query)
@@ -400,92 +401,94 @@ def get_client_performance_analysis(client_id: str, period_end_date: str) -> Dic
         return {"error": f"Error calculating performance: {str(e)}"}
 
 def calculate_stock_metrics(symbol: str, period_end_date: str) -> Dict:
-    """개별 종목의 현재가, 수익률, 변동성을 계산합니다."""
+    """개별 종목의 현재가, 수익률, 변동성을 계산합니다. Stooq 사용"""
     try:
         period_end = datetime.strptime(period_end_date, '%Y-%m-%d')
-        
-        # 1주일 전, 1달 전, 3년 전 날짜 계산
         week_ago = period_end - timedelta(days=7)
         month_ago = period_end - timedelta(days=30)
         three_years_ago = period_end - timedelta(days=3*365)
-        
-        # yfinance로 데이터 가져오기
-        ticker = yf.Ticker(symbol)
-        
-        # 3년치 데이터 (변동성 계산용)
-        hist_3y = ticker.history(
-            start=three_years_ago.strftime('%Y-%m-%d'),
-            end=(period_end + timedelta(days=1)).strftime('%Y-%m-%d'),
-            interval='1d'
-        )
-        
-        if hist_3y.empty:
-            logger.warning(f"No data found for {symbol}")
+
+        # Stooq 심볼 변환 (예: AAPL -> AAPL.US)
+        stooq_symbol = symbol.upper()
+        if not stooq_symbol.endswith('.US'):
+            stooq_symbol += '.US'
+
+        # Stooq에서 데이터 가져오기
+        try:
+            hist_3y = pdr.DataReader(stooq_symbol, 'stooq', three_years_ago, period_end + timedelta(days=1))
+        except Exception as e:
+            logger.warning(f"Stooq data fetch error for {symbol}: {e}")
             return {
                 "current_price": 0.0,
                 "weekly_return": 0.0,
                 "monthly_return": 0.0,
                 "volatility": 0.0,
-                "error": f"No data available for {symbol}"
+                "error": f"Stooq fetch error: {e}"
             }
-        
+
+        if hist_3y.empty:
+            logger.warning(f"No data found for {symbol} (Stooq)")
+            return {
+                "current_price": 0.0,
+                "weekly_return": 0.0,
+                "monthly_return": 0.0,
+                "volatility": 0.0,
+                "error": f"No data available for {symbol} (Stooq)"
+            }
+
+        # Stooq은 최신 데이터가 맨 위에 있으므로 정렬
+        hist_3y = hist_3y.sort_index()
+
         # 현재가 (기준일 종가)
         current_price = hist_3y['Close'].iloc[-1] if len(hist_3y) > 0 else 0.0
-        
+
         # 1주일 수익률
         weekly_return = 0.0
         try:
             week_price = None
-            for i in range(min(10, len(hist_3y))):  # 최대 10일 전까지 검색
+            for i in range(min(10, len(hist_3y))):
                 check_date = period_end - timedelta(days=7+i)
                 date_str = check_date.strftime('%Y-%m-%d')
                 if date_str in hist_3y.index.strftime('%Y-%m-%d'):
                     week_price = hist_3y.loc[hist_3y.index.strftime('%Y-%m-%d') == date_str, 'Close'].iloc[0]
                     break
-            
             if week_price and week_price > 0:
                 weekly_return = ((current_price - week_price) / week_price) * 100
         except Exception as e:
             logger.warning(f"Error calculating weekly return for {symbol}: {e}")
-        
+
         # 1달 수익률
         monthly_return = 0.0
         try:
             month_price = None
-            for i in range(min(10, len(hist_3y))):  # 최대 10일 전까지 검색
+            for i in range(min(10, len(hist_3y))):
                 check_date = period_end - timedelta(days=30+i)
                 date_str = check_date.strftime('%Y-%m-%d')
                 if date_str in hist_3y.index.strftime('%Y-%m-%d'):
                     month_price = hist_3y.loc[hist_3y.index.strftime('%Y-%m-%d') == date_str, 'Close'].iloc[0]
                     break
-            
             if month_price and month_price > 0:
                 monthly_return = ((current_price - month_price) / month_price) * 100
         except Exception as e:
             logger.warning(f"Error calculating monthly return for {symbol}: {e}")
-        
+
         # 변동성 계산 (3년치 데이터 사용)
         volatility = 0.0
         try:
             if len(hist_3y) > 1:
-                # 일일 수익률 계산
                 daily_returns = hist_3y['Close'].pct_change().dropna()
-                
                 if len(daily_returns) > 1:
-                    # 일일 표준편차 계산
                     daily_std = daily_returns.std()
-                    # 월간 변동성으로 환산 (루트20 적용)
-                    volatility = daily_std * np.sqrt(20) * 100  # 퍼센트로 변환
+                    volatility = daily_std * np.sqrt(20) * 100
         except Exception as e:
             logger.warning(f"Error calculating volatility for {symbol}: {e}")
-        
+
         return {
             "current_price": round(current_price, 2),
             "weekly_return": round(weekly_return, 2),
             "monthly_return": round(monthly_return, 2),
             "volatility": round(volatility, 2)
         }
-        
     except Exception as e:
         logger.error(f"Error calculating stock metrics for {symbol}: {e}")
         return {

@@ -4,6 +4,7 @@ import PortfolioChart from './PortfolioChart';
 import PortfolioAnalysis from './PortfolioAnalysis';
 import PerformanceChart from './PerformanceChart';
 import './ClientPipeline.css';
+import './ClientDetails.css';
 
 const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
   const [clientData, setClientData] = useState(null);
@@ -105,17 +106,6 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
 
   return (
     <div className="client-detail-container">
-      {/* 헤더 */}
-      <div className="client-detail-header">
-        <button className="back-btn" onClick={onBack}>
-          <span>←</span> 목록으로 돌아가기
-        </button>
-        <h1 className="client-detail-title">
-          {client_info.name}님 분석 포트폴리오
-        </h1>
-        <div className="period-info">{year}년 {month}월 {weekStr}</div>
-      </div>
-
       {/* 메인 콘텐츠 */}
       <div className="client-detail-content">
         {/* 좌측: 고객 이미지 */}
@@ -138,62 +128,41 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
 
         {/* 우측: 고객 정보 */}
         <div className="client-info-section">
-          <div className="client-basic-info-panel">
-            <h3 className="info-panel-title">기본 정보</h3>
-            <div className="info-grid">
-              <div className="info-item">
-                <span className="info-label">성명:</span>
-                <span className="info-value">{client_info.name}</span>
-              </div>
-              <div className="info-item">
-                <span className="info-label">성별:</span>
-                <span className="info-value">{client_info.sex}</span>
-              </div>
-              <div className="info-item">
-                <span className="info-label">나이:</span>
-                <span className="info-value">{client_info.age}세</span>
-              </div>
-              <div className="info-item">
-                <span className="info-label">위험성향:</span>
-                <span className="info-value risk-profile" style={{color: riskProfileInfo.color}}>
-                  {riskProfileInfo.label}
-                </span>
-              </div>
-              <div className="info-item">
-                <span className="info-label">투자기간:</span>
-                <span className="info-value">{client_info.investment_horizon}</span>
-              </div>
-              <div className="info-item total-amount-item">
-                <span className="info-label">총 투자금액:</span>
-                <span className="info-value total-amount">{formatAmount(client_info.total_amount)}</span>
-              </div>
+          <div className="client-info-header">
+            <div className="client-info-row">
+              <span className="client-info-item">
+                <strong>성함</strong> {client_info.name}
+              </span>
+              <span className="client-info-item">
+                <strong>성별/나이</strong> {client_info.sex}/{client_info.age}세
+              </span>
+              <span className="client-info-item">
+                <strong>투자기간</strong> 30년
+              </span>
+            </div>
+            <div className="client-info-row">
+              <span className="client-info-item">
+                <strong>위험 성향</strong> 위험 중립형
+              </span>
+              <span className="client-info-item">
+                <strong>주식 투자금액</strong> {formatAmount(client_info.total_amount)}
+              </span>
             </div>
           </div>
+          
+          {/* 특이사항 박스 */}
+          {(client_info.memo1 || client_info.memo2 || client_info.memo3) && (
+            <div className="client-memo-box">
+              <h4 className="memo-title">특이사항</h4>
+              <ul className="memo-list-items">
+                {client_info.memo1 && <li>{client_info.memo1}</li>}
+                {client_info.memo2 && <li>{client_info.memo2}</li>}
+                {client_info.memo3 && <li>{client_info.memo3}</li>}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* 메모 정보 - 전체 너비 */}
-      {(client_info.memo1 || client_info.memo2 || client_info.memo3) && (
-        <div className="client-memo-section">
-          <div className="memo-list">
-            {client_info.memo1 && (
-              <div className="memo-item">
-                <div className="memo-content">{client_info.memo1}</div>
-              </div>
-            )}
-            {client_info.memo2 && (
-              <div className="memo-item">
-                <div className="memo-content">{client_info.memo2}</div>
-              </div>
-            )}
-            {client_info.memo3 && (
-              <div className="memo-item">
-                <div className="memo-content">{client_info.memo3}</div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* AI 투자 분석 요약 */}
       {performanceData && performanceData.ai_summary && (
@@ -226,6 +195,13 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
       {/* 포트폴리오 분석 - 포트폴리오 도넛 차트 섹션 */}
       <PortfolioChart clientId={client.id} 
       />
+
+      {/* 페이지 말단에 back-btn 배치 */}
+      <div style={{ display: 'flex', justifyContent: 'center', margin: '32px 0' }}>
+        <button className="back-btn" onClick={onBack}>
+          <span>←</span> 목록으로 돌아가기
+        </button>
+      </div>
     </div>
   );
 };
