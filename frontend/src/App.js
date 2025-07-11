@@ -413,12 +413,12 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
               <div className="pipeline-title">
                 <img src={titlecloud} alt="cloud" /> 미국 증시 동향
               </div>
-              {/* <MarketIndicesChart 
+              <MarketIndicesChart 
                 data={indicesData} 
                 loading={loading} 
                 error={indicesData?.error} 
-              /> */}
-              {/* <MarketIndices1YearTable indices1YearData={indices1YearData} loading={loading} error={error} /> */}
+              />
+              <MarketIndices1YearTable indices1YearData={indices1YearData} loading={loading} error={error} />
               {/* 핫한 기사 섹션을 CombinedFinancialChart 위로 이동 */}
               <HotArticles 
                 year={year}
@@ -430,7 +430,7 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
               <div className="pipeline-title">
                 <img src={titlecloud} alt="cloud" /> FICC
               </div>
-              {/* <CombinedFinancialChart 
+              <CombinedFinancialChart 
                 treasuryData={treasuryData} 
                 fxData={fxData}
                 loading={loading} 
@@ -441,7 +441,7 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
                 fxData1Year={fxData1Year}
                 loading={loading}
                 error={treasuryData1Year?.error || fxData1Year?.error}
-              /> */}
+              />
               <div style={{height: '50px'}}></div>
             </>
           )}
