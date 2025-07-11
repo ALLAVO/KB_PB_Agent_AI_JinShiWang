@@ -44,14 +44,13 @@ const ClientList = ({ clients, onClientSelect, year, month, weekStr }) => {
   };
 
   return (
-    <div>
-      <div className="client-list-header" style={{ marginBottom: '16px' }}>
-        <h2 className="client-list-title">
-          <span className="title-icon">👥</span>
-          고객 관리
+    <div style={{ marginTop: '50px' }}>
+      <div className="client-list-header" style={{marginBottom: '16px', background: 'rgba(234,227,215,0.9)', borderRadius: '8px', border: 'none', boxShadow: 'none', padding: '30px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h2 className="client-list-title" style={{ fontWeight: 700, fontSize: '1.3rem', color: '#8B7355', margin: 0 }}>
+          <span className="title-icon"></span>
+          김PB님 오늘 하루도 화이팅입니다💪
         </h2>
-        <div className="client-list-summary">
-          <span className="period-info">{year}년 {month}월 {weekStr}</span>
+        <div className="client-list-summary" style={{ color: '#8B7355', fontWeight: 500, fontSize: '1.1rem' }}>
           <span className="total-clients">총 {clients.length}명의 고객</span>
         </div>
       </div>
@@ -117,6 +116,7 @@ const ClientList = ({ clients, onClientSelect, year, month, weekStr }) => {
                 border: 'none',
                 letterSpacing: '-1px',
                 minWidth: 120,
+                borderTopRightRadius: '6px',
                 borderBottom: '1.5px solid #e5dfd3',
               }}>위험성향</th>
               <th style={{
@@ -127,7 +127,8 @@ const ClientList = ({ clients, onClientSelect, year, month, weekStr }) => {
                 color: '#363532',
                 border: 'none',
                 letterSpacing: '-1px',
-                minWidth: 100,
+                minWidth: 120,
+                borderTopRightRadius: '6px',
                 borderBottom: '1.5px solid #e5dfd3',
               }}>투자기간</th>
               <th style={{
@@ -196,7 +197,7 @@ const ClientList = ({ clients, onClientSelect, year, month, weekStr }) => {
                 <td style={{
                   padding: '12px 16px',
                   textAlign: 'center',
-                  fontWeight: 400,
+                  fontWeight: 500,
                   fontSize: '1.0rem',
                   color: '#363532',
                   letterSpacing: '-1px',
@@ -204,7 +205,7 @@ const ClientList = ({ clients, onClientSelect, year, month, weekStr }) => {
                 <td style={{
                   padding: '12px 16px',
                   textAlign: 'center',
-                  fontWeight: 400,
+                  fontWeight: 500,
                   fontSize: '1.0rem',
                   color: '#363532',
                   letterSpacing: '-1px',
@@ -212,23 +213,19 @@ const ClientList = ({ clients, onClientSelect, year, month, weekStr }) => {
                 <td style={{
                   padding: '12px 16px',
                   textAlign: 'center',
-                  fontWeight: 400,
+                  fontWeight: 500,
                   fontSize: '1.0rem',
                   color: '#363532',
-                  letterSpacing: '-1px',
-                }}>
-                  {getRiskProfileBadge(client.risk_profile)}
-                </td>
+                  letterSpacing: '-1px'
+                }}>{client.risk_profile}</td>
                 <td style={{
                   padding: '12px 16px',
                   textAlign: 'center',
-                  fontWeight: 400,
+                  fontWeight: 500,
                   fontSize: '1.0rem',
                   color: '#363532',
                   letterSpacing: '-1px',
-                }}>
-                  {getInvestmentHorizonBadge(client.investment_horizon)}
-                </td>
+                }}>{client.investment_horizon}</td>
                 <td style={{
                   padding: '12px 16px',
                   textAlign: 'center',
@@ -243,6 +240,7 @@ const ClientList = ({ clients, onClientSelect, year, month, weekStr }) => {
           </tbody>
         </table>
       )}
+      <div style={{ background: '#fff', height: '50px', width: '100%', borderRadius: '8px', marginTop: '24px' }} />
     </div>
   );
 };
