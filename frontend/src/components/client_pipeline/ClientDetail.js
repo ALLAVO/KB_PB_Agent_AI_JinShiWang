@@ -5,6 +5,7 @@ import PortfolioAnalysis from './PortfolioAnalysis';
 import PerformanceChart from './PerformanceChart';
 import './ClientPipeline.css';
 import './ClientDetails.css';
+import titlecloud from '../../assets/titlecloud.png';
 
 const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
   const [clientData, setClientData] = useState(null);
@@ -106,7 +107,7 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
   return (
     <>
       {/* 메인 콘텐츠 */}
-      <div className="client-detail-content" style={{ maxWidth: '1600px', margin: '0 auto' }}>
+      <div className="client-detail-content" style={{ maxWidth: '2000px', margin: '0 auto' }}>
         {/* 좌측: 고객 이미지 */}
         <div className="client-image-section">
           <div className="client-profile-image">
@@ -153,7 +154,7 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
           {(client_info.memo1 || client_info.memo2 || client_info.memo3) && (
             <>
               <div style={{ textAlign: 'left', marginTop: '-17px' }}>
-                <span className="client-info-item" style={{ fontWeight: 'bold', color: '#6D5A42', fontSize: '18px' }}>특이사항</span>
+                <span className="client-info-item" style={{ fontWeight: 'bold', color: '#302A24', fontSize: '18px' }}>특이사항</span>
               </div>
               <div className="client-memo-box" style={{ marginTop: '-10px' }}>
                 <ul className="memo-list-items">
@@ -166,19 +167,23 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
           )}
         </div>
       </div>
-
-      {/* AI 투자 분석 요약 */}
+      <div className="pipeline-title">
+        <img src={titlecloud} alt="cloud" /> {'AI 투자 분석 요약'}
+      </div>
       {performanceData && performanceData.ai_summary && (
-        <div className="ai-analysis-section">
-          <h3 className="section-title">AI 투자 분석 요약</h3>
-          <div className="ai-analysis-content-combined">
-            <div className="ai-combined-card">
-              <div className="ai-summary-section">
-                <h4 className="ai-section-title">투자 성과 분석</h4>
-                <p className="ai-summary-text">{performanceData.ai_summary}</p>
-              </div>
-            </div>
-          </div>
+        <div style={{ background: '#ede8dd', borderRadius: '18px', padding: '20px 32px', marginBottom: '10px', maxWidth: '750px', marginLeft: 'auto', marginRight: 'auto' }}>
+          <p className="ai-summary-text" style={{ background: 'none', borderLeft: 'none', padding: 0, margin: 0, fontSize: '1.0rem', color: '#302A24', textAlign: 'left', lineHeight: 1.5 }}>
+            {performanceData.ai_summary && performanceData.ai_summary
+              .replace(/(1\.|2\.|3\.)/g, '\n$1')
+              .split(/\n(.+?\.)/).map((part, idx, arr) => {
+                if (part === '' || part === undefined) return null;
+                // Only add <br /> before 1., 2., 3. (not after)
+                if (/^(1\.|2\.|3\.)/.test(part) && idx !== 0) {
+                  return <React.Fragment key={idx}><br />{part}</React.Fragment>;
+                }
+                return <React.Fragment key={idx}>{part}</React.Fragment>;
+              })}
+          </p>
         </div>
       )}
 

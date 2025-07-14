@@ -79,6 +79,7 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
+  color: #302A24;
 }
 
 .client-basic-info-panel {
@@ -304,7 +305,7 @@
 .ai-summary-text {
   font-size: 14px;
   line-height: 1.6;
-  color: var(--kb-brown-dark);
+  color: #302A24;
   margin: 0;
   text-align: justify;
   background: var(--kb-yellow-light);
@@ -330,7 +331,7 @@
 
 .client-info-item {
   font-size: 18px;
-  color: var(--kb-brown-dark);
+  color: #302A24;
   line-height: 1.4;
 }
 
@@ -340,8 +341,8 @@
 }
 
 .client-memo-box {
-  background: var(--kb-beige);
-  border: 2px solid var(--kb-brown-light);
+  /* background: var(--kb-beige); */
+  border: 1px solid var(--kb-brown);
   border-radius: 12px;
   padding: 20px;
   margin-top: 0px;
@@ -365,7 +366,7 @@
 .memo-list-items li {
   font-size: 14px;
   line-height: 1.6;
-  color: var(--kb-brown-dark);
+  color: #302A24;
   margin-bottom: 8px;
   text-align: left;
 }
