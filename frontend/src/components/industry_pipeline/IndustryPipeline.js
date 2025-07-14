@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import titlecloud from "../../assets/titlecloud.png";
-import { fetchIndustryTop3Articles, fetchIndustryTop10Companies } from "../../api/industry";
+import { fetchIndustryTop3Articles } from "../../api/industry";
 import IndustryArticleList from "./IndustryArticleList";
 import ArticleDetailModal from "./ArticleDetailModal";
 
@@ -12,9 +12,6 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
   const [industryData, setIndustryData] = useState(null);
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [companiesData, setCompaniesData] = useState(null);
-  const [loadingCompanies, setLoadingCompanies] = useState(false);
-  const [showCompaniesTable, setShowCompaniesTable] = useState(false);
   
   // 산업 섹터 목록
   const sectors = [
@@ -63,27 +60,7 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
     // eslint-disable-next-line
   }, [autoIndustryTrigger, autoIndustryCategory]);
 
-  const handleLoadCompanies = async (categoryToUse) => {
-    if (!endDate) {
-      console.error('End date is required for companies data');
-      return;
-    }
-    
-    setLoadingCompanies(true);
-    try {
-      const data = await fetchIndustryTop10Companies({
-        sector: categoryToUse.trim(),
-        endDate: endDate
-      });
-      setCompaniesData(data);
-      setShowCompaniesTable(true);
-      console.log('기업 데이터:', data);
-    } catch (e) {
-      console.error('기업 데이터 로드 오류:', e);
-    } finally {
-      setLoadingCompanies(false);
-    }
-  };
+
 
   const handleSearch = async (overrideCategory, isAuto) => {
     const categoryToUse = overrideCategory !== undefined ? overrideCategory : inputSymbol;
@@ -109,9 +86,6 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
       });
       setIndustryData(data);
       console.log('산업 데이터:', data);
-      
-      // 기사 로드 완료 후 기업 정보도 자동으로 로드
-      await handleLoadCompanies(categoryToUse);
     } catch (e) {
       console.error('산업 API 호출 오류:', e);
       setError('데이터를 불러오지 못했습니다.');
@@ -192,6 +166,10 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
       {started && (
         <>
           <div className="pipeline-title">
+            <img src={titlecloud} alt="cloud" />{inputSymbol} 산업 핵심 기업
+          </div>
+
+          <div className="pipeline-title">
             <img src={titlecloud} alt="cloud" />{inputSymbol} 산업 핵심 뉴스
           </div>
           {/* 전 주에 핫한 기사 Top 3 섹션 */}
@@ -212,68 +190,6 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
               </div>
             )}
           </div>
-          
-          {/* 기업 정보 테이블 섹션 */}
-          {showCompaniesTable && (
-            <div className="industry-companies-section">
-              <div className="pipeline-title">
-                <img src={titlecloud} alt="cloud" />{inputSymbol} 상위 10개 기업
-              </div>
-              
-              {loadingCompanies ? (
-                <div className="industry-companies-loading">
-                  기업 정보를 불러오는 중...
-                </div>
-              ) : companiesData && companiesData.companies && companiesData.companies.length > 0 ? (
-                <div className="companies-table-container">
-                  <table className="companies-table">
-                    <thead>
-                      <tr>
-                        <th>순위</th>
-                        <th>기업명</th>
-                        <th>티커</th>
-                        <th>현재가($)</th>
-                        <th>시가총액(M$)</th>
-                        <th>1주 수익률</th>
-                        <th>1달 수익률</th>
-                        <th>1년 수익률</th>
-                        <th>P/E(배)</th>
-                        <th>P/B(배)</th>
-                        <th>ROE(%)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {companiesData.companies.map((company, index) => (
-                        <tr key={company.ticker}>
-                          <td>{index + 1}</td>
-                          <td className="company-name">{company.company_name}</td>
-                          <td className="ticker">{company.ticker}</td>
-                          <td>${company.current_price || 'N/A'}</td>
-                          <td>{formatNumber(company.market_cap_millions)}</td>
-                          <td className={company.return_1week >= 0 ? 'positive' : 'negative'}>
-                            {formatPercentage(company.return_1week)}
-                          </td>
-                          <td className={company.return_1month >= 0 ? 'positive' : 'negative'}>
-                            {formatPercentage(company.return_1month)}
-                          </td>
-                          <td className={company.return_1year >= 0 ? 'positive' : 'negative'}>
-                            {formatPercentage(company.return_1year)}
-                          </td>
-                          <td>{company.pe_ratio || 'N/A'}</td>
-                          <td>{company.pb_ratio || 'N/A'}</td>
-                          <td>{company.roe ? `${company.roe}%` : 'N/A'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="industry-companies-nodata">
-                  해당 산업의 기업 데이터가 없습니다.
-                </div>
-              )}
-            </div>
-          )}
           
           {/* 기사 상세 모달 */}
           <ArticleDetailModal article={showModal && selectedArticle} onClose={closeModal} />
