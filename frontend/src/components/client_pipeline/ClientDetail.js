@@ -80,8 +80,7 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
 
   if (loading) {
     return (
-      <div className="client-detail-loading">
-        <div className="loading-spinner"></div>
+      <div style={{ padding: '40px 0', textAlign: 'center', background: 'transparent', border: 'none' }}>
         <span>고객 상세 정보를 불러오는 중...</span>
       </div>
     );
@@ -105,9 +104,9 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
   const riskProfileInfo = getRiskProfileInfo(client_info.risk_profile);
 
   return (
-    <div className="client-detail-container">
+    <>
       {/* 메인 콘텐츠 */}
-      <div className="client-detail-content">
+      <div className="client-detail-content" style={{ maxWidth: '1600px', margin: '0 auto' }}>
         {/* 좌측: 고객 이미지 */}
         <div className="client-image-section">
           <div className="client-profile-image">
@@ -152,14 +151,18 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
           
           {/* 특이사항 박스 */}
           {(client_info.memo1 || client_info.memo2 || client_info.memo3) && (
-            <div className="client-memo-box">
-              <h4 className="memo-title">특이사항</h4>
-              <ul className="memo-list-items">
-                {client_info.memo1 && <li>{client_info.memo1}</li>}
-                {client_info.memo2 && <li>{client_info.memo2}</li>}
-                {client_info.memo3 && <li>{client_info.memo3}</li>}
-              </ul>
-            </div>
+            <>
+              <div style={{ textAlign: 'left', marginTop: '-17px' }}>
+                <span className="client-info-item" style={{ fontWeight: 'bold', color: '#6D5A42', fontSize: '18px' }}>특이사항</span>
+              </div>
+              <div className="client-memo-box" style={{ marginTop: '-10px' }}>
+                <ul className="memo-list-items">
+                  {client_info.memo1 && <li>{client_info.memo1}</li>}
+                  {client_info.memo2 && <li>{client_info.memo2}</li>}
+                  {/* {client_info.memo3 && <li>{client_info.memo3}</li>} */}
+                </ul>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -202,7 +205,7 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
           <span>←</span> 목록으로 돌아가기
         </button>
       </div>
-    </div>
+    </>
   );
 };
 

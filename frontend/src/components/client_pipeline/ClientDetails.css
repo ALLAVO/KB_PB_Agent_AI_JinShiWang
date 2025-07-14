@@ -138,14 +138,14 @@
   font-weight: bold;
   color: var(--kb-brown);
 }
-
+/* 
 .client-memo-section {
   margin: 32px;
   padding: 24px;
   background: var(--kb-yellow-light);
   border-radius: 12px;
   border: 1px solid var(--kb-brown-light);
-}
+} */
 
 .memo-list {
   display: flex;
@@ -344,7 +344,7 @@
   border: 2px solid var(--kb-brown-light);
   border-radius: 12px;
   padding: 20px;
-  margin-top: 20px;
+  margin-top: 0px;
 }
 
 .memo-title {
@@ -367,6 +367,7 @@
   line-height: 1.6;
   color: var(--kb-brown-dark);
   margin-bottom: 8px;
+  text-align: left;
 }
 
 .memo-list-items li:last-child {
@@ -414,5 +415,6 @@
   
   .memo-list-items li {
     font-size: 13px;
+    text-align: left;
   }
 }
