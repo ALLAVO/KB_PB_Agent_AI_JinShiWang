@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List
 from openai import OpenAI
 from app.db.connection import check_db_connection
+import numpy as np
 
 # 요청 간 최소 대기시간 (초 단위)
 RATE_LIMIT_SLEEP = 10
@@ -466,7 +467,6 @@ def get_return_analysis_summary(ticker: str, start_date: str, end_date: str) -> 
         relative_final_return = data['relative_returns'][-1]
         
         # 변동성 계산 (일간 수익률의 표준편차 × √252)
-        import numpy as np
         if len(data['stock_prices']) > 1:
             daily_stock_returns = [((data['stock_prices'][i] / data['stock_prices'][i-1]) - 1) * 100 
                                  for i in range(1, len(data['stock_prices']))]
@@ -868,59 +868,96 @@ def get_commodity_prices_6months(fred_api_key: str, end_date: str) -> dict:
 
 def get_enhanced_stock_info(ticker: str) -> Dict:
     """
-    stooq(데이터리더)로 불러올 수 있는 정보는 stooq로, 시가총액/유동주식수 등은 Alpha Vantage로 가져옵니다.
+    주가 관련 정보는 DB에서, 시가총액/유동주식수 등은 FMP API로 가져옵니다.
     """
-    import numpy as np
     try:
-        # stooq용 티커 변환
-        stooq_ticker = ticker if ticker.endswith('.US') else ticker + '.US'
-        # 1년치 데이터
-        df_1y = web.DataReader(stooq_ticker, 'stooq', start=(datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d'), end=datetime.now().strftime('%Y-%m-%d'))
-        df_1y = df_1y.sort_index()
-        # 1개월치 데이터
-        df_1m = web.DataReader(stooq_ticker, 'stooq', start=(datetime.now() - timedelta(days=31)).strftime('%Y-%m-%d'), end=datetime.now().strftime('%Y-%m-%d'))
-        df_1m = df_1m.sort_index()
-        # 60일치 데이터
-        df_60d = web.DataReader(stooq_ticker, 'stooq', start=(datetime.now() - timedelta(days=60)).strftime('%Y-%m-%d'), end=datetime.now().strftime('%Y-%m-%d'))
-        df_60d = df_60d.sort_index()
-        if df_1y.empty or df_1m.empty or df_60d.empty:
-            return {"error": f"No historical data found for {ticker} (stooq)"}
-        # 현재가 (가장 최근 종가)
-        current_price = df_1y['Close'].iloc[-1] if not df_1y.empty else None
-        # 52주 최고가/최저가
-        week_52_high = df_1y['High'].max() if not df_1y.empty else None
-        week_52_low = df_1y['Low'].min() if not df_1y.empty else None
-        # 60일 평균거래량
-        avg_volume_60d = df_60d['Volume'].mean() if not df_60d.empty else None
-        # 1개월 변동성 (표준편차 기반, 연환산)
-        if len(df_1m) > 1:
-            returns_1m = df_1m['Close'].pct_change().dropna()
-            volatility_1m = returns_1m.std() * (252 ** 0.5) * 100
+        # DB 테이블 선택
+        first_char = ticker[0].lower()
+        if 'a' <= first_char <= 'd':
+            table_name = 'fnspid_stock_price_a'
+        elif 'e' <= first_char <= 'm':
+            table_name = 'fnspid_stock_price_b'
         else:
-            volatility_1m = None
+            table_name = 'fnspid_stock_price_c'
+
+        conn = check_db_connection()
+        if conn is None:
+            return {"error": "Database connection failed"}
+        cur = conn.cursor()
+        now = datetime.now()
+        date_1y_ago = (now - timedelta(days=365)).strftime('%Y-%m-%d')
+        date_1m_ago = (now - timedelta(days=31)).strftime('%Y-%m-%d')
+        date_60d_ago = (now - timedelta(days=60)).strftime('%Y-%m-%d')
+        now_str = now.strftime('%Y-%m-%d')
+
+        # 1년치 데이터
+        cur.execute(f"""
+            SELECT date, high, low, close, volume
+            FROM {table_name}
+            WHERE stock_symbol = %s AND date BETWEEN %s AND %s
+            ORDER BY date ASC
+        """, (ticker, date_1y_ago, now_str))
+        rows_1y = cur.fetchall()
+        # 1개월치 데이터
+        cur.execute(f"""
+            SELECT date, close
+            FROM {table_name}
+            WHERE stock_symbol = %s AND date BETWEEN %s AND %s
+            ORDER BY date ASC
+        """, (ticker, date_1m_ago, now_str))
+        rows_1m = cur.fetchall()
+        # 60일치 데이터
+        cur.execute(f"""
+            SELECT date, volume
+            FROM {table_name}
+            WHERE stock_symbol = %s AND date BETWEEN %s AND %s
+            ORDER BY date ASC
+        """, (ticker, date_60d_ago, now_str))
+        rows_60d = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        if not rows_1y or not rows_1m or not rows_60d:
+            return {"error": f"No historical data found for {ticker} (DB)"}
+
+        # 1년치 데이터 처리
+        highs_1y = [float(r[1]) for r in rows_1y if r[1] is not None]
+        lows_1y = [float(r[2]) for r in rows_1y if r[2] is not None]
+        closes_1y = [float(r[3]) for r in rows_1y if r[3] is not None]
+        # 현재가 (가장 최근 종가)
+        current_price = closes_1y[-1] if closes_1y else None
+        # 52주 최고가/최저가
+        week_52_high = max(highs_1y) if highs_1y else None
+        week_52_low = min(lows_1y) if lows_1y else None
         # 1년 변동성 (연환산)
-        if len(df_1y) > 1:
-            returns_1y = df_1y['Close'].pct_change().dropna()
-            volatility_1y = returns_1y.std() * (252 ** 0.5) * 100
+        if len(closes_1y) > 1:
+            returns_1y = [(closes_1y[i] / closes_1y[i-1] - 1) for i in range(1, len(closes_1y))]
+            volatility_1y = np.std(returns_1y) * (252 ** 0.5) * 100
         else:
             volatility_1y = None
-        # 시가총액, 유동주식수 등은 FMP API로 가져오기
+        # 1개월 변동성 (연환산)
+        closes_1m = [float(r[1]) for r in rows_1m if r[1] is not None]
+        if len(closes_1m) > 1:
+            returns_1m = [(closes_1m[i] / closes_1m[i-1] - 1) for i in range(1, len(closes_1m))]
+            volatility_1m = np.std(returns_1m) * (252 ** 0.5) * 100
+        else:
+            volatility_1m = None
+        # 60일 평균거래량
+        volumes_60d = [float(r[1]) for r in rows_60d if r[1] is not None]
+        avg_volume_60d = np.mean(volumes_60d) if volumes_60d else None
+
+        # FMP API로 시가총액 등 정보
         market_cap = None
         shares_outstanding = None
         float_shares = None
         try:
             api_key = settings.FMP_API_KEY
             url = f"https://financialmodelingprep.com/api/v3/profile/{ticker}?apikey={api_key}"
-            print(f"🔍 FMP Profile URL: {url[:50]}...{url[-20:]}")  # API 키 부분 숨기기
             resp = requests.get(url)
-            print(f"📡 FMP Profile response status: {resp.status_code}")
             if resp.status_code == 200:
                 data = resp.json()
-                print(f"📊 FMP Profile data received: {len(data)} companies")
-                # FMP profile은 배열로 반환됨
                 if data and isinstance(data, list) and len(data) > 0:
                     company_data = data[0]
-                    # 안전한 숫자 변환
                     def safe_int_convert(value):
                         if value is None:
                             return None
@@ -928,18 +965,10 @@ def get_enhanced_stock_info(ticker: str) -> Dict:
                             return int(float(str(value).replace(',', '')))
                         except (ValueError, TypeError):
                             return None
-                    
-                    print(f"💰 Raw values - MarketCap: {company_data.get('mktCap')}, Shares: {company_data.get('sharesOutstanding')}")
                     market_cap = safe_int_convert(company_data.get('mktCap'))
                     shares_outstanding = safe_int_convert(company_data.get('sharesOutstanding'))
-                    # FMP에서는 float shares 정보가 따로 없으므로 shares_outstanding과 동일하게 설정
                     float_shares = shares_outstanding
-                    print(f"✅ Converted values - MarketCap: {market_cap}, Shares: {shares_outstanding}, Float: {float_shares}")
-                else:
-                    print(f"❌ FMP Profile: No data found for {ticker}")
-            # else: 그대로 None 유지
         except Exception as e:
-            print(f"❌ FMP Profile error for {ticker}: {e}")
             market_cap = None
             shares_outstanding = None
             float_shares = None
@@ -959,17 +988,6 @@ def get_enhanced_stock_info(ticker: str) -> Dict:
     except Exception as e:
         return {"error": f"Error fetching enhanced stock info for {ticker}: {e}"}
 
-
-def get_financial_metrics_from_sec(ticker: str, end_date: str = None) -> dict:
-    """
-    FMP API를 통해 재무지표를 가져옵니다.
-    - 매출액, 영업이익, 영업이익률, 순이익
-    - 최근 2년치 데이터 제공
-    
-    Note: This function has been replaced with FMP API for better reliability.
-    The end_date parameter is kept for compatibility but not used.
-    """
-    return get_financial_metrics_from_fmp(ticker)
 
 def get_financial_metrics_from_fmp(ticker: str) -> dict:
     """

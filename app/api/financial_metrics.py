@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import Dict, Optional
-from app.services.crawler import get_financial_metrics_from_sec
+from app.services.crawler import get_financial_metrics_from_fmp
 
 router = APIRouter()
 
@@ -13,7 +13,7 @@ async def get_financial_metrics(symbol: str, end_date: Optional[str] = Query(Non
     - end_date: 해당 날짜를 기준으로 연도 계산 (선택사항)
     """
     try:
-        result = get_financial_metrics_from_sec(symbol.upper(), end_date)
+        result = get_financial_metrics_from_fmp(symbol.upper(), end_date)
         
         if "error" in result:
             raise HTTPException(status_code=404, detail=result["error"])

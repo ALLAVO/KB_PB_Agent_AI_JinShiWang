@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from app.services.crawler import get_valuation_metrics_from_sec
+from app.services.crawler import get_valuation_metrics_from_fmp
 from typing import Optional
 
 router = APIRouter()
@@ -12,7 +12,7 @@ async def get_valuation_metrics(symbol: str, end_date: Optional[str] = None):
     - 당해연도, 전연도 데이터
     """
     try:
-        result = get_valuation_metrics_from_sec(symbol, end_date)
+        result = get_valuation_metrics_from_fmp(symbol, end_date)
         
         if "error" in result:
             raise HTTPException(status_code=404, detail=result["error"])

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   ComposedChart, 
   Line, 
@@ -10,14 +10,9 @@ import {
   Legend, 
   ResponsiveContainer 
 } from 'recharts';
-import { fetchCombinedStockChart, fetchStockChartSummary, fetchEnhancedStockInfo } from '../../api/stockChart';
 import './StockChart.css';
 
-const StockChart = ({ symbol, startDate, endDate }) => {
-  const [chartData, setChartData] = useState([]);
-  const [chartSummary, setChartSummary] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+const StockChart = ({ symbol, startDate, endDate, chartData, chartSummary, loading, error }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('6M');
   const [showPeriodOptions, setShowPeriodOptions] = useState(false);
 
@@ -59,81 +54,6 @@ const StockChart = ({ symbol, startDate, endDate }) => {
       endDate: end.toISOString().split('T')[0]
     };
   };
-
-  // 차트 데이터 로드
-  const loadChartData = async () => {
-    if (!symbol) return;
-    
-    setLoading(true);
-    setError('');
-    
-    try {
-      const { startDate: calcStartDate, endDate: calcEndDate } = calculateDateRange(selectedPeriod, endDate);
-      const fixedChartTypes = ['price', 'volume'];
-      
-      console.log('🚀 Loading chart data:', { 
-        symbol, 
-        period: selectedPeriod,
-        types: fixedChartTypes, 
-      });
-      
-      // 차트 데이터, 요약 정보, 상세 정보를 동시에 가져오기
-      const [data, summaryData, enhancedData] = await Promise.all([
-        fetchCombinedStockChart(
-          symbol, 
-          calcStartDate, 
-          calcEndDate, 
-          fixedChartTypes,
-        ),
-        fetchStockChartSummary(symbol, calcStartDate, calcEndDate),
-        fetchEnhancedStockInfo(symbol)
-      ]);
-      
-      console.log('📦 Received chart data:', data);
-      console.log('📈 Received enhanced data:', enhancedData);
-      
-      // 차트 데이터 변환
-      const transformedData = data.dates.map((date, index) => {
-        const item = { date };
-        
-        // 주가 데이터
-        if (data.data.price) {
-          item.close = data.data.price.closes[index];
-          item.open = data.data.price.opens[index];
-          item.high = data.data.price.highs[index];
-          item.low = data.data.price.lows[index];
-        }
-        
-        // 거래량 데이터
-        if (data.data.volume) {
-          item.volume = data.data.volume.volumes[index];
-        }
-        
-        return item;
-      });
-      
-      console.log('🎯 Transformed data sample:', transformedData.slice(0, 3));
-      
-      // 상세 정보를 요약 정보에 병합
-      const mergedSummary = {
-        ...summaryData,
-        ...enhancedData
-      };
-      
-      setChartData(transformedData);
-      setChartSummary(mergedSummary);
-    } catch (err) {
-      setError('차트 데이터를 불러오는데 실패했습니다: ' + err.message);
-      console.error('Chart data loading error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 기간이나 차트 타입이 변경될 때 데이터 새로고침
-  useEffect(() => {
-    loadChartData();
-  }, [symbol, selectedPeriod]);
 
   // 거래량 포맷터
   const formatVolume = (value) => {

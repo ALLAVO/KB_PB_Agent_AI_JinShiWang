@@ -19,3 +19,16 @@ export const fetchCompanyFinancialAnalysis = async (symbol, startDate = null, en
     throw error;
   }
 };
+
+export const fetchCompanyInfo = async (symbol) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/companies/${symbol}/info`);
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Company info API error:', error);
+    throw error;
+  }
+};

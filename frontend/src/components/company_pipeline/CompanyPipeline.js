@@ -10,6 +10,8 @@ import { fetchWeeklyKeywords } from '../../api/keyword';
 import { fetchPredictionSummary } from '../../api/prediction';
 import { fetchFinancialMetrics } from '../../api/financialMetrics';
 import { fetchValuationMetrics } from '../../api/valuation';
+import { fetchCompanyInfo } from '../../api/company';
+import { fetchCombinedStockChart, fetchStockChartSummary, fetchEnhancedStockInfo } from '../../api/stockChart';
 import Top3Articles from './Top3Articles';
 import ArticleDetailModal from './ArticleDetailModal';
 import StockChart from './StockChart';
@@ -28,6 +30,9 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
   const [prediction, setPrediction] = useState(null);
   const [financialMetrics, setFinancialMetrics] = useState(null);
   const [valuationMetrics, setValuationMetrics] = useState(null);
+  const [companyInfo, setCompanyInfo] = useState(null);
+  const [stockChartData, setStockChartData] = useState(null);
+  const [stockChartSummary, setStockChartSummary] = useState(null);
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [currentSymbol, setCurrentSymbol] = useState(""); // 현재 처리 중인 심볼 저장
@@ -152,6 +157,9 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
     setPrediction(null);
     setFinancialMetrics(null);
     setValuationMetrics(null);
+    setCompanyInfo(null);
+    setStockChartData(null);
+    setStockChartSummary(null);
     
     // 리포트 제목 설정
     if (onSetReportTitle) {
@@ -161,27 +169,65 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
     // 실제 API 호출 파라미터 확인
     console.log('API 호출', { symbol: cleanSymbol, startDate, endDate });
     try {
-      // 여섯 API를 병렬로 호출 - cleanSymbol을 사용
-      const [articlesData, summariesData, keywordsData, predictionData, financialData, valuationData] = await Promise.all([
-        fetchTop3Articles({ symbol: cleanSymbol, startDate, endDate }),
-        fetchWeeklySummaries({ symbol: cleanSymbol, startDate, endDate }),
-        fetchWeeklyKeywords({ symbol: cleanSymbol, startDate, endDate }),
-        fetchPredictionSummary({ symbol: cleanSymbol, startDate, endDate }),
-        fetchFinancialMetrics({ symbol: cleanSymbol, endDate }),
-        fetchValuationMetrics({ symbol: cleanSymbol, endDate })
+      // 렌더링 순서에 맞춰 API 호출 순서도 변경
+      const fixedChartTypes = ['price', 'volume'];
+      const [companyInfoData, financialData, valuationData, stockChartDataResponse, stockChartSummaryResponse, enhancedStockInfoResponse, predictionData, articlesData, summariesData, keywordsData] = await Promise.all([
+        fetchCompanyInfo(cleanSymbol), // 1. CompanyInfo (기업 정보)
+        fetchFinancialMetrics({ symbol: cleanSymbol, endDate }), // 2. 재무지표
+        fetchValuationMetrics({ symbol: cleanSymbol, endDate }), // 3. 벨류에이션 지표
+        fetchCombinedStockChart(cleanSymbol, startDate, endDate, fixedChartTypes), // 4. 주가 차트 데이터
+        fetchStockChartSummary(cleanSymbol, startDate, endDate), // 5. 주가 차트 요약
+        fetchEnhancedStockInfo(cleanSymbol), // 6. 상세 주식 정보
+        fetchPredictionSummary({ symbol: cleanSymbol, startDate, endDate }), // 7. 주가 전망
+        fetchTop3Articles({ symbol: cleanSymbol, startDate, endDate }), // 8. 핵심 뉴스
+        fetchWeeklySummaries({ symbol: cleanSymbol, startDate, endDate }), // 9. 요약
+        fetchWeeklyKeywords({ symbol: cleanSymbol, startDate, endDate }) // 10. 키워드
       ]);
+      
+      // 차트 데이터 변환
+      const transformedChartData = stockChartDataResponse.dates.map((date, index) => {
+        const item = { date };
+        
+        // 주가 데이터
+        if (stockChartDataResponse.data.price) {
+          item.close = stockChartDataResponse.data.price.closes[index];
+          item.open = stockChartDataResponse.data.price.opens[index];
+          item.high = stockChartDataResponse.data.price.highs[index];
+          item.low = stockChartDataResponse.data.price.lows[index];
+        }
+        
+        // 거래량 데이터
+        if (stockChartDataResponse.data.volume) {
+          item.volume = stockChartDataResponse.data.volume.volumes[index];
+        }
+        
+        return item;
+      });
+      
+      // 상세 정보를 요약 정보에 병합
+      const mergedChartSummary = {
+        ...stockChartSummaryResponse,
+        ...enhancedStockInfoResponse
+      };
+      
+      // 실제로 사용하는 데이터만 setState
+      setCompanyInfo(companyInfoData);
+      setFinancialMetrics(financialData);
+      setValuationMetrics(valuationData);
+      setStockChartData(transformedChartData);
+      setStockChartSummary(mergedChartSummary);
+      setPrediction(predictionData);
       setTop3Articles(articlesData);
       setSummaries(summariesData);
       setKeywords(keywordsData);
-      setPrediction(predictionData);
-      setFinancialMetrics(financialData);
-      setValuationMetrics(valuationData);
+      // stockChartData, returnAnalysisData 등은 필요시 추가
+      console.log('기업 정보 데이터:', companyInfoData);
+      console.log('재무지표 데이터:', financialData);
+      console.log('벨류에이션 지표 데이터:', valuationData);
+      console.log('예측 데이터:', predictionData);
       console.log('기사 데이터:', articlesData);
       console.log('요약 데이터:', summariesData);
       console.log('키워드 데이터:', keywordsData);
-      console.log('예측 데이터:', predictionData);
-      console.log('재무지표 데이터:', financialData);
-      console.log('벨류에이션 지표 데이터:', valuationData);
     } catch (e) {
       console.error('API 호출 오류:', e);
       setError('데이터를 불러오지 못했습니다.');
@@ -244,7 +290,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
           <div className="pipeline-title">
             <img src={titlecloud} alt="cloud" /> {currentSymbol ? `기업 정보` : '기업 정보'}
           </div>
-          <CompanyInfo symbol={currentSymbol} />
+          <CompanyInfo symbol={currentSymbol} companyData={companyInfo} loading={loading} error={error} />
           
           <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', marginBottom: '24px' }}>
             <div style={{ flex: 1 }}>
@@ -278,6 +324,10 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
               symbol={currentSymbol}
               startDate={startDate}
               endDate={endDate}
+              chartData={stockChartData}
+              chartSummary={stockChartSummary}
+              loading={loading}
+              error={error}
             />
           )}
           <div className="pipeline-title">
