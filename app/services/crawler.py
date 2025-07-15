@@ -1064,14 +1064,29 @@ def get_valuation_metrics_from_fmp(ticker: str) -> dict:
             except (ValueError, TypeError):
                 return None
         
+        # EPS 데이터를 Income Statement API에서 가져오기
+        current_eps = None
+        previous_eps = None
+        try:
+            income_url = f"https://financialmodelingprep.com/api/v3/income-statement/{ticker}?limit=2&apikey={api_key}"
+            income_resp = requests.get(income_url)
+            if income_resp.status_code == 200:
+                income_data = income_resp.json()
+                if income_data and isinstance(income_data, list):
+                    current_eps = safe_float(income_data[0].get("eps")) if len(income_data) > 0 else None
+                    previous_eps = safe_float(income_data[1].get("eps")) if len(income_data) > 1 else None
+                    print(f"📈 EPS from Income Statement - Current: {current_eps}, Previous: {previous_eps}")
+        except Exception as e:
+            print(f"⚠️ Could not fetch EPS from Income Statement: {e}")
+        
         result = {
             "ticker": ticker,
             "current_year": current_data.get("calendarYear") if current_data else None,
             "previous_year": previous_data.get("calendarYear") if previous_data else None,
             "metrics": {
                 "eps": {
-                    "current": None,  # FMP ratios에서는 EPS 직접 제공 안함
-                    "previous": None
+                    "current": current_eps,
+                    "previous": previous_eps
                 },
                 "pe_ratio": {
                     "current": safe_float(current_data.get("priceEarningsRatio")) if current_data else None,
@@ -1097,6 +1112,7 @@ def get_valuation_metrics_from_fmp(ticker: str) -> dict:
         }
         
         print(f"✅ FMP Ratios result for {ticker}:")
+        print(f"   EPS: {result['metrics']['eps']['current']} / {result['metrics']['eps']['previous']}")
         print(f"   P/E: {result['metrics']['pe_ratio']['current']} / {result['metrics']['pe_ratio']['previous']}")
         print(f"   P/B: {result['metrics']['pb_ratio']['current']} / {result['metrics']['pb_ratio']['previous']}")
         print(f"   ROE: {result['metrics']['roe_percent']['current']}% / {result['metrics']['roe_percent']['previous']}%")
