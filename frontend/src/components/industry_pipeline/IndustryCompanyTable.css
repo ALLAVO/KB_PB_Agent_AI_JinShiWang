@@ -1,0 +1,75 @@
+.industry-company-table-wrapper {
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+
+.industry-company-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+
+.industry-company-table thead tr {
+  background: rgba(234,227,215,0.7);
+  height: 60px;
+}
+
+.industry-company-table th {
+  padding: 3px 0;
+  text-align: center;
+  font-weight: 500;
+  font-size: 1.1rem;
+  color: #363532;
+  border: none;
+  letter-spacing: -1px;
+  border-bottom: 1.5px solid #e5dfd3;
+}
+
+.industry-company-table th:first-child {
+  border-top-left-radius: 6px;
+}
+.industry-company-table th:last-child {
+  border-top-right-radius: 6px;
+}
+
+.industry-company-table tbody tr {
+  background: #fff;
+  height: 44px;
+}
+
+.industry-company-table td {
+  padding: 6px 0;
+  text-align: center;
+  font-weight: 400;
+  font-size: 1.1rem;
+  color: #363532;
+  letter-spacing: -1px;
+}
+
+.industry-company-table td.positive {
+  color: #ef4444;
+  font-weight: 500;
+}
+.industry-company-table td.negative {
+  color: #2563eb;
+  font-weight: 500;
+}
+
+.industry-company-table td:first-child {
+  border-bottom-left-radius: 6px;
+}
+.industry-company-table td:last-child {
+  border-bottom-right-radius: 6px;
+}
+
+.industry-companies-loading,
+.industry-companies-nodata {
+  padding: 32px 0;
+  text-align: center;
+  color: #888;
+  font-size: 1.1rem;
+}

@@ -200,9 +200,140 @@ def get_enhanced_stock_info(ticker: str, end_date: str) -> Dict:
     except Exception as e:
         return {"error": f"Error fetching enhanced stock info for {ticker}: {e}"}
 
+def get_stock_table_name(ticker: str) -> str:
+    """
+    티커의 첫 글자에 따라 해당하는 데이터베이스 테이블명을 반환합니다.
+    """
+    first_char = ticker[0].lower()
+    if first_char <= 'd':
+        return 'fnspid_stock_price_a'
+    elif first_char <= 'm':
+        return 'fnspid_stock_price_b'
+    else:
+        return 'fnspid_stock_price_c'
+
+def get_stock_data_from_db(ticker: str, end_date: str) -> Dict:
+    """
+    데이터베이스에서 특정 티커의 주가 데이터를 가져옵니다.
+    """
+    conn = check_db_connection()
+    if conn is None:
+        return {"error": "Database connection failed"}
+    
+    try:
+        table_name = get_stock_table_name(ticker)
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        
+        # 1년치 데이터를 가져오기 위해 시작일 설정
+        start_dt = end_dt - timedelta(days=400)
+        start_str = start_dt.strftime('%Y-%m-%d')
+        
+        cur = conn.cursor()
+        query = f"""
+            SELECT date, close, "adj close", volume
+            FROM {table_name}
+            WHERE stock_symbol = %s AND date BETWEEN %s AND %s
+            ORDER BY date ASC;
+        """
+        cur.execute(query, (ticker, start_str, end_date))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        if not rows:
+            return {"error": f"No data found for {ticker}"}
+        
+        # 데이터 구조화
+        dates = []
+        closes = []
+        
+        for row in rows:
+            # row[0]이 이미 문자열인 경우와 datetime 객체인 경우를 모두 처리
+            if isinstance(row[0], str):
+                dates.append(row[0])
+            else:
+                dates.append(row[0].strftime('%Y-%m-%d'))
+            closes.append(float(row[1]) if row[1] is not None else None)
+        
+        return {
+            "dates": dates,
+            "closes": closes,
+            "current_price": closes[-1] if closes else None
+        }
+        
+    except Exception as e:
+        if conn:
+            conn.close()
+        return {"error": f"Error fetching stock data for {ticker}: {e}"}
+
+def calculate_returns_from_db(ticker: str, end_date: str) -> Dict:
+    """
+    데이터베이스 데이터를 이용해 수익률을 계산합니다.
+    """
+    try:
+        stock_data = get_stock_data_from_db(ticker, end_date)
+        if "error" in stock_data:
+            return {"1week": None, "1month": None, "1year": None}
+        
+        dates = stock_data["dates"]
+        closes = stock_data["closes"]
+        
+        if not dates or not closes:
+            return {"1week": None, "1month": None, "1year": None}
+        
+        current_price = closes[-1]
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        
+        # 1주일 수익률
+        week_return = None
+        for days_back in range(5, 10):
+            target_date = (end_dt - timedelta(days=days_back)).strftime('%Y-%m-%d')
+            # 해당 날짜 이전의 가장 가까운 데이터 찾기
+            for i in range(len(dates)-1, -1, -1):
+                if dates[i] <= target_date:
+                    week_price = closes[i]
+                    week_return = ((current_price / week_price) - 1) * 100
+                    break
+            if week_return is not None:
+                break
+        
+        # 1개월 수익률
+        month_return = None
+        for days_back in range(28, 35):
+            target_date = (end_dt - timedelta(days=days_back)).strftime('%Y-%m-%d')
+            for i in range(len(dates)-1, -1, -1):
+                if dates[i] <= target_date:
+                    month_price = closes[i]
+                    month_return = ((current_price / month_price) - 1) * 100
+                    break
+            if month_return is not None:
+                break
+        
+        # 1년 수익률
+        year_return = None
+        for days_back in range(360, 370):
+            target_date = (end_dt - timedelta(days=days_back)).strftime('%Y-%m-%d')
+            for i in range(len(dates)-1, -1, -1):
+                if dates[i] <= target_date:
+                    year_price = closes[i]
+                    year_return = ((current_price / year_price) - 1) * 100
+                    break
+            if year_return is not None:
+                break
+        
+        return {
+            "1week": round(week_return, 2) if week_return else None,
+            "1month": round(month_return, 2) if month_return else None,
+            "1year": round(year_return, 2) if year_return else None
+        }
+        
+    except Exception as e:
+        print(f"Error calculating returns for {ticker}: {e}")
+        return {"1week": None, "1month": None, "1year": None}
+
 def get_industry_top10_companies(sector: str, end_date: str) -> Dict:
     """
-    특정 산업의 미리 정의된 기업 목록에 대한 정보를 반환합니다. (FMP API 사용)
+    특정 산업의 미리 정의된 기업 목록에 대한 정보를 데이터베이스에서 반환합니다.
     """
     try:
         print(f"🚀 Starting industry analysis for sector: {sector}, end_date: {end_date}")
@@ -237,29 +368,62 @@ def get_industry_top10_companies(sector: str, end_date: str) -> Dict:
             try:
                 print(f"📊 Processing {i+1}/{len(company_tickers)}: {ticker}")
                 
-                # 기본 정보 (시가총액, 현재가 등)
-                enhanced_info = get_enhanced_stock_info(ticker, end_date)
-                if "error" in enhanced_info:
-                    print(f"⚠️  Enhanced info failed for {ticker}: {enhanced_info['error']}")
+                # 데이터베이스에서 주가 데이터 가져오기
+                stock_data = get_stock_data_from_db(ticker, end_date)
+                if "error" in stock_data:
+                    print(f"⚠️  Stock data failed for {ticker}: {stock_data['error']}")
                     failed_count += 1
                     continue
                 
-                # 시가총액이 있는 경우만 처리
-                if not enhanced_info.get('market_cap'):
-                    print(f"⚠️  No market cap for {ticker}")
+                current_price = stock_data.get('current_price')
+                if not current_price:
+                    print(f"⚠️  No current price for {ticker}")
                     failed_count += 1
                     continue
                 
-                # 수익률 계산
-                returns = get_stock_returns(ticker, end_date)
+                # 수익률 계산 (데이터베이스 기반)
+                returns = calculate_returns_from_db(ticker, end_date)
                 
-                # 밸류에이션 지표
+                # 밸류에이션 지표 (FMP API 유지)
                 valuation = get_valuation_metrics_from_fmp(ticker)
+                
+                # 시가총액을 FMP API에서 가져오기
+                market_cap_millions = None
+                try:
+                    api_key = settings.FMP_API_KEY
+                    url = f"https://financialmodelingprep.com/api/v3/profile/{ticker}?apikey={api_key}"
+                    resp = requests.get(url, timeout=10)
+                    time.sleep(0.5)  # API 제한 고려
+                    
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        if data and isinstance(data, list) and len(data) > 0:
+                            company_data = data[0]
+                            market_cap = company_data.get('mktCap')
+                            
+                            if market_cap and market_cap != 0:
+                                market_cap_millions = round(market_cap / 1000000, 1)
+                                print(f"📊 FMP market cap for {ticker}: ${market_cap_millions}M")
+                            else:
+                                print(f"⚠️  FMP returned 0 or null market cap for {ticker}")
+                        else:
+                            print(f"⚠️  FMP: No profile data found for {ticker}")
+                    else:
+                        print(f"⚠️  FMP API error for {ticker}: {resp.status_code}")
+                        
+                except Exception as e:
+                    print(f"❌ FMP market cap error for {ticker}: {e}")
+                
+                # FMP에서 시가총액을 가져오지 못한 경우 추정값 사용
+                if not market_cap_millions:
+                    estimated_shares = 1000000000  # 10억주 가정
+                    market_cap_millions = round((current_price * estimated_shares) / 1000000, 1)
+                    print(f"🔮 Using estimated market cap for {ticker}: ${market_cap_millions}M")
                 
                 company_data = {
                     "ticker": ticker,
-                    "current_price": enhanced_info.get('current_price'),
-                    "market_cap_millions": round(enhanced_info.get('market_cap', 0) / 1000000, 1),
+                    "current_price": round(current_price, 2),
+                    "market_cap_millions": market_cap_millions,
                     "return_1week": returns.get('1week'),
                     "return_1month": returns.get('1month'),
                     "return_1year": returns.get('1year'),
@@ -269,7 +433,7 @@ def get_industry_top10_companies(sector: str, end_date: str) -> Dict:
                 }
                 companies_data.append(company_data)
                 successful_count += 1
-                print(f"✅ Successfully processed {ticker} (Market Cap: ${enhanced_info.get('market_cap', 0)/1000000:.1f}M)")
+                print(f"✅ Successfully processed {ticker} (Price: ${current_price:.2f})")
                 
             except Exception as e:
                 failed_count += 1

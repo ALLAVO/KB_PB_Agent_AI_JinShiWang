@@ -3,6 +3,7 @@ import titlecloud from "../../assets/titlecloud.png";
 import { fetchIndustryTop3Articles, fetchIndustryTop10Companies } from "../../api/industry";
 import IndustryArticleList from "./IndustryArticleList";
 import ArticleDetailModal from "./ArticleDetailModal";
+import IndustryCompanyTable from "./IndustryCompanyTable";
 
 function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone }) {
   const [started, setStarted] = useState(false);
@@ -102,6 +103,10 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
     }
     
     try {
+      // 먼저 기업 정보를 로드
+      await handleLoadCompanies(categoryToUse);
+      
+      // 그 다음에 기사 정보를 로드
       console.log('산업 API 호출', { sector: categoryToUse.trim(), endDate });
       const data = await fetchIndustryTop3Articles({ 
         sector: categoryToUse.trim(), 
@@ -109,9 +114,6 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
       });
       setIndustryData(data);
       console.log('산업 데이터:', data);
-      
-      // 기사 로드 완료 후 기업 정보도 자동으로 로드
-      await handleLoadCompanies(categoryToUse);
     } catch (e) {
       console.error('산업 API 호출 오류:', e);
       setError('데이터를 불러오지 못했습니다.');
@@ -198,217 +200,12 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
           {/* 기업 정보 테이블 섹션 */}
           {showCompaniesTable && (
             <div className="industry-companies-section">
-              {loadingCompanies ? (
-                <div className="industry-companies-loading">
-                  기업 정보를 불러오는 중...
-                </div>
-              ) : companiesData && companiesData.companies && companiesData.companies.length > 0 ? (
-                <div style={{ marginTop: '16px', marginBottom: '16px' }}>
-                  <table style={{
-                    width: '100%',
-                    borderCollapse: 'separate',
-                    borderSpacing: 0,
-                    background: 'white',
-                    borderRadius: '10px',
-                    overflow: 'hidden',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-                  }}>
-                    <thead style={{ background: 'rgba(234,227,215,0.7)', borderRadius: '6px 6px 0 0' }}>
-                      <tr style={{ background: 'rgba(234,227,215,0.7)', height: 60 }}>
-                        <th style={{
-                          padding: '24px 0 24px 0',
-                          textAlign: 'center',
-                          fontWeight: 500,
-                          fontSize: '1.2rem',
-                          color: '#363532',
-                          border: 'none',
-                          letterSpacing: '-1px',
-                          minWidth: 80,
-                          borderBottom: '1.5px solid #e5dfd3',
-                          borderTopLeftRadius: '6px',
-                        }}>티커</th>
-                        <th style={{
-                          padding: '24px 0 24px 0',
-                          textAlign: 'center',
-                          fontWeight: 500,
-                          fontSize: '1.2rem',
-                          color: '#363532',
-                          border: 'none',
-                          letterSpacing: '-1px',
-                          minWidth: 100,
-                          borderBottom: '1.5px solid #e5dfd3',
-                        }}>현재가($)</th>
-                        <th style={{
-                          padding: '24px 0 24px 0',
-                          textAlign: 'center',
-                          fontWeight: 500,
-                          fontSize: '1.2rem',
-                          color: '#363532',
-                          border: 'none',
-                          letterSpacing: '-1px',
-                          minWidth: 120,
-                          borderBottom: '1.5px solid #e5dfd3',
-                        }}>시가총액(M$)</th>
-                        <th style={{
-                          padding: '24px 0 24px 0',
-                          textAlign: 'center',
-                          fontWeight: 500,
-                          fontSize: '1.2rem',
-                          color: '#363532',
-                          border: 'none',
-                          letterSpacing: '-1px',
-                          minWidth: 100,
-                          borderBottom: '1.5px solid #e5dfd3',
-                        }}>1주 수익률</th>
-                        <th style={{
-                          padding: '24px 0 24px 0',
-                          textAlign: 'center',
-                          fontWeight: 500,
-                          fontSize: '1.2rem',
-                          color: '#363532',
-                          border: 'none',
-                          letterSpacing: '-1px',
-                          minWidth: 100,
-                          borderBottom: '1.5px solid #e5dfd3',
-                        }}>1달 수익률</th>
-                        <th style={{
-                          padding: '24px 0 24px 0',
-                          textAlign: 'center',
-                          fontWeight: 500,
-                          fontSize: '1.2rem',
-                          color: '#363532',
-                          border: 'none',
-                          letterSpacing: '-1px',
-                          minWidth: 100,
-                          borderBottom: '1.5px solid #e5dfd3',
-                        }}>1년 수익률</th>
-                        <th style={{
-                          padding: '24px 0 24px 0',
-                          textAlign: 'center',
-                          fontWeight: 500,
-                          fontSize: '1.2rem',
-                          color: '#363532',
-                          border: 'none',
-                          letterSpacing: '-1px',
-                          minWidth: 80,
-                          borderBottom: '1.5px solid #e5dfd3',
-                        }}>P/E(배)</th>
-                        <th style={{
-                          padding: '24px 0 24px 0',
-                          textAlign: 'center',
-                          fontWeight: 500,
-                          fontSize: '1.2rem',
-                          color: '#363532',
-                          border: 'none',
-                          letterSpacing: '-1px',
-                          minWidth: 80,
-                          borderBottom: '1.5px solid #e5dfd3',
-                        }}>P/B(배)</th>
-                        <th style={{
-                          padding: '24px 0 24px 0',
-                          textAlign: 'center',
-                          fontWeight: 500,
-                          fontSize: '1.2rem',
-                          color: '#363532',
-                          border: 'none',
-                          letterSpacing: '-1px',
-                          minWidth: 80,
-                          borderBottom: '1.5px solid #e5dfd3',
-                          borderTopRightRadius: '6px',
-                        }}>ROE(%)</th>
-                      </tr>
-                    </thead>
-                    <tbody style={{ background: '#fff', borderRadius: '0 0 6px 6px' }}>
-                      {companiesData.companies.map((company, index) => (
-                        <tr key={company.ticker} style={{
-                          background: '#fff',
-                          borderBottom: index < companiesData.companies.length - 1 ? '1.5px solid #ede9e2' : 'none',
-                          height: 44
-                        }}>
-                          <td style={{
-                            padding: '6px 0',
-                            textAlign: 'center',
-                            fontWeight: 400,
-                            fontSize: '1.2rem',
-                            color: '#363532',
-                            letterSpacing: '-1px',
-                            borderBottomLeftRadius: index === companiesData.companies.length - 1 ? '6px' : 0,
-                          }}>{company.ticker}</td>
-                          <td style={{
-                            padding: '6px 0',
-                            textAlign: 'center',
-                            fontWeight: 400,
-                            fontSize: '1.2rem',
-                            color: '#363532',
-                            letterSpacing: '-1px',
-                          }}>${company.current_price || 'N/A'}</td>
-                          <td style={{
-                            padding: '6px 0',
-                            textAlign: 'center',
-                            fontWeight: 400,
-                            fontSize: '1.2rem',
-                            color: '#363532',
-                            letterSpacing: '-1px',
-                          }}>{formatNumber(company.market_cap_millions)}</td>
-                          <td style={{
-                            padding: '6px 0',
-                            textAlign: 'center',
-                            fontWeight: 500,
-                            fontSize: '1.2rem',
-                            color: company.return_1week >= 0 ? '#ef4444' : '#2563eb',
-                            letterSpacing: '-1px',
-                          }}>{formatPercentage(company.return_1week)}</td>
-                          <td style={{
-                            padding: '6px 0',
-                            textAlign: 'center',
-                            fontWeight: 500,
-                            fontSize: '1.2rem',
-                            color: company.return_1month >= 0 ? '#ef4444' : '#2563eb',
-                            letterSpacing: '-1px',
-                          }}>{formatPercentage(company.return_1month)}</td>
-                          <td style={{
-                            padding: '6px 0',
-                            textAlign: 'center',
-                            fontWeight: 500,
-                            fontSize: '1.2rem',
-                            color: company.return_1year >= 0 ? '#ef4444' : '#2563eb',
-                            letterSpacing: '-1px',
-                          }}>{formatPercentage(company.return_1year)}</td>
-                          <td style={{
-                            padding: '6px 0',
-                            textAlign: 'center',
-                            fontWeight: 400,
-                            fontSize: '1.2rem',
-                            color: '#363532',
-                            letterSpacing: '-1px',
-                          }}>{company.pe_ratio || 'N/A'}</td>
-                          <td style={{
-                            padding: '6px 0',
-                            textAlign: 'center',
-                            fontWeight: 400,
-                            fontSize: '1.2rem',
-                            color: '#363532',
-                            letterSpacing: '-1px',
-                          }}>{company.pb_ratio || 'N/A'}</td>
-                          <td style={{
-                            padding: '6px 0',
-                            textAlign: 'center',
-                            fontWeight: 400,
-                            fontSize: '1.2rem',
-                            color: '#363532',
-                            letterSpacing: '-1px',
-                            borderBottomRightRadius: index === companiesData.companies.length - 1 ? '6px' : 0,
-                          }}>{company.roe ? `${company.roe}%` : 'N/A'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="industry-companies-nodata">
-                  해당 산업의 기업 데이터가 없습니다.
-                </div>
-              )}
+              <IndustryCompanyTable 
+                companiesData={companiesData}
+                loadingCompanies={loadingCompanies}
+                formatNumber={formatNumber}
+                formatPercentage={formatPercentage}
+              />
             </div>
           )}
           <div className="pipeline-title">
