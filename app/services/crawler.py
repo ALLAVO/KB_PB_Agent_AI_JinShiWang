@@ -8,6 +8,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from typing import Dict, List
 from openai import OpenAI
+from app.db.connection import check_db_connection
 
 # 요청 간 최소 대기시간 (초 단위)
 RATE_LIMIT_SLEEP = 10
@@ -577,7 +578,7 @@ def get_return_analysis_table(ticker: str, start_date: str, end_date: str) -> di
 ## 04-1. 미국 증시 지수
 def get_us_indices_6months_chart(end_date: str) -> dict:
     """
-    DOW, S&P500, NASDAQ 6개월치 일별 종가 데이터를 반환합니다.
+    DOW, S&P500, NASDAQ 6개월치 일별 종가 데이터를 데이터베이스에서 반환합니다.
     end_date: 'YYYY-MM-DD' (그래프 마지막 날짜)
     반환: {
         'dow': {'dates': [...], 'closes': [...]},
@@ -585,35 +586,60 @@ def get_us_indices_6months_chart(end_date: str) -> dict:
         'nasdaq': {'dates': [...], 'closes': [...]}
     }
     """
+    conn = check_db_connection()
+    if conn is None:
+        return {'error': 'Database connection failed'}
+    
     try:
         end_dt = datetime.strptime(end_date, '%Y-%m-%d')
         start_dt = end_dt - timedelta(days=182)  # 약 6개월(182일)
         start_str = start_dt.strftime('%Y-%m-%d')
         end_str = end_dt.strftime('%Y-%m-%d')
 
-        indices = {
-            'dow': '^DJI',
-            'sp500': '^SPX',
-            'nasdaq': '^NDQ'
-        }
-        result = {}
-        for key, ticker in indices.items():
-            df = web.DataReader(ticker, 'stooq', start=start_str, end=end_str)
-            df = df.sort_index()
-            if df.empty:
-                result[key] = {'dates': [], 'closes': []}
+        cur = conn.cursor()
+        query = """
+            SELECT date, dow, sp500, nasdaq 
+            FROM index_closing_price 
+            WHERE date BETWEEN %s AND %s
+            ORDER BY date ASC;
+        """
+        cur.execute(query, (start_str, end_str))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        # 데이터 구조화
+        dates = []
+        dow_closes = []
+        sp500_closes = []
+        nasdaq_closes = []
+        
+        for row in rows:
+            # row[0]이 이미 문자열인 경우와 datetime 객체인 경우를 모두 처리
+            if isinstance(row[0], str):
+                dates.append(row[0])
             else:
-                result[key] = {
-                    'dates': [d.strftime('%Y-%m-%d') for d in df.index],
-                    'closes': df['Close'].tolist()
-                }
+                dates.append(row[0].strftime('%Y-%m-%d'))
+            dow_closes.append(float(row[1]) if row[1] is not None else None)
+            sp500_closes.append(float(row[2]) if row[2] is not None else None)
+            nasdaq_closes.append(float(row[3]) if row[3] is not None else None)
+        
+        result = {
+            'dow': {'dates': dates, 'closes': dow_closes},
+            'sp500': {'dates': dates, 'closes': sp500_closes},
+            'nasdaq': {'dates': dates, 'closes': nasdaq_closes}
+        }
+        
         return result
+        
     except Exception as e:
-        return {'error': f'Error fetching 6-month US indices data: {e}'}
+        if conn:
+            conn.close()
+        return {'error': f'Error fetching 6-month US indices data from database: {e}'}
 
 def get_us_indices_1year_chart(end_date: str) -> dict:
     """
-    DOW, S&P500, NASDAQ 1년치 일별 종가 데이터를 반환합니다.
+    DOW, S&P500, NASDAQ 1년치 일별 종가 데이터를 데이터베이스에서 반환합니다.
     end_date: 'YYYY-MM-DD' (그래프 마지막 날짜)
     반환: {
         'dow': {'dates': [...], 'closes': [...]},
@@ -621,31 +647,56 @@ def get_us_indices_1year_chart(end_date: str) -> dict:
         'nasdaq': {'dates': [...], 'closes': [...]}
     }
     """
+    conn = check_db_connection()
+    if conn is None:
+        return {'error': 'Database connection failed'}
+    
     try:
         end_dt = datetime.strptime(end_date, '%Y-%m-%d')
         start_dt = end_dt - timedelta(days=365)  # 1년(365일)
         start_str = start_dt.strftime('%Y-%m-%d')
         end_str = end_dt.strftime('%Y-%m-%d')
 
-        indices = {
-            'dow': '^DJI',
-            'sp500': '^SPX',
-            'nasdaq': '^NDQ'
-        }
-        result = {}
-        for key, ticker in indices.items():
-            df = web.DataReader(ticker, 'stooq', start=start_str, end=end_str)
-            df = df.sort_index()
-            if df.empty:
-                result[key] = {'dates': [], 'closes': []}
+        cur = conn.cursor()
+        query = """
+            SELECT date, dow, sp500, nasdaq 
+            FROM index_closing_price 
+            WHERE date BETWEEN %s AND %s
+            ORDER BY date ASC;
+        """
+        cur.execute(query, (start_str, end_str))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        # 데이터 구조화
+        dates = []
+        dow_closes = []
+        sp500_closes = []
+        nasdaq_closes = []
+        
+        for row in rows:
+            # row[0]이 이미 문자열인 경우와 datetime 객체인 경우를 모두 처리
+            if isinstance(row[0], str):
+                dates.append(row[0])
             else:
-                result[key] = {
-                    'dates': [d.strftime('%Y-%m-%d') for d in df.index],
-                    'closes': df['Close'].tolist()
-                }
+                dates.append(row[0].strftime('%Y-%m-%d'))
+            dow_closes.append(float(row[1]) if row[1] is not None else None)
+            sp500_closes.append(float(row[2]) if row[2] is not None else None)
+            nasdaq_closes.append(float(row[3]) if row[3] is not None else None)
+        
+        result = {
+            'dow': {'dates': dates, 'closes': dow_closes},
+            'sp500': {'dates': dates, 'closes': sp500_closes},
+            'nasdaq': {'dates': dates, 'closes': nasdaq_closes}
+        }
+        
         return result
+        
     except Exception as e:
-        return {'error': f'Error fetching 1-year US indices data: {e}'}
+        if conn:
+            conn.close()
+        return {'error': f'Error fetching 1-year US indices data from database: {e}'}
 
 ## 04-2. 미국 국채 금리
 def get_us_treasury_yields_6months(fred_api_key: str, end_date: str) -> dict:
