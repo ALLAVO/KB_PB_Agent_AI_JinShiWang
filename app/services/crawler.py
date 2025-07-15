@@ -129,28 +129,25 @@ def get_financial_statements_from_sec(ticker: str, start_date: str = None, end_d
     
 
 #### 02 . 회사 정보 #####
-def get_company_profile_from_alphavantage(ticker: str, api_key: str) -> dict:
+def get_company_profile_from_yfinance(ticker: str) -> dict:
     """
-    Alpha Vantage Company Overview API를 통해 기업의 name, sector, industry, description, address를 반환합니다.
+    yfinance를 통해 기업의 name, sector, industry, description, address를 반환합니다.
     """
-    url = f"https://www.alphavantage.co/query?function=OVERVIEW&symbol={ticker}&apikey={api_key}"
+    import yfinance as yf
     try:
-        resp = requests.get(url)
-        if resp.status_code != 200:
-            return {"error": f"Alpha Vantage API request failed: {resp.status_code}"}
-        data = resp.json()
-        # Alpha Vantage는 데이터가 없으면 빈 dict 반환
-        if not data or 'Note' in data or 'Error Message' in data:
-            return {"error": f"No data or rate limited: {data.get('Note', data.get('Error Message', 'No data'))}"}
+        info = yf.Ticker(ticker).info
         return {
-            "company_name": data.get("Name"),
-            "sector": data.get("Sector"),
-            "industry": data.get("Industry"),
-            "address": data.get("Address"),
-            "description": data.get("Description")
+            "company_name": info.get("longName") or info.get("shortName"),
+            "sector": info.get("sector"),
+            "industry": info.get("industry"),
+            "address": info.get("address1"),
+            "description": info.get("longBusinessSummary")
         }
     except Exception as e:
-        return {"error": f"Error fetching Alpha Vantage company profile: {e}"}
+        return {"error": f"Error fetching company profile from yfinance: {e}"}
+
+# 기존 함수 대체
+get_company_profile_from_alphavantage = get_company_profile_from_yfinance
 
 
 #### 03 . 주가 + 기술지표 #####
@@ -365,7 +362,7 @@ def calculate_absolute_and_relative_returns(ticker: str, start_date: str, end_da
         
         # 수익률 계산 (%)
         stock_returns = [((price / stock_prices[0]) - 1) * 100 for price in stock_prices]
-        sp500_returns = [((price / sp500Prices[0]) - 1) * 100 for price in sp500_prices]
+        sp500_returns = [((price / sp500_prices[0]) - 1) * 100 for price in sp500_prices]
         relative_returns = [((rel_idx / 100) - 1) * 100 for rel_idx in relative_index]
         
         return {

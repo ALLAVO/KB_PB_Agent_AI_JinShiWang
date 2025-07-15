@@ -211,18 +211,33 @@ def get_enhanced_stock_info(ticker: str, end_date: str) -> Dict:
 
 def get_industry_top10_companies(sector: str, end_date: str) -> Dict:
     """
-    특정 산업의 시가총액 상위 10개 기업 정보를 반환합니다.
+    특정 산업의 미리 정의된 기업 목록에 대한 정보를 반환합니다.
     """
     try:
         print(f"🚀 Starting industry analysis for sector: {sector}, end_date: {end_date}")
         api_key = settings.ALPHAVANTAGE_API_KEY
         
-        # DB에서 해당 섹터의 기업 목록 가져오기
-        company_tickers = get_sector_companies_from_db(sector)
-        print(f"📋 Found {len(company_tickers)} companies for sector {sector}: {company_tickers[:10]}...")
+        # 섹터별 미리 정의된 기업 목록
+        sector_companies = {
+            'Technology': ['NVDA', 'MSFT', 'AAPL', 'GOOG', 'META', 'AVGO', 'ORCL', 'PLTR', 'GE', 'IBM', 'CRM', 'AMD', 'INTU', 'TXN'],
+            'Telecommunications': ['CSCO', 'TMUS', 'T', 'VZ', 'ANET', 'CMCSA', 'CHTR', 'WBD', 'FFIV', 'LBRDK', 'ROKU'],
+            'Health Care': ['LLY', 'JNJ', 'ABBV', 'PM', 'UNH', 'ABT', 'MRK', 'ISRG', 'AMGN', 'BSX', 'SYK', 'PFE', 'GILD'],
+            'Finance': ['JPM', 'BAC', 'WFC', 'MS', 'AXP', 'GS', 'BLK', 'SCHW', 'C', 'SPGI'],
+            'Real Estate': ['AMT', 'WELL', 'PLD', 'EQIX', 'DLR', 'SPG', 'O', 'PSA', 'CCI', 'VICI', 'EXR'],
+            'Consumer Discretionary': ['AMZN', 'TSLA', 'WMT', 'V', 'NFLX', 'MA', 'COST', 'PG', 'HD', 'DIS', 'MCD', 'UBER', 'BKNG'],
+            'Consumer Staples': ['KO', 'PEP', 'MDLZ', 'CVS', 'MNST', 'CTVA', 'KR', 'KDP', 'HSY', 'KHC', 'STZ', 'GIS', 'K'],
+            'Industrials': ['LIN', 'RTX', 'CAT', 'BA', 'TMO', 'HON', 'DHR', 'UNP', 'DE', 'LMT', 'PH', 'TDG', 'UPS'],
+            'Basic Materials': ['SCCO', 'NEM', 'FCX', 'IP', 'MP', 'TREX', 'FBIN', 'LPX', 'UFPI', 'CDE', 'CLF', 'SLVM'],
+            'Energy': ['XOM', 'CVX', 'COP', 'EOG', 'MPC', 'PSX', 'MPLX', 'VLO', 'HES', 'OXY', 'FANG', 'EQT', 'EXEEW'],
+            'Utilities': ['SO', 'CEG', 'DUK', 'WM', 'RSG', 'WMB', 'EPD', 'VST', 'KMI', 'ET', 'AEP', 'LNG', 'OKE']
+        }
+        
+        # 입력받은 섹터에 해당하는 기업 목록 가져오기
+        company_tickers = sector_companies.get(sector, [])
+        print(f"📋 Found {len(company_tickers)} companies for sector {sector}: {company_tickers}")
         
         if not company_tickers:
-            return {"error": f"No companies found for sector: {sector}"}
+            return {"error": f"No predefined companies found for sector: {sector}"}
         
         companies_data = []
         successful_count = 0
@@ -239,24 +254,11 @@ def get_industry_top10_companies(sector: str, end_date: str) -> Dict:
                     failed_count += 1
                     continue
                 
-                # 시가총액이 있는 경우만 처리 (이제 추정값이라도 항상 있을 것)
+                # 시가총액이 있는 경우만 처리
                 if not enhanced_info.get('market_cap'):
-                    print(f"⚠️  No market cap for {ticker} (this should not happen now)")
+                    print(f"⚠️  No market cap for {ticker}")
                     failed_count += 1
                     continue
-                
-                # 기업명 가져오기
-                company_name = ticker  # 기본값으로 티커 사용
-                try:
-                    url = f"https://www.alphavantage.co/query?function=OVERVIEW&symbol={ticker}&apikey={api_key}"
-                    resp = requests.get(url, timeout=10)
-                    time.sleep(0.5)  # API 제한 완화
-                    if resp.status_code == 200:
-                        overview_data = resp.json()
-                        if overview_data and 'Note' not in overview_data and 'Name' in overview_data:
-                            company_name = overview_data.get('Name', ticker)
-                except Exception as e:
-                    print(f"⚠️  Company name fetch failed for {ticker}: {e}")
                 
                 # 수익률 계산
                 returns = get_stock_returns(ticker, end_date)
@@ -266,7 +268,6 @@ def get_industry_top10_companies(sector: str, end_date: str) -> Dict:
                 
                 company_data = {
                     "ticker": ticker,
-                    "company_name": company_name,
                     "current_price": enhanced_info.get('current_price'),
                     "market_cap_millions": round(enhanced_info.get('market_cap', 0) / 1000000, 1),
                     "return_1week": returns.get('1week'),
@@ -278,7 +279,7 @@ def get_industry_top10_companies(sector: str, end_date: str) -> Dict:
                 }
                 companies_data.append(company_data)
                 successful_count += 1
-                print(f"✅ Successfully processed {ticker}: {company_name} (Market Cap: ${enhanced_info.get('market_cap', 0)/1000000:.1f}M)")
+                print(f"✅ Successfully processed {ticker} (Market Cap: ${enhanced_info.get('market_cap', 0)/1000000:.1f}M)")
                 
             except Exception as e:
                 failed_count += 1
@@ -290,16 +291,13 @@ def get_industry_top10_companies(sector: str, end_date: str) -> Dict:
         # 시가총액 기준으로 정렬
         companies_data.sort(key=lambda x: x.get('market_cap_millions', 0) or 0, reverse=True)
         
-        # 상위 10개만 반환
-        top_10 = companies_data[:10]
-        
-        print(f"🎯 Successfully processed {len(top_10)} companies for sector {sector}")
+        print(f"🎯 Successfully processed {len(companies_data)} companies for sector {sector}")
         
         return {
             "sector": sector,
             "end_date": end_date,
-            "companies": top_10,
-            "total_companies": len(top_10)
+            "companies": companies_data,
+            "total_companies": len(companies_data)
         }
         
     except Exception as e:
