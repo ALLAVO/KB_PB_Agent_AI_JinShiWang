@@ -5,8 +5,10 @@ import PortfolioAnalysis from './PortfolioAnalysis';
 import PerformanceChart from './PerformanceChart';
 import './ClientPipeline.css';
 import './ClientDetails.css';
+import titlecloud from '../../assets/titlecloud.png';
+import Markdown from 'react-markdown';
 
-const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
+const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbol }) => {
   const [clientData, setClientData] = useState(null);
   const [performanceData, setPerformanceData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -105,9 +107,9 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
   const riskProfileInfo = getRiskProfileInfo(client_info.risk_profile);
 
   return (
-    <div className="client-detail-container">
+    <>
       {/* 메인 콘텐츠 */}
-      <div className="client-detail-content">
+      <div className="client-detail-content" style={{ marginLeft: '-50px' }}>
         {/* 좌측: 고객 이미지 */}
         <div className="client-image-section">
           <div className="client-profile-image">
@@ -152,30 +154,28 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
           
           {/* 특이사항 박스 */}
           {(client_info.memo1 || client_info.memo2 || client_info.memo3) && (
-            <div className="client-memo-box">
-              <h4 className="memo-title">특이사항</h4>
-              <ul className="memo-list-items">
-                {client_info.memo1 && <li>{client_info.memo1}</li>}
-                {client_info.memo2 && <li>{client_info.memo2}</li>}
-                {client_info.memo3 && <li>{client_info.memo3}</li>}
-              </ul>
-            </div>
+            <>
+              <h4 className="client-info-item" style={{ textAlign: 'left', marginTop: '-20px' }}>특이사항</h4>
+              <div className="client-memo-box" style={{ textAlign: 'left', marginTop: '-25px' }}>
+                <ul className="memo-list-items">
+                  {client_info.memo1 && <li className="client-info-item">{client_info.memo1}</li>}
+                  {client_info.memo2 && <li className="client-info-item">{client_info.memo2}</li>}
+                  {/* {client_info.memo3 && <li className="client-info-item">{client_info.memo3}</li>} */}
+                </ul>
+              </div>
+            </>
           )}
         </div>
       </div>
 
+      <div className="pipeline-title">
+          <img src={titlecloud} alt="cloud" />{inputSymbol} 진시황의 투자 분석 요약
+      </div>
+
       {/* AI 투자 분석 요약 */}
       {performanceData && performanceData.ai_summary && (
-        <div className="ai-analysis-section">
-          <h3 className="section-title">AI 투자 분석 요약</h3>
-          <div className="ai-analysis-content-combined">
-            <div className="ai-combined-card">
-              <div className="ai-summary-section">
-                <h4 className="ai-section-title">투자 성과 분석</h4>
-                <p className="ai-summary-text">{performanceData.ai_summary}</p>
-              </div>
-            </div>
-          </div>
+        <div className="ai-summary-text">
+          <Markdown>{performanceData.ai_summary}</Markdown>
         </div>
       )}
 
@@ -202,7 +202,7 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period }) => {
           <span>←</span> 목록으로 돌아가기
         </button>
       </div>
-    </div>
+    </>
   );
 };
 

@@ -51,6 +51,8 @@ def generate_performance_summary(performance_data: Dict[str, Any]) -> Dict[str, 
                 3. 향후 투자 방향성 및 조언
 
                 전문적이면서도 고객이 이해하기 쉬운 친근한 톤으로 작성해주세요.
+
+                제목 없이 바로 1.이라는 숫자로 시작되도록 해주세요.
                 """
 
         # OpenAI API 호출

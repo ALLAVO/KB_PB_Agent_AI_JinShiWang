@@ -37,3 +37,4 @@ ta
 hdbscan>=0.8.29
 # 기타
 numpy
+react-markdown
