@@ -179,12 +179,20 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
         </div>
       )}
 
+      <div className="pipeline-title">
+          <img src={titlecloud} alt="cloud" />{inputSymbol} 수익률 표
+      </div>
+
       {/* 고객 수익률 차트 */}
       <PerformanceChart 
         clientName={client_info.name}
         performanceData={performanceData}
         loading={loading}
       />
+
+      <div className="pipeline-title">
+          <img src={titlecloud} alt="cloud" />{inputSymbol} 종목 분석
+      </div>
 
       {/* 종목 분석 */}
       <PortfolioAnalysis 
