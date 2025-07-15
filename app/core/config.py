@@ -13,7 +13,6 @@ class Settings(BaseSettings):
     DB_PASSWORD: str
 
     # API KEY 설정
-    ALPHAVANTAGE_API_KEY: str
     FRED_API_KEY: str
     OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY")
     FMP_API_KEY: str = Field(..., env="FMP_API_KEY")

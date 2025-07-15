@@ -7,7 +7,7 @@ from app.core.config import settings
 import pandas as pd
 from datetime import datetime, timedelta
 from typing import Dict, List
-import yfinance as yf
+from openai import OpenAI
 
 # 요청 간 최소 대기시간 (초 단위)
 RATE_LIMIT_SLEEP = 10
@@ -158,18 +158,64 @@ def get_company_profile_from_fmp(ticker: str) -> dict:
             print(f"⚠️ FMP API error for {ticker}: {info['Error Message']}")
             return {"error": f"FMP API error: {info['Error Message']}"}
         
+        # 원본 설명 가져오기
+        original_description = info.get("description", "")
+        company_name = info.get("companyName", ticker)
+        
+        # OpenAI로 설명 요약
+        summarized_description = summarize_company_description_with_openai(original_description, company_name)
+        
         result = {
-            "company_name": info.get("companyName"),
+            "company_name": company_name,
             "sector": info.get("sector"),
             "industry": info.get("industry"),
             "address": f"{info.get('address', '')}, {info.get('city', '')}, {info.get('state', '')}, {info.get('country', '')}".strip(', '),
-            "description": info.get("description")
+            "description": summarized_description
         }
         print(f"✅ FMP parsed result for {ticker}: {result}")
         return result
     except Exception as e:
         print(f"❌ Exception in FMP request for {ticker}: {e}")
         return {"error": f"Error fetching company profile from FMP: {e}"}
+
+
+def summarize_company_description_with_openai(description: str, company_name: str = "") -> str:
+    """
+    OpenAI API를 사용해서 회사 설명을 2-3줄 이내 한국어로 요약합니다.
+    """
+    if not description or description.strip() == "":
+        return "회사 설명이 제공되지 않았습니다."
+    
+    try:
+        client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        
+        prompt = f"""
+다음은 {company_name} 회사의 영문 설명입니다. 이를 2-3줄 이내의 한국어로 간단명료하게 요약해주세요.
+핵심 사업영역과 주요 제품/서비스만 포함하여 최대한 간결하게 작성해주세요.
+
+회사 설명:
+{description}
+
+요약 (2-3줄 이내):
+"""
+
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=250,
+            temperature=0.3
+        )
+        
+        summary = response.choices[0].message.content.strip()
+        print(f"✅ OpenAI summary for {company_name}: {summary}")
+        return summary
+        
+    except Exception as e:
+        print(f"❌ OpenAI summarization error for {company_name}: {e}")
+        # 실패시 원본 설명의 첫 100자만 반환
+        return description[:100] + "..." if len(description) > 100 else description
 
 
 #### 03 . 주가 + 기술지표 #####
@@ -807,37 +853,42 @@ def get_enhanced_stock_info(ticker: str) -> Dict:
             volatility_1y = returns_1y.std() * (252 ** 0.5) * 100
         else:
             volatility_1y = None
-        # 시가총액, 유동주식수 등은 Alpha Vantage로 가져오기
+        # 시가총액, 유동주식수 등은 FMP API로 가져오기
         market_cap = None
         shares_outstanding = None
         float_shares = None
         try:
-            api_key = settings.ALPHAVANTAGE_API_KEY
-            url = f"https://www.alphavantage.co/query?function=OVERVIEW&symbol={ticker}&apikey={api_key}"
-            print(f"🔍 Alpha Vantage URL: {url[:50]}...{url[-20:]}")  # API 키 부분 숨기기
+            api_key = settings.FMP_API_KEY
+            url = f"https://financialmodelingprep.com/api/v3/profile/{ticker}?apikey={api_key}"
+            print(f"🔍 FMP Profile URL: {url[:50]}...{url[-20:]}")  # API 키 부분 숨기기
             resp = requests.get(url)
-            print(f"📡 Alpha Vantage response status: {resp.status_code}")
+            print(f"📡 FMP Profile response status: {resp.status_code}")
             if resp.status_code == 200:
                 data = resp.json()
-                print(f"📊 Alpha Vantage data keys: {list(data.keys())[:10]}")
-                # Alpha Vantage는 데이터가 없으면 빈 dict 반환
-                if data and 'Note' not in data and 'Error Message' not in data:
+                print(f"📊 FMP Profile data received: {len(data)} companies")
+                # FMP profile은 배열로 반환됨
+                if data and isinstance(data, list) and len(data) > 0:
+                    company_data = data[0]
                     # 안전한 숫자 변환
                     def safe_int_convert(value):
-                        if value and str(value).replace(',', '').replace('.', '').isdigit():
-                            return int(str(value).replace(',', ''))
-                        return None
+                        if value is None:
+                            return None
+                        try:
+                            return int(float(str(value).replace(',', '')))
+                        except (ValueError, TypeError):
+                            return None
                     
-                    print(f"💰 Raw values - MarketCap: {data.get('MarketCapitalization')}, Shares: {data.get('SharesOutstanding')}, Float: {data.get('SharesFloat')}")
-                    market_cap = safe_int_convert(data.get('MarketCapitalization'))
-                    shares_outstanding = safe_int_convert(data.get('SharesOutstanding'))
-                    float_shares = safe_int_convert(data.get('SharesFloat'))
+                    print(f"💰 Raw values - MarketCap: {company_data.get('mktCap')}, Shares: {company_data.get('sharesOutstanding')}")
+                    market_cap = safe_int_convert(company_data.get('mktCap'))
+                    shares_outstanding = safe_int_convert(company_data.get('sharesOutstanding'))
+                    # FMP에서는 float shares 정보가 따로 없으므로 shares_outstanding과 동일하게 설정
+                    float_shares = shares_outstanding
                     print(f"✅ Converted values - MarketCap: {market_cap}, Shares: {shares_outstanding}, Float: {float_shares}")
                 else:
-                    print(f"❌ Alpha Vantage error response: {data}")
+                    print(f"❌ FMP Profile: No data found for {ticker}")
             # else: 그대로 None 유지
         except Exception as e:
-            print(f"❌ Alpha Vantage error for {ticker}: {e}")
+            print(f"❌ FMP Profile error for {ticker}: {e}")
             market_cap = None
             shares_outstanding = None
             float_shares = None
@@ -857,165 +908,82 @@ def get_enhanced_stock_info(ticker: str) -> Dict:
     except Exception as e:
         return {"error": f"Error fetching enhanced stock info for {ticker}: {e}"}
 
-def get_shares_outstanding_from_alphavantage(ticker: str, api_key: str) -> int:
-    """
-    Alpha Vantage Company Overview API를 통해 유동주식수(SharesOutstanding)를 반환합니다.
-    실패 시 None 반환.
-    """
-    url = f"https://www.alphavantage.co/query?function=OVERVIEW&symbol={ticker}&apikey={api_key}"
-    try:
-        resp = requests.get(url)
-        if resp.status_code == 200:
-            data = resp.json()
-            shares = data.get("SharesOutstanding")
-            if shares:
-                try:
-                    # 쉼표 제거 후 int 변환
-                    return int(str(shares).replace(",", ""))
-                except Exception:
-                    return None
-        return None
-    except Exception:
-        return None
 
 def get_financial_metrics_from_sec(ticker: str, end_date: str = None) -> dict:
     """
-    SEC XBRL companyfacts API에서 재무지표를 추출합니다.
+    FMP API를 통해 재무지표를 가져옵니다.
     - 매출액, 영업이익, 영업이익률, 순이익
-    - 당해연도, 전연도 데이터
-    end_date: 'YYYY-MM-DD' 형식, 이 날짜를 기준으로 연도 계산
-    """
-    from datetime import datetime
+    - 최근 2년치 데이터 제공
     
-    cik = get_cik_for_ticker(ticker)
-    if not cik:
-        return {"error": f"CIK not found for ticker {ticker}"}
+    Note: This function has been replaced with FMP API for better reliability.
+    The end_date parameter is kept for compatibility but not used.
+    """
+    return get_financial_metrics_from_fmp(ticker)
 
-    company_facts_url = f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
+def get_financial_metrics_from_fmp(ticker: str) -> dict:
+    """
+    FMP API의 Income Statement를 통해 재무지표를 가져옵니다.
+    - 매출액, 영업이익, 영업이익률, 순이익
+    - 최근 2년치 데이터 제공
+    """
     try:
-        resp = requests.get(
-            company_facts_url,
-            headers={"User-Agent": "Mozilla/5.0 (compatible; MyApp/1.0; +contact@email.com)"}
-        )
-        time.sleep(RATE_LIMIT_SLEEP)
+        api_key = settings.FMP_API_KEY
+        url = f"https://financialmodelingprep.com/api/v3/income-statement/{ticker}?limit=2&apikey={api_key}"
+        print(f"� FMP Income Statement URL for {ticker}: {url[:50]}...{url[-20:]}")
+        
+        resp = requests.get(url)
+        print(f"📡 FMP Income Statement response status for {ticker}: {resp.status_code}")
+        
         if resp.status_code != 200:
-            return {"error": f"Failed to fetch company facts for CIK {cik}: Status {resp.status_code}"}
+            return {"error": f"FMP Income Statement API request failed: {resp.status_code}"}
         
         data = resp.json()
-        us_gaap = data.get('facts', {}).get('us-gaap', {})
+        print(f"📊 FMP Income Statement data for {ticker}: {len(data)} entries found")
         
-        # 디버깅: 사용 가능한 태그들 확인
-        print(f"🔍 Available US-GAAP tags for {ticker}: {list(us_gaap.keys())[:20]}...")
+        if not data or not isinstance(data, list) or len(data) == 0:
+            print(f"❌ FMP Income Statement: No data found for {ticker}")
+            return {"error": f"No income statement data found for {ticker}"}
         
-        # end_date를 기준으로 현재 연도와 전년도 계산
-        if end_date:
+        # 최근 2년 데이터 추출
+        current_data = data[0] if len(data) > 0 else None
+        previous_data = data[1] if len(data) > 1 else None
+        
+        def safe_float(value):
+            """안전한 float 변환"""
+            if value is None:
+                return None
             try:
-                end_dt = datetime.strptime(end_date, '%Y-%m-%d')
-                current_year = end_dt.year
-            except ValueError:
-                current_year = datetime.now().year
-        else:
-            current_year = datetime.now().year
-        previous_year = current_year - 1
+                return float(value)
+            except (ValueError, TypeError):
+                return None
         
-        print(f"📅 Target years: current={current_year}, previous={previous_year}")
+        def safe_percentage(numerator, denominator):
+            """안전한 퍼센트 계산"""
+            if numerator is None or denominator is None or denominator == 0:
+                return None
+            try:
+                return round((float(numerator) / float(denominator)) * 100, 2)
+            except (ValueError, TypeError, ZeroDivisionError):
+                return None
         
-        # 필요한 재무지표 태그들 (더 많은 옵션 추가)
-        revenue_tags = [
-            # 일반 기업용
-            'Revenues', 
-            'SalesRevenueNet', 
-            'RevenueFromContractWithCustomerExcludingAssessedTax',
-            'RevenueFromContractWithCustomerIncludingAssessedTax',
-            'SalesRevenueGoodsNet',
-            'SalesRevenueServicesNet',
-            'RevenueFromRelatedParties',
-            # 금융업용 (추가)
-            'RevenuesNetOfInterestExpense',
-            'BrokerageCommissionsRevenue',
-            'InvestmentBankingRevenue',
-            'PrincipalTransactionsRevenue'
-        ]
-        operating_income_tags = [
-            'OperatingIncomeLoss',
-            'IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest',
-            'IncomeLossFromContinuingOperations'
-        ]
-        net_income_tags = [
-            'NetIncomeLoss',
-            'NetIncomeLossAvailableToCommonStockholdersBasic',
-            'ProfitLoss'
-        ]
+        # 현재년도 데이터
+        current_revenue = safe_float(current_data.get("revenue")) if current_data else None
+        current_operating_income = safe_float(current_data.get("operatingIncome")) if current_data else None
+        current_net_income = safe_float(current_data.get("netIncome")) if current_data else None
         
-        def get_latest_value_for_year(tag_list, year):
-            """특정 연도의 가장 최신 값을 가져옵니다."""
-            print(f"🔍 Searching for year {year} in tags: {tag_list}")
-            
-            for tag in tag_list:
-                if tag in us_gaap:
-                    print(f"✅ Found tag: {tag}")
-                    facts = us_gaap[tag].get('units', {})
-                    print(f"📊 Available units for {tag}: {list(facts.keys())}")
-                    
-                    unit = 'USD' if 'USD' in facts else (list(facts.keys())[0] if facts else None)
-                    if unit:
-                        fact_list = facts[unit]
-                        print(f"📈 Total facts for {tag} in {unit}: {len(fact_list)}")
-                        
-                        # 모든 날짜 출력 (최근 10개만)
-                        all_dates = [f.get('end', 'No end date') for f in fact_list]
-                        print(f"📅 Recent dates for {tag}: {sorted(all_dates, reverse=True)[:10]}")
-                        
-                        # 해당 연도의 데이터만 필터링
-                        year_facts = [f for f in fact_list if 'end' in f and str(year) in f['end']]
-                        print(f"🎯 Facts for year {year}: {len(year_facts)}")
-                        
-                        if year_facts:
-                            # 가장 최신 날짜의 값 반환
-                            latest = max(year_facts, key=lambda f: f['end'])
-                            print(f"🎉 Found value for {tag} in {year}: {latest['val']} (date: {latest['end']})")
-                            return latest['val']
-                        else:
-                            print(f"❌ No data found for {tag} in year {year}")
-                else:
-                    print(f"❌ Tag not found: {tag}")
-            
-            print(f"❌ No value found for any tag in year {year}")
-            return None
-        
-        # 각 연도별 데이터 수집
-        print(f"\n🔍 === Searching for REVENUE data ===")
-        current_revenue = get_latest_value_for_year(revenue_tags, current_year)
-        previous_revenue = get_latest_value_for_year(revenue_tags, previous_year)
-        
-        print(f"\n🔍 === Searching for OPERATING INCOME data ===")
-        current_operating_income = get_latest_value_for_year(operating_income_tags, current_year)
-        previous_operating_income = get_latest_value_for_year(operating_income_tags, previous_year)
-        
-        print(f"\n🔍 === Searching for NET INCOME data ===")
-        current_net_income = get_latest_value_for_year(net_income_tags, current_year)
-        previous_net_income = get_latest_value_for_year(net_income_tags, previous_year)
-        
-        print(f"\n📊 === FINAL RESULTS ===")
-        print(f"Revenue - Current: {current_revenue}, Previous: {previous_revenue}")
-        print(f"Operating Income - Current: {current_operating_income}, Previous: {previous_operating_income}")
-        print(f"Net Income - Current: {current_net_income}, Previous: {previous_net_income}")
+        # 전년도 데이터
+        previous_revenue = safe_float(previous_data.get("revenue")) if previous_data else None
+        previous_operating_income = safe_float(previous_data.get("operatingIncome")) if previous_data else None
+        previous_net_income = safe_float(previous_data.get("netIncome")) if previous_data else None
         
         # 영업이익률 계산
-        current_operating_margin = None
-        previous_operating_margin = None
-        
-        if current_revenue and current_operating_income and current_revenue != 0:
-            current_operating_margin = (current_operating_income / current_revenue) * 100
-            print(f"✅ Calculated current operating margin: {current_operating_margin}%")
-            
-        if previous_revenue and previous_operating_income and previous_revenue != 0:
-            previous_operating_margin = (previous_operating_income / previous_revenue) * 100
-            print(f"✅ Calculated previous operating margin: {previous_operating_margin}%")
+        current_operating_margin = safe_percentage(current_operating_income, current_revenue)
+        previous_operating_margin = safe_percentage(previous_operating_income, previous_revenue)
         
         result = {
-            "current_year": current_year,
-            "previous_year": previous_year,
+            "ticker": ticker,
+            "current_year": current_data.get("calendarYear") if current_data else None,
+            "previous_year": previous_data.get("calendarYear") if previous_data else None,
             "metrics": {
                 "revenue": {
                     "current": current_revenue,
@@ -1036,366 +1004,105 @@ def get_financial_metrics_from_sec(ticker: str, end_date: str = None) -> dict:
             }
         }
         
+        print(f"✅ FMP Income Statement result for {ticker}:")
+        print(f"   Revenue: {current_revenue} / {previous_revenue}")
+        print(f"   Operating Income: {current_operating_income} / {previous_operating_income}")
+        print(f"   Operating Margin: {current_operating_margin}% / {previous_operating_margin}%")
+        print(f"   Net Income: {current_net_income} / {previous_net_income}")
+        
         return result
         
     except Exception as e:
-        return {"error": f"Error fetching financial metrics: {e}"}
+        print(f"❌ Exception in FMP Income Statement request for {ticker}: {e}")
+        return {"error": f"Error fetching financial metrics from FMP: {e}"}
 
 def get_valuation_metrics_from_sec(ticker: str, end_date: str = None) -> dict:
     """
-    SEC XBRL companyfacts API에서 벨류에이션 지표를 추출합니다.
-    - EPS, P/E, P/B, ROE(%)
-    - 당해연도, 전연도 데이터
-    end_date: 'YYYY-MM-DD' 형식, 이 날짜를 기준으로 연도 계산
+    FMP API를 통해 벨류에이션 지표를 가져옵니다.
+    - P/E Ratio, P/B Ratio, ROE 등
+    - 최근 5년치 데이터 제공
+    
+    Note: This function has been replaced with FMP API for better reliability.
+    The end_date parameter is kept for compatibility but not used.
     """
-    from datetime import datetime
-    import requests
-    import time
-    cik = get_cik_for_ticker(ticker)
-    if not cik:
-        return {"error": f"CIK not found for ticker {ticker}"}
+    return get_valuation_metrics_from_fmp(ticker)
 
-    company_facts_url = f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
+def get_valuation_metrics_from_fmp(ticker: str) -> dict:
+    """
+    FMP API를 통해 벨류에이션 지표를 가져옵니다.
+    - P/E Ratio, P/B Ratio, ROE 등
+    - 최근 5년치 데이터 제공
+    """
     try:
-        resp = requests.get(
-            company_facts_url,
-            headers={"User-Agent": "Mozilla/5.0 (compatible; MyApp/1.0; +contact@email.com)"}
-        )
-        time.sleep(RATE_LIMIT_SLEEP)
+        api_key = settings.FMP_API_KEY
+        url = f"https://financialmodelingprep.com/api/v3/ratios/{ticker}?apikey={api_key}"
+        print(f"🔍 FMP Ratios URL for {ticker}: {url[:50]}...{url[-20:]}")
+        
+        resp = requests.get(url)
+        print(f"📡 FMP Ratios response status for {ticker}: {resp.status_code}")
+        
         if resp.status_code != 200:
-            return {"error": f"Failed to fetch company facts for CIK {cik}: Status {resp.status_code}"}
+            return {"error": f"FMP Ratios API request failed: {resp.status_code}"}
+        
         data = resp.json()
-        us_gaap = data.get('facts', {}).get('us-gaap', {})
+        print(f"📊 FMP Ratios data for {ticker}: {len(data)} entries found")
         
-        # 디버깅: 사용 가능한 태그들 확인
-        print(f"🔍 Available US-GAAP tags for valuation of {ticker}: {list(us_gaap.keys())[:20]}...")
+        if not data or not isinstance(data, list) or len(data) == 0:
+            print(f"❌ FMP Ratios: No data found for {ticker}")
+            return {"error": f"No ratios data found for {ticker}"}
         
-        # end_date를 기준으로 현재 연도와 전년도 계산
-        if end_date:
-            try:
-                end_dt = datetime.strptime(end_date, '%Y-%m-%d')
-                current_year = end_dt.year
-            except ValueError:
-                current_year = datetime.now().year
-        else:
-            current_year = datetime.now().year
-        previous_year = current_year - 1
+        # 최근 2년 데이터 추출 (현재년도, 전년도)
+        current_data = data[0] if len(data) > 0 else None
+        previous_data = data[1] if len(data) > 1 else None
         
-        print(f"📅 Valuation Target years: current={current_year}, previous={previous_year}")
-        
-        # 필요한 재무지표 태그들
-        # EPS 관련 태그들
-        eps_tags = [
-            'EarningsPerShareBasic',
-            'EarningsPerShareDiluted',
-            'IncomeLossFromContinuingOperationsPerBasicShare',
-            'IncomeLossFromContinuingOperationsPerDilutedShare'
-        ]
-        
-        # 순이익 관련 태그들 (EPS 계산용)
-        net_income_tags = [
-            'NetIncomeLoss',
-            'ProfitLoss',
-            'IncomeLossFromContinuingOperations',
-            'IncomeLossFromContinuingOperationsIncludingPortionAttributableToNoncontrollingInterest'
-        ]
-        
-        # 주식수 관련 태그들 (EPS 계산용) - 더 많은 태그 추가
-        shares_tags = [
-            'WeightedAverageNumberOfSharesOutstandingBasic',
-            'WeightedAverageNumberOfDilutedSharesOutstanding',
-            'CommonStockSharesOutstanding',
-            'CommonStockSharesIssued',
-            'SharesOutstanding',
-            'NumberOfSharesOutstanding',
-            'CommonStockSharesAuthorized',
-            'WeightedAverageSharesOutstandingBasic',
-            'WeightedAverageSharesOutstandingDiluted',
-            # 분기별/연말 기준 주식수
-            'CommonStockSharesOutstandingAtPeriodEnd',
-            'SharesIssuedAndOutstanding'
-        ]
-        
-        # 자기자본(Shareholders' Equity) 관련 태그들 (ROE, P/B 계산용) - 더 많은 태그 추가
-        equity_tags = [
-            'StockholdersEquity',
-            'StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest', 
-            'StockholdersEquityAndNoncontrollingInterests',
-            'PartnersCapitalIncludingPortionAttributableToNoncontrollingInterest',
-            'PartnersCapital',
-            'MembersEquity',
-            'TotalEquity',
-            'CommonStockholdersEquity',
-            'ShareholdersEquityCommonStockholders',
-            # 은행/금융업 특화 태그들
-            'BankShareholdersEquity',
-            'ShareholdersEquityBankHoldingCompany',
-            # REITs 특화 태그들
-            'ShareholdersEquityREIT',
-            'TotalShareholdersEquity'
-        ]
-        
-        # 주가 정보는 Stooq를 통해 조회
-        try:
-            stooq_ticker = ticker if ticker.endswith('.US') else ticker + '.US'
-            start_date = f"{previous_year}-01-01"
-            end_date_str = f"{current_year}-12-31"
-            print(f"📈 Fetching stock data from Stooq for {stooq_ticker}: {start_date} to {end_date_str}")
-            df = web.DataReader(stooq_ticker, 'stooq', start=start_date, end=end_date_str)
-            if not df.empty:
-                df = df.sort_index()
-                current_price = df['Close'].iloc[-1]
-                previous_year_data = df[df.index.year == previous_year]
-                if not previous_year_data.empty:
-                    previous_price = previous_year_data['Close'].iloc[-1]
-                    print(f"💰 Previous year price: {previous_price} (date: {previous_year_data.index[-1]})")
-                else:
-                    previous_price = None
-                    print(f"❌ No stock data found for previous year {previous_year}")
-                # Alpha Vantage로 shares_outstanding 가져오기 (항상 Alpha Vantage 사용)
-                try:
-                    api_key = settings.ALPHAVANTAGE_API_KEY
-                    shares_outstanding = get_shares_outstanding_from_alphavantage(ticker, api_key)
-                    print(f"📈 Shares outstanding (Alpha Vantage): {shares_outstanding}")
-                    current_shares = shares_outstanding
-                    previous_shares = shares_outstanding
-                except Exception as e:
-                    shares_outstanding = None
-                    current_shares = None
-                    previous_shares = None
-                    print(f"❌ Could not fetch shares outstanding from Alpha Vantage: {e}")
-            else:
-                print(f"❌ No stock data found for {stooq_ticker}")
-                current_price = None
-                previous_price = None
-                shares_outstanding = None
-                current_shares = None
-                previous_shares = None
-        except Exception as e:
-            print(f"⚠️ Error fetching stock data from Stooq: {e}")
-            current_price = None
-            previous_price = None
-            shares_outstanding = None
-            current_shares = None
-            previous_shares = None
-        
-        def find_metric_value(tags, target_year, metric_name="Unknown"):
-            """주어진 태그들에서 특정 연도의 값을 찾는 함수 (개선된 디버깅 포함)"""
-            print(f"\n🔍 === Searching for {metric_name} in year {target_year} ===")
-            
-            for tag in tags:
-                if tag in us_gaap:
-                    print(f"✅ Found tag: {tag}")
-                    tag_data = us_gaap[tag]
-                    units = tag_data.get('units', {})
-                    print(f"📊 Available units for {tag}: {list(units.keys())}")
-                    
-                    for unit_type, unit_data in units.items():
-                        print(f"📈 Checking unit: {unit_type} ({len(unit_data)} entries)")
-                        
-                        # 해당 연도의 모든 데이터 찾기 (더 유연한 검색)
-                        year_entries = []
-                        for entry in unit_data:
-                            entry_year = entry.get('fy')
-                            entry_form = entry.get('form', 'Unknown')
-                            entry_end = entry.get('end', 'No date')
-                            entry_val = entry.get('val')
-                            entry_period = entry.get('fp', 'Unknown')  # FY=Annual, Q1,Q2,Q3,Q4=Quarterly
-                            
-                            # 해당 연도의 데이터만 수집 (연간 데이터 우선, 분기 데이터도 고려)
-                            if entry_year == target_year:
-                                year_entries.append({
-                                    'year': entry_year,
-                                    'form': entry_form,
-                                    'end': entry_end,
-                                    'val': entry_val,
-                                    'period': entry_period
-                                })
-                        
-                        print(f"🎯 Found {len(year_entries)} entries for year {target_year}")
-                        for entry in year_entries:
-                            print(f"   - Form: {entry['form']}, Period: {entry['period']}, End: {entry['end']}, Value: {entry['val']}")
-                        
-                        # 우선순위: Annual(FY) > Q4 > Q3 > Q2 > Q1, 10-K > 10-Q, 최신 날짜 우선
-                        if year_entries:
-                            # 1순위: Annual 데이터 중 10-K
-                            annual_k = [e for e in year_entries if e['period'] == 'FY' and e['form'] == '10-K']
-                            if annual_k:
-                                selected = max(annual_k, key=lambda x: x['end'])
-                                print(f"🎉 Selected Annual 10-K entry: {selected}")
-                                return selected['val']
-                            
-                            # 2순위: Annual 데이터 중 기타
-                            annual_other = [e for e in year_entries if e['period'] == 'FY']
-                            if annual_other:
-                                selected = max(annual_other, key=lambda x: x['end'])
-                                print(f"🎉 Selected Annual entry: {selected}")
-                                return selected['val']
-                            
-                            # 3순위: Q4 데이터 (연말과 가장 가까움)
-                            q4_data = [e for e in year_entries if e['period'] == 'Q4']
-                            if q4_data:
-                                selected = max(q4_data, key=lambda x: x['end'])
-                                print(f"🎉 Selected Q4 entry: {selected}")
-                                return selected['val']
-                            
-                            # 4순위: 10-K 폼 (기간 상관없이)
-                            k_forms = [e for e in year_entries if e['form'] == '10-K']
-                            if k_forms:
-                                selected = max(k_forms, key=lambda x: x['end'])
-                                print(f"🎉 Selected 10-K entry: {selected}")
-                                return selected['val']
-                            
-                            # 5순위: 10-Q 폼 중 최신
-                            q_forms = [e for e in year_entries if e['form'] == '10-Q']
-                            if q_forms:
-                                selected = max(q_forms, key=lambda x: x['end'])
-                                print(f"🎉 Selected 10-Q entry: {selected}")
-                                return selected['val']
-                            
-                            # 6순위: 기타 폼 중 최신
-                            selected = max(year_entries, key=lambda x: x['end'])
-                            print(f"🎉 Selected other form entry: {selected}")
-                            return selected['val']
-                else:
-                    print(f"❌ Tag not found: {tag}")
-            
-            print(f"❌ No value found for {metric_name} in year {target_year}")
-            return None
-        
-        # 각 지표별 현재년도, 전년도 값 추출
-        current_eps = find_metric_value(eps_tags, current_year, "EPS")
-        previous_eps = find_metric_value(eps_tags, previous_year, "EPS")
-
-        current_net_income = find_metric_value(net_income_tags, current_year, "Net Income")
-        previous_net_income = find_metric_value(net_income_tags, previous_year, "Net Income")
-
-        current_equity = find_metric_value(equity_tags, current_year, "Shareholders Equity")
-        previous_equity = find_metric_value(equity_tags, previous_year, "Shareholders Equity")
-        
-        print(f"\n📊 === RAW DATA SUMMARY ===")
-        print(f"EPS - Current: {current_eps}, Previous: {previous_eps}")
-        print(f"Net Income - Current: {current_net_income}, Previous: {previous_net_income}")
-        print(f"Shares - Current: {current_shares}, Previous: {previous_shares}")
-        print(f"Equity - Current: {current_equity}, Previous: {previous_equity}")
-        print(f"Stock Price - Current: {current_price}, Previous: {previous_price}")
-        print(f"Shares Outstanding (yf): {shares_outstanding}")
-        
-        # EPS 계산 (직접 값이 없는 경우)
-        if current_eps is None and current_net_income and current_shares:
-            current_eps = current_net_income / current_shares
-            print(f"✅ Calculated current EPS: {current_eps}")
-        if previous_eps is None and previous_net_income and previous_shares:
-            previous_eps = previous_net_income / previous_shares
-            print(f"✅ Calculated previous EPS: {previous_eps}")
-        
-        # P/E 계산
-        current_pe = None
-        previous_pe = None
-        if current_eps and current_eps > 0 and current_price:
-            current_pe = current_price / current_eps
-            print(f"✅ Calculated current P/E: {current_pe} (Price: {current_price} / EPS: {current_eps})")
-        else:
-            print(f"❌ Cannot calculate current P/E - EPS: {current_eps}, Price: {current_price}")
-            
-        if previous_eps and previous_eps > 0 and previous_price:
-            previous_pe = previous_price / previous_eps
-            print(f"✅ Calculated previous P/E: {previous_pe} (Price: {previous_price} / EPS: {previous_eps})")
-        else:
-            print(f"❌ Cannot calculate previous P/E - EPS: {previous_eps}, Price: {previous_price}")
-        
-        # P/B 계산 (Book Value per Share = Equity / Shares Outstanding)
-        current_pb = None
-        previous_pb = None
-        # 현재년도 P/B 계산
-        if current_equity and current_shares and current_price:
-            book_value_per_share = current_equity / current_shares
-            if book_value_per_share > 0:
-                current_pb = current_price / book_value_per_share
-                print(f"✅ Calculated current P/B: {current_pb} (Price: {current_price} / BVPS: {book_value_per_share})")
-            else:
-                print(f"❌ Current BVPS is not positive: {book_value_per_share}")
-        else:
-            print(f"❌ Cannot calculate current P/B - Equity: {current_equity}, Shares: {current_shares}, Price: {current_price}")
-        # 전년도 P/B 계산 - 전년도 말 주식수 사용 (Alpha Vantage 값 사용)
-        if previous_equity and previous_price and previous_shares:
-            previous_book_value_per_share = previous_equity / previous_shares
-            if previous_book_value_per_share > 0:
-                previous_pb = previous_price / previous_book_value_per_share
-                print(f"✅ Calculated previous P/B: {previous_pb} (Price: {previous_price} / BVPS: {previous_book_value_per_share})")
-            else:
-                print(f"❌ Previous BVPS is not positive: {previous_book_value_per_share}")
-        else:
-            print(f"❌ Cannot calculate previous P/B - Equity: {previous_equity}, Shares: {previous_shares}, Price: {previous_price}")
-        
-        # ROE 계산 (Return on Equity = Net Income / Shareholders' Equity * 100)
-        current_roe = None
-        previous_roe = None
-        if current_net_income and current_equity and current_equity > 0:
-            current_roe = (current_net_income / current_equity) * 100
-            print(f"✅ Calculated current ROE: {current_roe}% (NI: {current_net_income} / Equity: {current_equity})")
-        else:
-            print(f"❌ Cannot calculate current ROE - Net Income: {current_net_income}, Equity: {current_equity}")
-            
-        if previous_net_income and previous_equity and previous_equity > 0:
-            previous_roe = (previous_net_income / previous_equity) * 100
-            print(f"✅ Calculated previous ROE: {previous_roe}% (NI: {previous_net_income} / Equity: {previous_equity})")
-        else:
-            print(f"❌ Cannot calculate previous ROE - Net Income: {previous_net_income}, Equity: {previous_equity}")
-        
-        # 값 정리 (소수점 2자리)
-        def format_value(value):
-            if value is None:
+        def safe_float(value):
+            """안전한 float 변환"""
+            if value is None or value == "":
                 return None
-            return round(float(value), 2)
+            try:
+                return round(float(value), 2)
+            except (ValueError, TypeError):
+                return None
         
         result = {
             "ticker": ticker,
-            "current_year": current_year,
-            "previous_year": previous_year,
+            "current_year": current_data.get("calendarYear") if current_data else None,
+            "previous_year": previous_data.get("calendarYear") if previous_data else None,
             "metrics": {
                 "eps": {
-                    "current": format_value(current_eps),
-                    "previous": format_value(previous_eps)
+                    "current": None,  # FMP ratios에서는 EPS 직접 제공 안함
+                    "previous": None
                 },
                 "pe_ratio": {
-                    "current": format_value(current_pe),
-                    "previous": format_value(previous_pe)
+                    "current": safe_float(current_data.get("priceEarningsRatio")) if current_data else None,
+                    "previous": safe_float(previous_data.get("priceEarningsRatio")) if previous_data else None
                 },
                 "pb_ratio": {
-                    "current": format_value(current_pb),
-                    "previous": format_value(previous_pb)
+                    "current": safe_float(current_data.get("priceToBookRatio")) if current_data else None,
+                    "previous": safe_float(previous_data.get("priceToBookRatio")) if previous_data else None
                 },
                 "roe_percent": {
-                    "current": format_value(current_roe),
-                    "previous": format_value(previous_roe)
+                    "current": safe_float(current_data.get("returnOnEquity")) if current_data else None,
+                    "previous": safe_float(previous_data.get("returnOnEquity")) if previous_data else None
                 }
             },
-            "raw_data": {
-                "current_price": format_value(current_price),
-                "previous_price": format_value(previous_price),
-                "shares_outstanding_yf": shares_outstanding,
-                "current_net_income": format_value(current_net_income),
-                "previous_net_income": format_value(previous_net_income),
-                "current_equity": format_value(current_equity),
-                "previous_equity": format_value(previous_equity),
-                "current_shares_sec": format_value(current_shares),
-                "previous_shares_sec": format_value(previous_shares),
-                # P/B 계산을 위한 추가 정보
-                "current_book_value_per_share": format_value(current_equity / shares_outstanding) if current_equity and shares_outstanding else None,
-                "previous_book_value_per_share": format_value(previous_equity / (previous_shares or shares_outstanding)) if previous_equity and (previous_shares or shares_outstanding) else None
+            "additional_ratios": {
+                "current_ratio": safe_float(current_data.get("currentRatio")) if current_data else None,
+                "quick_ratio": safe_float(current_data.get("quickRatio")) if current_data else None,
+                "debt_to_equity": safe_float(current_data.get("debtEquityRatio")) if current_data else None,
+                "gross_profit_margin": safe_float(current_data.get("grossProfitMargin")) if current_data else None,
+                "operating_profit_margin": safe_float(current_data.get("operatingProfitMargin")) if current_data else None,
+                "net_profit_margin": safe_float(current_data.get("netProfitMargin")) if current_data else None
             }
         }
         
-        print(f"\n🎯 === FINAL VALUATION METRICS RESULT ===")
-        print(f"Ticker: {ticker}")
-        print(f"Years: {current_year} (current) / {previous_year} (previous)")
-        print(f"EPS: {result['metrics']['eps']['current']} / {result['metrics']['eps']['previous']}")
-        print(f"P/E: {result['metrics']['pe_ratio']['current']} / {result['metrics']['pe_ratio']['previous']}")
-        print(f"P/B: {result['metrics']['pb_ratio']['current']} / {result['metrics']['pb_ratio']['previous']}")
-        print(f"ROE: {result['metrics']['roe_percent']['current']}% / {result['metrics']['roe_percent']['previous']}%")
+        print(f"✅ FMP Ratios result for {ticker}:")
+        print(f"   P/E: {result['metrics']['pe_ratio']['current']} / {result['metrics']['pe_ratio']['previous']}")
+        print(f"   P/B: {result['metrics']['pb_ratio']['current']} / {result['metrics']['pb_ratio']['previous']}")
+        print(f"   ROE: {result['metrics']['roe_percent']['current']}% / {result['metrics']['roe_percent']['previous']}%")
         
         return result
         
     except Exception as e:
-        return {"error": f"Error fetching valuation metrics: {e}"}
+        print(f"❌ Exception in FMP Ratios request for {ticker}: {e}")
+        return {"error": f"Error fetching ratios from FMP: {e}"}
