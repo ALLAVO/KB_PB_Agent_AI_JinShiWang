@@ -93,36 +93,43 @@ def get_stock_returns(ticker: str, end_date: str) -> Dict:
         print(f"Error calculating returns for {ticker}: {e}")
         return {"1week": None, "1month": None, "1year": None}
 
-def get_valuation_metrics_from_alphavantage(ticker: str, api_key: str) -> Dict:
+def get_valuation_metrics_from_fmp(ticker: str) -> Dict:
     """
-    Alpha Vantage에서 밸류에이션 지표를 가져옵니다.
+    FMP API에서 밸류에이션 지표를 가져옵니다.
     """
     try:
-        url = f"https://www.alphavantage.co/query?function=OVERVIEW&symbol={ticker}&apikey={api_key}"
+        api_key = settings.FMP_API_KEY
+        url = f"https://financialmodelingprep.com/api/v3/ratios/{ticker}?apikey={api_key}"
         resp = requests.get(url)
-        time.sleep(1)  # API 제한 고려
+        time.sleep(0.5)  # API 제한 고려
         
         if resp.status_code != 200:
             return {"pe_ratio": None, "pb_ratio": None, "roe": None}
         
         data = resp.json()
         
-        if not data or 'Note' in data or 'Error Message' in data:
+        if not data or not isinstance(data, list) or len(data) == 0:
             return {"pe_ratio": None, "pb_ratio": None, "roe": None}
         
-        def safe_float_convert(value):
-            if value and str(value).replace('.', '').replace('-', '').isdigit():
-                return float(value)
-            return None
+        # 최신 데이터 사용
+        current_data = data[0]
         
-        pe_ratio = safe_float_convert(data.get('PERatio'))
-        pb_ratio = safe_float_convert(data.get('PriceToBookRatio'))
-        roe = safe_float_convert(data.get('ReturnOnEquityTTM'))
+        def safe_float_convert(value):
+            if value is None or value == "":
+                return None
+            try:
+                return float(value)
+            except (ValueError, TypeError):
+                return None
+        
+        pe_ratio = safe_float_convert(current_data.get('priceEarningsRatio'))
+        pb_ratio = safe_float_convert(current_data.get('priceToBookRatio'))
+        roe = safe_float_convert(current_data.get('returnOnEquity'))
         
         return {
             "pe_ratio": round(pe_ratio, 2) if pe_ratio else None,
             "pb_ratio": round(pb_ratio, 2) if pb_ratio else None,
-            "roe": round(roe * 100, 2) if roe else None  # 백분율로 변환
+            "roe": round(roe, 2) if roe else None  # FMP에서는 이미 백분율
         }
     except Exception as e:
         print(f"Error fetching valuation metrics for {ticker}: {e}")
@@ -130,7 +137,7 @@ def get_valuation_metrics_from_alphavantage(ticker: str, api_key: str) -> Dict:
 
 def get_enhanced_stock_info(ticker: str, end_date: str) -> Dict:
     """
-    특정 종료일 기준으로 주식 정보를 가져옵니다.
+    특정 종료일 기준으로 주식 정보를 가져옵니다. (FMP API 사용)
     """
     import numpy as np
     try:
@@ -148,55 +155,39 @@ def get_enhanced_stock_info(ticker: str, end_date: str) -> Dict:
         # 현재가 (종료일 기준 종가)
         current_price = df['Close'].iloc[-1]
         
-        # 시가총액, 유동주식수 등은 Alpha Vantage로 가져오기
+        # 시가총액은 FMP API로 가져오기
         market_cap = None
         shares_outstanding = None
         
         try:
-            api_key = settings.ALPHAVANTAGE_API_KEY
-            url = f"https://www.alphavantage.co/query?function=OVERVIEW&symbol={ticker}&apikey={api_key}"
+            api_key = settings.FMP_API_KEY
+            url = f"https://financialmodelingprep.com/api/v3/profile/{ticker}?apikey={api_key}"
             resp = requests.get(url, timeout=10)
             time.sleep(0.5)
             
             if resp.status_code == 200:
                 data = resp.json()
-                if data and 'Note' not in data and 'Error Message' not in data:
+                if data and isinstance(data, list) and len(data) > 0:
+                    company_data = data[0]
+                    
                     def safe_int_convert(value):
-                        if value and str(value).replace(',', '').replace('.', '').isdigit():
-                            return int(str(value).replace(',', ''))
-                        return None
-                    
-                    market_cap = safe_int_convert(data.get('MarketCapitalization'))
-                    shares_outstanding = safe_int_convert(data.get('SharesOutstanding'))
-                    
-                    # 시가총액이 없지만 발행주식수가 있으면 직접 계산
-                    if not market_cap and shares_outstanding and current_price:
-                        market_cap = int(shares_outstanding * current_price)
-                        print(f"💡 Calculated market cap for {ticker}: {market_cap}")
-                    
-                    # 둘 다 없으면 yfinance로 시도
-                    if not market_cap:
+                        if value is None:
+                            return None
                         try:
-                            import yfinance as yf
-                            stock = yf.Ticker(ticker)
-                            info = stock.info
-                            market_cap = info.get('marketCap')
-                            if not shares_outstanding:
-                                shares_outstanding = info.get('sharesOutstanding')
-                            print(f"📈 yfinance market cap for {ticker}: {market_cap}")
-                        except Exception as yf_error:
-                            print(f"⚠️ yfinance also failed for {ticker}: {yf_error}")
+                            return int(float(str(value).replace(',', '')))
+                        except (ValueError, TypeError):
+                            return None
                     
-                    # 여전히 없으면 추정값 사용 (매우 작은 기업으로 가정)
-                    if not market_cap:
-                        # 주가 * 최소 추정 발행주식수 (1백만주)
-                        estimated_shares = 1000000  # 1백만주 가정
-                        market_cap = int(current_price * estimated_shares)
-                        print(f"🔮 Estimated market cap for {ticker}: {market_cap} (price: {current_price} * estimated shares: {estimated_shares})")
-                        
+                    market_cap = safe_int_convert(company_data.get('mktCap'))
+                    shares_outstanding = safe_int_convert(company_data.get('sharesOutstanding'))
+                    
+                    print(f"� FMP market cap for {ticker}: {market_cap}")
+                else:
+                    print(f"❌ FMP: No profile data found for {ticker}")
+                    
         except Exception as e:
-            print(f"❌ Alpha Vantage error for {ticker}: {e}")
-            # Alpha Vantage 실패 시 추정값 사용
+            print(f"❌ FMP error for {ticker}: {e}")
+            # FMP 실패 시 추정값 사용
             estimated_shares = 1000000  # 1백만주 가정
             market_cap = int(current_price * estimated_shares)
             print(f"🔮 Fallback estimated market cap for {ticker}: {market_cap}")
@@ -211,11 +202,10 @@ def get_enhanced_stock_info(ticker: str, end_date: str) -> Dict:
 
 def get_industry_top10_companies(sector: str, end_date: str) -> Dict:
     """
-    특정 산업의 미리 정의된 기업 목록에 대한 정보를 반환합니다.
+    특정 산업의 미리 정의된 기업 목록에 대한 정보를 반환합니다. (FMP API 사용)
     """
     try:
         print(f"🚀 Starting industry analysis for sector: {sector}, end_date: {end_date}")
-        api_key = settings.ALPHAVANTAGE_API_KEY
         
         # 섹터별 미리 정의된 기업 목록
         sector_companies = {
@@ -264,7 +254,7 @@ def get_industry_top10_companies(sector: str, end_date: str) -> Dict:
                 returns = get_stock_returns(ticker, end_date)
                 
                 # 밸류에이션 지표
-                valuation = get_valuation_metrics_from_alphavantage(ticker, api_key)
+                valuation = get_valuation_metrics_from_fmp(ticker)
                 
                 company_data = {
                     "ticker": ticker,
