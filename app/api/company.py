@@ -5,7 +5,7 @@ from typing import Optional
 
 from app.services.sentiment import get_weekly_sentiment_scores_by_stock_symbol
 from app.services.crawler import (
-    get_company_profile_from_alphavantage,
+    get_company_profile_from_fmp,
     get_financial_statements_from_sec,
     get_weekly_stock_indicators_from_stooq,
     get_enhanced_stock_info
@@ -17,7 +17,7 @@ router = APIRouter()
 # 기업 기본 정보만 반환하는 API
 @router.get("/companies/{stock_symbol}/info")
 def get_company_basic_info(stock_symbol: str):
-    profile = get_company_profile_from_alphavantage(stock_symbol, settings.ALPHAVANTAGE_API_KEY)
+    profile = get_company_profile_from_fmp(stock_symbol)
     return {
         "company_name": profile.get("company_name") or stock_symbol,
         "stock_symbol": stock_symbol,
@@ -35,8 +35,8 @@ def get_company_info(
     end_date: Optional[str] = Query(None, description="조회 종료일 (YYYY-MM-DD)"),
     granularity: Optional[str] = Query("year", description="조회 단위: day/month/year")
 ):
-    # Alpha Vantage 기업 개요
-    profile = get_company_profile_from_alphavantage(stock_symbol, settings.ALPHAVANTAGE_API_KEY)
+    # FMP 기업 개요
+    profile = get_company_profile_from_fmp(stock_symbol)
     # SEC 재무제표
     financials = get_financial_statements_from_sec(stock_symbol, start_date=start_date, end_date=end_date)
     # Stooq 주가/기술지표 (이동평균 제외)

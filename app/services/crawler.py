@@ -129,25 +129,47 @@ def get_financial_statements_from_sec(ticker: str, start_date: str = None, end_d
     
 
 #### 02 . 회사 정보 #####
-def get_company_profile_from_yfinance(ticker: str) -> dict:
+def get_company_profile_from_fmp(ticker: str) -> dict:
     """
-    yfinance를 통해 기업의 name, sector, industry, description, address를 반환합니다.
+    Financial Modeling Prep API를 통해 기업의 name, sector, industry, description, address를 반환합니다.
     """
-    import yfinance as yf
     try:
-        info = yf.Ticker(ticker).info
-        return {
-            "company_name": info.get("longName") or info.get("shortName"),
+        api_key = settings.FMP_API_KEY
+        url = f"https://financialmodelingprep.com/api/v3/profile/{ticker}?apikey={api_key}"
+        print(f"🔍 FMP URL for {ticker}: {url[:50]}...{url[-20:]}")  # API 키 부분 숨기기
+        resp = requests.get(url)
+        print(f"📡 FMP response status for {ticker}: {resp.status_code}")
+        
+        if resp.status_code != 200:
+            return {"error": f"FMP API request failed: {resp.status_code}"}
+        
+        data = resp.json()
+        print(f"📊 FMP raw response for {ticker}: {data}")
+        
+        # FMP는 배열로 반환하므로 첫 번째 항목 사용
+        if not data or not isinstance(data, list) or len(data) == 0:
+            print(f"❌ FMP error or empty response for {ticker}: {data}")
+            return {"error": f"No company profile data found for {ticker}"}
+        
+        info = data[0]  # 첫 번째 회사 정보
+        
+        # API 에러 메시지 확인
+        if 'Error Message' in info:
+            print(f"⚠️ FMP API error for {ticker}: {info['Error Message']}")
+            return {"error": f"FMP API error: {info['Error Message']}"}
+        
+        result = {
+            "company_name": info.get("companyName"),
             "sector": info.get("sector"),
             "industry": info.get("industry"),
-            "address": info.get("address1"),
-            "description": info.get("longBusinessSummary")
+            "address": f"{info.get('address', '')}, {info.get('city', '')}, {info.get('state', '')}, {info.get('country', '')}".strip(', '),
+            "description": info.get("description")
         }
+        print(f"✅ FMP parsed result for {ticker}: {result}")
+        return result
     except Exception as e:
-        return {"error": f"Error fetching company profile from yfinance: {e}"}
-
-# 기존 함수 대체
-get_company_profile_from_alphavantage = get_company_profile_from_yfinance
+        print(f"❌ Exception in FMP request for {ticker}: {e}")
+        return {"error": f"Error fetching company profile from FMP: {e}"}
 
 
 #### 03 . 주가 + 기술지표 #####
@@ -1130,24 +1152,32 @@ def get_valuation_metrics_from_sec(ticker: str, end_date: str = None) -> dict:
                 else:
                     previous_price = None
                     print(f"❌ No stock data found for previous year {previous_year}")
-                # Alpha Vantage로 shares_outstanding 가져오기
+                # Alpha Vantage로 shares_outstanding 가져오기 (항상 Alpha Vantage 사용)
                 try:
                     api_key = settings.ALPHAVANTAGE_API_KEY
                     shares_outstanding = get_shares_outstanding_from_alphavantage(ticker, api_key)
                     print(f"📈 Shares outstanding (Alpha Vantage): {shares_outstanding}")
+                    current_shares = shares_outstanding
+                    previous_shares = shares_outstanding
                 except Exception as e:
                     shares_outstanding = None
+                    current_shares = None
+                    previous_shares = None
                     print(f"❌ Could not fetch shares outstanding from Alpha Vantage: {e}")
             else:
                 print(f"❌ No stock data found for {stooq_ticker}")
                 current_price = None
                 previous_price = None
                 shares_outstanding = None
+                current_shares = None
+                previous_shares = None
         except Exception as e:
             print(f"⚠️ Error fetching stock data from Stooq: {e}")
             current_price = None
             previous_price = None
             shares_outstanding = None
+            current_shares = None
+            previous_shares = None
         
         def find_metric_value(tags, target_year, metric_name="Unknown"):
             """주어진 태그들에서 특정 연도의 값을 찾는 함수 (개선된 디버깅 포함)"""
@@ -1236,13 +1266,10 @@ def get_valuation_metrics_from_sec(ticker: str, end_date: str = None) -> dict:
         # 각 지표별 현재년도, 전년도 값 추출
         current_eps = find_metric_value(eps_tags, current_year, "EPS")
         previous_eps = find_metric_value(eps_tags, previous_year, "EPS")
-        
+
         current_net_income = find_metric_value(net_income_tags, current_year, "Net Income")
         previous_net_income = find_metric_value(net_income_tags, previous_year, "Net Income")
-        
-        current_shares = find_metric_value(shares_tags, current_year, "Shares Outstanding")
-        previous_shares = find_metric_value(shares_tags, previous_year, "Shares Outstanding")
-        
+
         current_equity = find_metric_value(equity_tags, current_year, "Shareholders Equity")
         previous_equity = find_metric_value(equity_tags, previous_year, "Shareholders Equity")
         
@@ -1280,45 +1307,26 @@ def get_valuation_metrics_from_sec(ticker: str, end_date: str = None) -> dict:
         # P/B 계산 (Book Value per Share = Equity / Shares Outstanding)
         current_pb = None
         previous_pb = None
-        
         # 현재년도 P/B 계산
-        if current_equity and shares_outstanding and current_price:
-            book_value_per_share = current_equity / shares_outstanding
+        if current_equity and current_shares and current_price:
+            book_value_per_share = current_equity / current_shares
             if book_value_per_share > 0:
                 current_pb = current_price / book_value_per_share
                 print(f"✅ Calculated current P/B: {current_pb} (Price: {current_price} / BVPS: {book_value_per_share})")
             else:
                 print(f"❌ Current BVPS is not positive: {book_value_per_share}")
         else:
-            print(f"❌ Cannot calculate current P/B - Equity: {current_equity}, Shares: {shares_outstanding}, Price: {current_price}")
-        
-        # 전년도 P/B 계산 - 전년도 말 주식수 사용
-        if previous_equity and previous_price:
-            # 전년도 주식수가 있으면 사용, 없으면 현재 주식수 사용 (일반적으로 큰 변화 없음)
-            shares_for_previous = previous_shares if previous_shares else shares_outstanding
-            
-            if shares_for_previous:
-                previous_book_value_per_share = previous_equity / shares_for_previous
-                if previous_book_value_per_share > 0:
-                    previous_pb = previous_price / previous_book_value_per_share
-                    print(f"✅ Calculated previous P/B: {previous_pb} (Price: {previous_price} / BVPS: {previous_book_value_per_share})")
-                    print(f"   📊 Used shares: {shares_for_previous} ({'from SEC' if previous_shares else 'from yfinance (current)'})")
-                else:
-                    print(f"❌ Previous BVPS is not positive: {previous_book_value_per_share}")
+            print(f"❌ Cannot calculate current P/B - Equity: {current_equity}, Shares: {current_shares}, Price: {current_price}")
+        # 전년도 P/B 계산 - 전년도 말 주식수 사용 (Alpha Vantage 값 사용)
+        if previous_equity and previous_price and previous_shares:
+            previous_book_value_per_share = previous_equity / previous_shares
+            if previous_book_value_per_share > 0:
+                previous_pb = previous_price / previous_book_value_per_share
+                print(f"✅ Calculated previous P/B: {previous_pb} (Price: {previous_price} / BVPS: {previous_book_value_per_share})")
             else:
-                print(f"❌ No shares data available for previous P/B calculation")
+                print(f"❌ Previous BVPS is not positive: {previous_book_value_per_share}")
         else:
-            print(f"❌ Cannot calculate previous P/B - Equity: {previous_equity}, Price: {previous_price}")
-            
-        # P/B 계산에 대한 추가 디버깅 정보
-        print(f"\n🔍 === P/B CALCULATION DEBUG ===")
-        print(f"Current Equity: {current_equity:,}" if current_equity else f"Current Equity: {current_equity}")
-        print(f"Previous Equity: {previous_equity:,}" if previous_equity else f"Previous Equity: {previous_equity}")
-        print(f"Current Shares (SEC): {current_shares:,}" if current_shares else f"Current Shares (SEC): {current_shares}")
-        print(f"Previous Shares (SEC): {previous_shares:,}" if previous_shares else f"Previous Shares (SEC): {previous_shares}")
-        print(f"Shares Outstanding (yf): {shares_outstanding:,}" if shares_outstanding else f"Shares Outstanding (yf): {shares_outstanding}")
-        print(f"Current Price: ${current_price}" if current_price else f"Current Price: {current_price}")
-        print(f"Previous Price: ${previous_price}" if previous_price else f"Previous Price: {previous_price}")
+            print(f"❌ Cannot calculate previous P/B - Equity: {previous_equity}, Shares: {previous_shares}, Price: {previous_price}")
         
         # ROE 계산 (Return on Equity = Net Income / Shareholders' Equity * 100)
         current_roe = None

@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     ALPHAVANTAGE_API_KEY: str
     FRED_API_KEY: str
     OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY")
+    FMP_API_KEY: str = Field(..., env="FMP_API_KEY")
 
     @property
     def DATABASE_URL(self) -> str:
