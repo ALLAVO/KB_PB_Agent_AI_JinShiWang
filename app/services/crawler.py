@@ -286,25 +286,67 @@ get_weekly_stock_indicators_from_yahoo = get_weekly_stock_indicators_from_stooq
 
 def get_stock_price_chart_data(ticker: str, start_date: str, end_date: str) -> Dict:
     """
-    주식 가격 차트 데이터를 Stooq에서 가져옵니다.
+    주식 가격 차트 데이터를 DB에서 가져옵니다.
     """
     try:
-        if not ticker.endswith('.US'):
-            ticker = ticker + '.US'
-        df = web.DataReader(ticker, 'stooq', start=start_date, end=end_date)
-        if df.empty:
-            return {"error": f"No data found for symbol {ticker}"}
-        df = df.sort_index()
+        # DB 테이블 선택
+        first_char = ticker[0].lower()
+        if 'a' <= first_char <= 'd':
+            table_name = 'fnspid_stock_price_a'
+        elif 'e' <= first_char <= 'm':
+            table_name = 'fnspid_stock_price_b'
+        else:
+            table_name = 'fnspid_stock_price_c'
+
+        conn = check_db_connection()
+        if conn is None:
+            return {"error": "Database connection failed"}
+        
+        cur = conn.cursor()
+        query = f"""
+            SELECT date, open, high, low, "adj close", volume
+            FROM {table_name}
+            WHERE stock_symbol = %s AND date BETWEEN %s AND %s
+            ORDER BY date ASC
+        """
+        cur.execute(query, (ticker, start_date, end_date))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        if not rows:
+            return {"error": f"No data found for symbol {ticker} in date range {start_date} to {end_date}"}
+
+        # 데이터 구조화
+        dates = []
+        opens = []
+        highs = []
+        lows = []
+        closes = []
+        volumes = []
+        
+        for row in rows:
+            # row[0]이 이미 문자열인 경우와 datetime 객체인 경우를 모두 처리
+            if isinstance(row[0], str):
+                dates.append(row[0])
+            else:
+                dates.append(row[0].strftime('%Y-%m-%d'))
+            opens.append(float(row[1]) if row[1] is not None else None)
+            highs.append(float(row[2]) if row[2] is not None else None)
+            lows.append(float(row[3]) if row[3] is not None else None)
+            closes.append(float(row[4]) if row[4] is not None else None)  # adj close
+            volumes.append(float(row[5]) if row[5] is not None else None)
+        
         return {
-            "dates": [date.strftime('%Y-%m-%d') for date in df.index],
-            "closes": df['Close'].tolist(),
-            "opens": df['Open'].tolist(),
-            "highs": df['High'].tolist(),
-            "lows": df['Low'].tolist(),
-            "volumes": df['Volume'].tolist()
+            "dates": dates,
+            "closes": closes,
+            "opens": opens,
+            "highs": highs,
+            "lows": lows,
+            "volumes": volumes
         }
     except Exception as e:
-        return {"error": f"Error fetching stock data from Stooq for {ticker}: {e}"}
+        return {"error": f"Error fetching stock data from DB for {ticker}: {e}"}
 
 def get_stock_price_chart_with_ma(ticker: str, start_date: str, end_date: str, ma_periods: List[int]) -> Dict:
     """
@@ -337,7 +379,8 @@ def get_stock_price_chart_with_ma(ticker: str, start_date: str, end_date: str, m
 
 def get_index_chart_data(symbol: str, start_date: str, end_date: str) -> Dict:
     """
-    지수 데이터를 Stooq에서 가져옵니다 (나스닥, S&P 500 등)
+    [DEPRECATED] 지수 데이터를 Stooq에서 가져옵니다 (나스닥, S&P 500 등)
+    Use get_index_data_from_db() instead for database-driven index data.
     """
     try:
         # Stooq는 미국 지수는 심볼 그대로 사용
@@ -358,29 +401,105 @@ def get_index_chart_data(symbol: str, start_date: str, end_date: str) -> Dict:
 
 def get_nasdaq_index_data(start_date: str, end_date: str) -> dict:
     """
-    나스닥 지수 데이터를 가져옵니다.
+    나스닥 지수 데이터를 데이터베이스에서 가져옵니다.
     start_date, end_date: 'YYYY-MM-DD'
     반환: {
         'dates': [...],
         'nasdaq_closes': [...]
     }
     """
+    data = get_nasdaq_index_data_from_db(start_date, end_date)
+    if "error" in data:
+        return data
+    
+    return {
+        'dates': data['dates'],
+        'nasdaq_closes': data['closes']
+    }
+
+## 04-2. Database-driven Index Data Functions (Refactored from Stooq)
+def get_index_data_from_db(index_name: str, start_date: str, end_date: str) -> dict:
+    """
+    데이터베이스에서 지정된 지수 데이터를 가져옵니다.
+    index_name: 'sp500', 'nasdaq', 'dow' 중 하나
+    start_date, end_date: 'YYYY-MM-DD'
+    반환: {
+        'dates': [...],
+        'closes': [...]
+    }
+    """
+    conn = check_db_connection()
+    if conn is None:
+        return {'error': 'Database connection failed'}
+    
+    # 유효한 인덱스 이름 확인
+    valid_indices = ['sp500', 'nasdaq', 'dow']
+    if index_name.lower() not in valid_indices:
+        return {'error': f'Invalid index name: {index_name}. Must be one of {valid_indices}'}
+    
     try:
-        df = web.DataReader('^NDQ', 'stooq', start=start_date, end=end_date)
-        if df.empty:
-            return {"error": "No NASDAQ data in given period."}
-        df = df.sort_index()  # 날짜 오름차순
+        cur = conn.cursor()
+        query = f"""
+            SELECT date, {index_name.lower()} 
+            FROM index_closing_price 
+            WHERE date BETWEEN %s AND %s AND {index_name.lower()} IS NOT NULL
+            ORDER BY date ASC;
+        """
+        cur.execute(query, (start_date, end_date))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        if not rows:
+            return {"error": f"No {index_name} data found in the specified date range"}
+        
+        dates = []
+        closes = []
+        
+        for row in rows:
+            # row[0]이 이미 문자열인 경우와 datetime 객체인 경우를 모두 처리
+            if isinstance(row[0], str):
+                dates.append(row[0])
+            else:
+                dates.append(row[0].strftime('%Y-%m-%d'))
+            closes.append(float(row[1]))
         
         return {
-            'dates': [d.strftime('%Y-%m-%d') for d in df.index],
-            'nasdaq_closes': df['Close'].tolist()
+            'dates': dates,
+            'closes': closes
         }
+        
     except Exception as e:
-        return {"error": f"Error fetching NASDAQ data from Stooq: {e}"}
+        if conn:
+            conn.close()
+        return {'error': f'Error fetching {index_name} data from database: {e}'}
+
+def get_sp500_data_from_db(start_date: str, end_date: str) -> dict:
+    """
+    데이터베이스에서 S&P500 지수 데이터를 가져옵니다.
+    start_date, end_date: 'YYYY-MM-DD'
+    반환: {
+        'dates': [...],
+        'closes': [...]
+    }
+    """
+    return get_index_data_from_db('sp500', start_date, end_date)
+
+def get_nasdaq_index_data_from_db(start_date: str, end_date: str) -> dict:
+    """
+    데이터베이스에서 나스닥 지수 데이터를 가져옵니다.
+    start_date, end_date: 'YYYY-MM-DD'
+    반환: {
+        'dates': [...],
+        'closes': [...]
+    }
+    """
+    return get_index_data_from_db('nasdaq', start_date, end_date)
 
 def calculate_absolute_and_relative_returns(ticker: str, start_date: str, end_date: str) -> dict:
     """
     개별 주식의 절대수익률과 S&P500 대비 상대수익률을 계산합니다.
+    [REFACTORED] Now uses database (index_closing_price) for S&P500 data instead of Stooq API.
     start_date, end_date: 'YYYY-MM-DD'
     반환: {
         'dates': [...],
@@ -395,13 +514,13 @@ def calculate_absolute_and_relative_returns(ticker: str, start_date: str, end_da
     }
     """
     try:
-        # 개별 주식 데이터 가져오기
+        # 개별 주식 데이터 가져오기 (이미 DB에서 가져오도록 리팩토링됨)
         stock_data = get_stock_price_chart_data(ticker, start_date, end_date)
         if "error" in stock_data:
             return stock_data
         
-        # S&P500 데이터 가져오기 (기존 나스닥에서 S&P500으로 변경)
-        sp500_data = get_index_chart_data('^SPX', start_date, end_date)
+        # S&P500 데이터를 데이터베이스에서 가져오기
+        sp500_data = get_sp500_data_from_db(start_date, end_date)
         if "error" in sp500_data:
             return sp500_data
         
@@ -1085,18 +1204,7 @@ def get_financial_metrics_from_fmp(ticker: str) -> dict:
         print(f"❌ Exception in FMP Income Statement request for {ticker}: {e}")
         return {"error": f"Error fetching financial metrics from FMP: {e}"}
 
-def get_valuation_metrics_from_sec(ticker: str, end_date: str = None) -> dict:
-    """
-    FMP API를 통해 벨류에이션 지표를 가져옵니다.
-    - P/E Ratio, P/B Ratio, ROE 등
-    - 최근 5년치 데이터 제공
-    
-    Note: This function has been replaced with FMP API for better reliability.
-    The end_date parameter is kept for compatibility but not used.
-    """
-    return get_valuation_metrics_from_fmp(ticker)
-
-def get_valuation_metrics_from_fmp(ticker: str) -> dict:
+def get_valuation_metrics_from_fmp(ticker: str, end_date: str = None) -> dict:
     """
     FMP API를 통해 벨류에이션 지표를 가져옵니다.
     - P/E Ratio, P/B Ratio, ROE 등

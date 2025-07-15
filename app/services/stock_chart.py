@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Dict, List
-from app.services.crawler import get_stock_price_chart_data, get_stock_price_chart_with_ma, get_index_chart_data, get_enhanced_stock_info
+from app.services.crawler import get_stock_price_chart_data, get_stock_price_chart_with_ma, get_nasdaq_index_data_from_db, get_enhanced_stock_info
 
 class StockChartService:
     """주가 차트 관련 서비스"""
@@ -70,7 +70,7 @@ class StockChartService:
             
             # 나스닥 대비 상대지수 계산
             if "relative_nasdaq" in chart_types:
-                nasdaq_data = get_index_chart_data("^IXIC", start_date, end_date)
+                nasdaq_data = get_nasdaq_index_data_from_db(start_date, end_date)
                 if "error" not in nasdaq_data and len(nasdaq_data["closes"]) == len(data["closes"]):
                     stock_closes = data["closes"]
                     nasdaq_closes = nasdaq_data["closes"]

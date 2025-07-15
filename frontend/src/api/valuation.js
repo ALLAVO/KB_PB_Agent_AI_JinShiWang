@@ -1,8 +1,6 @@
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
-
 export const fetchValuationMetrics = async ({ symbol, endDate }) => {
   try {
-    let url = `${BASE_URL}/valuation?symbol=${encodeURIComponent(symbol)}`;
+    let url = `/api/v1/valuation?symbol=${encodeURIComponent(symbol)}`;
     
     if (endDate) {
       url += `&end_date=${encodeURIComponent(endDate)}`;

@@ -167,22 +167,52 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
     }
     
     // 실제 API 호출 파라미터 확인
-    console.log('API 호출', { symbol: cleanSymbol, startDate, endDate });
+    console.log('🚀 API 호출 시작', { symbol: cleanSymbol, startDate, endDate });
     try {
       // 렌더링 순서에 맞춰 API 호출 순서도 변경
       const fixedChartTypes = ['price', 'volume'];
-      const [companyInfoData, financialData, valuationData, stockChartDataResponse, stockChartSummaryResponse, enhancedStockInfoResponse, predictionData, articlesData, summariesData, keywordsData] = await Promise.all([
-        fetchCompanyInfo(cleanSymbol), // 1. CompanyInfo (기업 정보)
-        fetchFinancialMetrics({ symbol: cleanSymbol, endDate }), // 2. 재무지표
-        fetchValuationMetrics({ symbol: cleanSymbol, endDate }), // 3. 벨류에이션 지표
-        fetchCombinedStockChart(cleanSymbol, startDate, endDate, fixedChartTypes), // 4. 주가 차트 데이터
-        fetchStockChartSummary(cleanSymbol, startDate, endDate), // 5. 주가 차트 요약
-        fetchEnhancedStockInfo(cleanSymbol), // 6. 상세 주식 정보
-        fetchPredictionSummary({ symbol: cleanSymbol, startDate, endDate }), // 7. 주가 전망
-        fetchTop3Articles({ symbol: cleanSymbol, startDate, endDate }), // 8. 핵심 뉴스
-        fetchWeeklySummaries({ symbol: cleanSymbol, startDate, endDate }), // 9. 요약
-        fetchWeeklyKeywords({ symbol: cleanSymbol, startDate, endDate }) // 10. 키워드
-      ]);
+      
+      console.log('📞 1. Company Info API 호출...');
+      const companyInfoData = await fetchCompanyInfo(cleanSymbol);
+      console.log('✅ Company Info 완료:', companyInfoData);
+
+      console.log('📞 2. Financial Metrics API 호출...');
+      const financialData = await fetchFinancialMetrics({ symbol: cleanSymbol, endDate });
+      console.log('✅ Financial Metrics 완료:', financialData);
+
+      console.log('📞 3. Valuation Metrics API 호출...');
+      const valuationData = await fetchValuationMetrics({ symbol: cleanSymbol, endDate });
+      console.log('✅ Valuation Metrics 완료:', valuationData);
+
+      console.log('📞 4. Stock Chart Data API 호출...');
+      const stockChartDataResponse = await fetchCombinedStockChart(cleanSymbol, startDate, endDate, fixedChartTypes);
+      console.log('✅ Stock Chart Data 완료:', stockChartDataResponse);
+
+      console.log('📞 5. Stock Chart Summary API 호출...');
+      const stockChartSummaryResponse = await fetchStockChartSummary(cleanSymbol, startDate, endDate);
+      console.log('✅ Stock Chart Summary 완료:', stockChartSummaryResponse);
+
+      console.log('📞 6. Enhanced Stock Info API 호출...');
+      const enhancedStockInfoResponse = await fetchEnhancedStockInfo(cleanSymbol);
+      console.log('✅ Enhanced Stock Info 완료:', enhancedStockInfoResponse);
+
+      console.log('📞 7. Prediction Summary API 호출...');
+      const predictionData = await fetchPredictionSummary({ symbol: cleanSymbol, startDate, endDate });
+      console.log('✅ Prediction Summary 완료:', predictionData);
+
+      console.log('📞 8. Top3 Articles API 호출...');
+      const articlesData = await fetchTop3Articles({ symbol: cleanSymbol, startDate, endDate });
+      console.log('✅ Top3 Articles 완료:', articlesData);
+
+      console.log('📞 9. Weekly Summaries API 호출...');
+      const summariesData = await fetchWeeklySummaries({ symbol: cleanSymbol, startDate, endDate });
+      console.log('✅ Weekly Summaries 완료:', summariesData);
+
+      console.log('📞 10. Weekly Keywords API 호출...');
+      const keywordsData = await fetchWeeklyKeywords({ symbol: cleanSymbol, startDate, endDate });
+      console.log('✅ Weekly Keywords 완료:', keywordsData);
+      
+      console.log('🎯 모든 API 호출 완료! 데이터 처리 시작...');
       
       // 차트 데이터 변환
       const transformedChartData = stockChartDataResponse.dates.map((date, index) => {
@@ -211,6 +241,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
       };
       
       // 실제로 사용하는 데이터만 setState
+      console.log('📊 상태 업데이트 시작...');
       setCompanyInfo(companyInfoData);
       setFinancialMetrics(financialData);
       setValuationMetrics(valuationData);
@@ -220,17 +251,25 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
       setTop3Articles(articlesData);
       setSummaries(summariesData);
       setKeywords(keywordsData);
-      // stockChartData, returnAnalysisData 등은 필요시 추가
-      console.log('기업 정보 데이터:', companyInfoData);
-      console.log('재무지표 데이터:', financialData);
-      console.log('벨류에이션 지표 데이터:', valuationData);
-      console.log('예측 데이터:', predictionData);
-      console.log('기사 데이터:', articlesData);
-      console.log('요약 데이터:', summariesData);
-      console.log('키워드 데이터:', keywordsData);
+      
+      console.log('🎉 모든 데이터 상태 업데이트 완료!');
+      console.log('📋 최종 데이터 요약:');
+      console.log('   기업 정보:', companyInfoData ? '✅' : '❌');
+      console.log('   재무지표:', financialData ? '✅' : '❌');
+      console.log('   벨류에이션:', valuationData ? '✅' : '❌');
+      console.log('   주가 차트:', transformedChartData ? '✅' : '❌');
+      console.log('   예측 데이터:', predictionData ? '✅' : '❌');
+      console.log('   기사 데이터:', articlesData ? '✅' : '❌');
+      console.log('   요약 데이터:', summariesData ? '✅' : '❌');
+      console.log('   키워드 데이터:', keywordsData ? '✅' : '❌');
     } catch (e) {
-      console.error('API 호출 오류:', e);
-      setError('데이터를 불러오지 못했습니다.');
+      console.error('❌ API 호출 오류:', e);
+      console.error('❌ 오류 상세:', {
+        message: e.message,
+        stack: e.stack,
+        name: e.name
+      });
+      setError(`데이터를 불러오지 못했습니다: ${e.message}`);
     } finally {
       setLoading(false);
       if (isAuto && onAutoCompanyDone) {
