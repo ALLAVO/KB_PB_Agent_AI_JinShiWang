@@ -62,7 +62,7 @@ def get_stock_data_from_db(ticker: str, end_date: str, days_back: int = 400) -> 
         
         cur = conn.cursor()
         query = f"""
-            SELECT date, open, high, low, close, "adj close", volume
+            SELECT date, open, high, low, close, adj_close, volume
             FROM {table_name}
             WHERE stock_symbol = %s 
             AND date BETWEEN %s AND %s

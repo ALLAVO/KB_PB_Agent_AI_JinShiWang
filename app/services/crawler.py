@@ -258,7 +258,7 @@ def get_weekly_stock_indicators_from_stooq(ticker: str, start_date: str, end_dat
         
         # 주간 데이터 조회
         query = f"""
-            SELECT date, open, high, low, close, volume, "adj close"
+            SELECT date, open, high, low, close, volume, adj_close
             FROM {table_name}
             WHERE stock_symbol = %s AND date BETWEEN %s AND %s
             ORDER BY date ASC
