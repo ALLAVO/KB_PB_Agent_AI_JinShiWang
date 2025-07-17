@@ -192,6 +192,8 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
         </div>
       )}
 
+      <div style={{height:'50px' }} />
+
       <div className="pipeline-title">
           <img src={titlecloud} alt="cloud" />{inputSymbol} 수익률 표
       </div>
@@ -203,6 +205,8 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
         loading={loading}
       />
 
+      <div style={{height:'50px' }} />
+
       <div className="pipeline-title">
           <img src={titlecloud} alt="cloud" />{inputSymbol} 종목 분석
       </div>
@@ -213,17 +217,24 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
         portfolioSummary={portfolio_summary}
         periodEndDate={periodEndDate}
       />
+
+      <div style={{height:'50px' }} />
+
+      <div className="pipeline-title">
+          <img src={titlecloud} alt="cloud" />{inputSymbol} 포트폴리오 분석
+      </div>
       
       {/* 포트폴리오 분석 - 포트폴리오 도넛 차트 섹션 */}
       <PortfolioChart clientId={client.id} 
       />
 
       {/* 페이지 말단에 back-btn 배치 */}
-      <div style={{ display: 'flex', justifyContent: 'center', margin: '32px 0' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', margin: '10px 0' }}>
         <button className="back-btn" onClick={onBack}>
           <span>←</span> 목록으로 돌아가기
         </button>
       </div>
+      <div style={{height:'50px' }} />
     </>
   );
 };

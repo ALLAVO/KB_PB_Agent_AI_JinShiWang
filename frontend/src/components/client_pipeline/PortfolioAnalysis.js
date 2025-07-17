@@ -4,11 +4,8 @@ import { goToIndustryAgent } from '../../connect_agent/go_industry';
 const PortfolioAnalysis = ({ portfolio, portfolioSummary, periodEndDate }) => {
   if (!portfolio || !portfolioSummary) {
     return (
-      <div className="portfolio-analysis-section">
-        <h3 className="section-title">종목 분석</h3>
-        <div className="portfolio-loading">
-          <p>포트폴리오 데이터를 불러오는 중...</p>
-        </div>
+      <div className="portfolio-loading">
+        <p>포트폴리오 데이터를 불러오는 중...</p>
       </div>
     );
   }
@@ -25,11 +22,9 @@ const PortfolioAnalysis = ({ portfolio, portfolioSummary, periodEndDate }) => {
   };
 
   return (
-    <div className="portfolio-analysis-section">
-      <h3 className="section-title">종목 분석</h3>
-      
+    <>
       {/* 포트폴리오 요약 */}
-      <div className="portfolio-summary">
+      <div className="portfolio-summary" style={{ marginLeft: '40px', width: '770px' }}>
         <div className="summary-stats">
           <div className="stat-item">
             <div className="stat-content">
@@ -64,7 +59,7 @@ const PortfolioAnalysis = ({ portfolio, portfolioSummary, periodEndDate }) => {
 
       {/* 포트폴리오 테이블 */}
       {portfolio.length > 0 ? (
-        <div className="portfolio-table-container">
+        <div className="portfolio-table-container" style={{ marginLeft: '40px', width: '800px' }}>
           <table className="portfolio-table">
             <thead>
               <tr>
@@ -103,7 +98,7 @@ const PortfolioAnalysis = ({ portfolio, portfolioSummary, periodEndDate }) => {
           <p>보유 중인 종목이 없습니다.</p>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

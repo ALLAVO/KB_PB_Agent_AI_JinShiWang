@@ -2,12 +2,11 @@ import React from 'react';
 
 const PerformanceChart = ({ clientName, performanceData, loading }) => {
   return (
-    <div className="weekly-summary-section">
-      <h3 className="section-title">{clientName} 고객님 수익률 차트</h3>
-      <div className="summary-content">
+    <div>
+      <div>
         {performanceData ? (
-          <div className="performance-analysis">
-            <div className="performance-summary">
+          <div>
+            <div className="performance-summary" style={{ marginLeft: '40px', width: '770px' }}>
               <div className="performance-info">
                 <span className="performance-label">분석 기준일:</span>
                 <span className="performance-value">{performanceData.period_end}</span>
@@ -27,7 +26,7 @@ const PerformanceChart = ({ clientName, performanceData, loading }) => {
               </div>
             </div>
             
-            <div className="performance-table-container">
+            <div className="performance-table-container" style={{ marginLeft: '40px', width: '800px' }}>
               <table className="performance-table">
                 <thead>
                   <tr>
@@ -61,7 +60,7 @@ const PerformanceChart = ({ clientName, performanceData, loading }) => {
                   </tr>
                 </tbody>
               </table>
-              <small className="coming-soon">* 성과 구간은 고객님 최근 리밸런싱 이후부터 지난주 금요일까지를 대상으로 합니다.</small>
+              <small className="coming-soon" style={{ textAlign: 'right', display: 'block' }}>* 성과 구간은 고객님 최근 리밸런싱 이후부터 지난주 금요일까지를 대상으로 합니다.</small>
             </div>
           </div>
         ) : loading ? (

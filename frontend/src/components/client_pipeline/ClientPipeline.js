@@ -61,15 +61,6 @@ const ClientPipeline = ({ year, month, weekStr, period, onSetReportTitle, autoCu
     }
   };
 
-  if (loading) {
-    return (
-      <div className="client-pipeline-loading">
-        <div className="loading-spinner"></div>
-        <span>고객 데이터를 불러오는 중...</span>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="client-pipeline-error">
