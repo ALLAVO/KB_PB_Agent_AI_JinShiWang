@@ -221,10 +221,10 @@ def summarize_company_description_with_openai(description: str, company_name: st
 
 #### 03 . 주가 + 기술지표 #####
 
-# Stooq에서 주간 주가(종가, 시가, 고가, 저가, 거래량)와 기술지표(주간 변동성 등)를 반환하는 함수
+# 데이터베이스에서 주간 주가(종가, 시가, 고가, 저가, 거래량)와 기술지표(주간 변동성 등)를 반환하는 함수
 def get_weekly_stock_indicators_from_stooq(ticker: str, start_date: str, end_date: str) -> dict:
     """
-    Stooq에서 주간 주가(종가, 시가, 고가, 저가, 거래량)와 기술지표(주간 변동성 등)를 반환합니다.
+    데이터베이스에서 주간 주가(종가, 시가, 고가, 저가, 거래량)와 기술지표(주간 변동성 등)를 반환합니다.
     start_date, end_date: 'YYYY-MM-DD' (주차의 시작일, 마지막날)
     반환: {
         'close_avg', 'open_avg', 'high_avg', 'low_avg', 'volume_avg',
@@ -232,19 +232,64 @@ def get_weekly_stock_indicators_from_stooq(ticker: str, start_date: str, end_dat
     }
     """
     try:
-        if not ticker.endswith('.US'):
-            ticker = ticker + '.US'
-        df = web.DataReader(ticker, 'stooq', start=start_date, end=end_date)
-        if df.empty:
+        # 데이터베이스 연결
+        conn = check_db_connection()
+        if conn is None:
+            return {'error': 'Database connection failed'}
+        
+        # 티커 첫 글자에 따라 테이블 결정
+        first_letter = ticker[0].lower()
+        if 'a' <= first_letter <= 'd':
+            table_name = 'fnspid_stock_price_a'
+        elif 'e' <= first_letter <= 'm':
+            table_name = 'fnspid_stock_price_b'
+        elif 'n' <= first_letter <= 'z':
+            table_name = 'fnspid_stock_price_c'
+        else:
+            return {"error": f"Invalid ticker format: {ticker}"}
+        
+        # 2023년까지의 데이터만 있으므로 end_date가 2023년을 넘으면 조정
+        if end_date > '2023-12-31':
+            end_date = '2023-12-31'
+        if start_date > '2023-12-31':
+            return {"error": "No data available for the requested period (data only until 2023)"}
+        
+        cur = conn.cursor()
+        
+        # 주간 데이터 조회
+        query = f"""
+            SELECT date, open, high, low, close, volume, "adj close"
+            FROM {table_name}
+            WHERE stock_symbol = %s AND date BETWEEN %s AND %s
+            ORDER BY date ASC
+        """
+        cur.execute(query, (ticker, start_date, end_date))
+        rows = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        if not rows:
             return {"error": "No price data in given period."}
-        df = df.sort_index()  # 날짜 오름차순
-        close_avg = df['Close'].mean()
-        open_avg = df['Open'].mean()
-        high_avg = df['High'].mean()
-        low_avg = df['Low'].mean()
-        volume_avg = df['Volume'].mean()
-        volatility = df['Close'].std()
-        price_change_pct = ((df['Close'].iloc[-1] - df['Close'].iloc[0]) / df['Close'].iloc[0]) * 100 if len(df['Close']) > 1 else None
+        
+        # DataFrame 생성
+        columns = ['date', 'open', 'high', 'low', 'close', 'volume', 'adj_close']
+        df = pd.DataFrame(rows, columns=columns)
+        
+        # 날짜를 인덱스로 설정하고 정렬
+        df['date'] = pd.to_datetime(df['date'])
+        df.set_index('date', inplace=True)
+        df.sort_index(inplace=True)
+        
+        # 통계 계산 (adj_close 사용)
+        close_avg = df['adj_close'].mean()
+        open_avg = df['open'].mean()
+        high_avg = df['high'].mean()
+        low_avg = df['low'].mean()
+        volume_avg = df['volume'].mean()
+        volatility = df['adj_close'].std()
+        price_change_pct = ((df['adj_close'].iloc[-1] - df['adj_close'].iloc[0]) / df['adj_close'].iloc[0]) * 100 if len(df['adj_close']) > 1 else None
+        
         return {
             'close_avg': close_avg,
             'open_avg': open_avg,
@@ -255,7 +300,7 @@ def get_weekly_stock_indicators_from_stooq(ticker: str, start_date: str, end_dat
             'price_change_pct': price_change_pct
         }
     except Exception as e:
-        return {"error": f"Error fetching stock indicators from Stooq: {e}"}
+        return {"error": f"Error fetching stock indicators from database: {e}"}
 
 def get_moving_averages_from_stooq(ticker: str, end_date: str, windows=[5, 10, 20]) -> dict:
     """
@@ -285,25 +330,79 @@ get_weekly_stock_indicators_from_yahoo = get_weekly_stock_indicators_from_stooq
 
 def get_stock_price_chart_data(ticker: str, start_date: str, end_date: str) -> Dict:
     """
-    주식 가격 차트 데이터를 Stooq에서 가져옵니다.
+    주식 가격 차트 데이터를 데이터베이스에서 가져옵니다.
     """
     try:
-        if not ticker.endswith('.US'):
-            ticker = ticker + '.US'
-        df = web.DataReader(ticker, 'stooq', start=start_date, end=end_date)
-        if df.empty:
+        # 데이터베이스 연결
+        conn = check_db_connection()
+        if conn is None:
+            return {'error': 'Database connection failed'}
+        
+        # 티커 첫 글자에 따라 테이블 결정
+        first_letter = ticker[0].lower()
+        if 'a' <= first_letter <= 'd':
+            table_name = 'fnspid_stock_price_a'
+        elif 'e' <= first_letter <= 'm':
+            table_name = 'fnspid_stock_price_b'
+        elif 'n' <= first_letter <= 'z':
+            table_name = 'fnspid_stock_price_c'
+        else:
+            return {"error": f"Invalid ticker format: {ticker}"}
+        
+        # 2023년까지의 데이터만 있으므로 end_date가 2023년을 넘으면 조정
+        if end_date > '2023-12-31':
+            end_date = '2023-12-31'
+        if start_date > '2023-12-31':
+            return {"error": "No data available for the requested period (data only until 2023)"}
+        
+        cur = conn.cursor()
+        
+        # 차트 데이터 조회
+        query = f"""
+            SELECT date, open, high, low, close, volume, "adj close"
+            FROM {table_name}
+            WHERE stock_symbol = %s AND date BETWEEN %s AND %s
+            ORDER BY date ASC
+        """
+        cur.execute(query, (ticker, start_date, end_date))
+        rows = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        if not rows:
             return {"error": f"No data found for symbol {ticker}"}
-        df = df.sort_index()
+        
+        # 데이터 구조화
+        dates = []
+        opens = []
+        highs = []
+        lows = []
+        closes = []
+        volumes = []
+        
+        for row in rows:
+            # row[0]이 이미 문자열인 경우와 datetime 객체인 경우를 모두 처리
+            if isinstance(row[0], str):
+                dates.append(row[0])
+            else:
+                dates.append(row[0].strftime('%Y-%m-%d'))
+            opens.append(float(row[1]) if row[1] is not None else None)
+            highs.append(float(row[2]) if row[2] is not None else None)
+            lows.append(float(row[3]) if row[3] is not None else None)
+            closes.append(float(row[4]) if row[4] is not None else None)  # close 컬럼 사용
+            volumes.append(float(row[5]) if row[5] is not None else None)
+        
         return {
-            "dates": [date.strftime('%Y-%m-%d') for date in df.index],
-            "closes": df['Close'].tolist(),
-            "opens": df['Open'].tolist(),
-            "highs": df['High'].tolist(),
-            "lows": df['Low'].tolist(),
-            "volumes": df['Volume'].tolist()
+            "dates": dates,
+            "closes": closes,
+            "opens": opens,
+            "highs": highs,
+            "lows": lows,
+            "volumes": volumes
         }
     except Exception as e:
-        return {"error": f"Error fetching stock data from Stooq for {ticker}: {e}"}
+        return {"error": f"Error fetching stock data from database for {ticker}: {e}"}
 
 def get_stock_price_chart_with_ma(ticker: str, start_date: str, end_date: str, ma_periods: List[int]) -> Dict:
     """
@@ -336,24 +435,74 @@ def get_stock_price_chart_with_ma(ticker: str, start_date: str, end_date: str, m
 
 def get_index_chart_data(symbol: str, start_date: str, end_date: str) -> Dict:
     """
-    지수 데이터를 Stooq에서 가져옵니다 (나스닥, S&P 500 등)
+    지수 데이터를 데이터베이스에서 가져옵니다 (나스닥, S&P 500, DOW 등)
     """
     try:
-        # Stooq는 미국 지수는 심볼 그대로 사용
-        df = web.DataReader(symbol, 'stooq', start=start_date, end=end_date)
-        if df.empty:
+        # 데이터베이스 연결
+        conn = check_db_connection()
+        if conn is None:
+            return {'error': 'Database connection failed'}
+        
+        # 2023년까지의 데이터만 있으므로 end_date가 2023년을 넘으면 조정
+        if end_date > '2023-12-31':
+            end_date = '2023-12-31'
+        if start_date > '2023-12-31':
+            return {"error": "No data available for the requested period (data only until 2023)"}
+        
+        # 심볼에 따라 컬럼명 매핑
+        symbol_mapping = {
+            '^SPX': 'sp500',
+            '^IXIC': 'nasdaq', 
+            '^NDQ': 'nasdaq',
+            '^DJI': 'dow'
+        }
+        
+        column_name = symbol_mapping.get(symbol)
+        if not column_name:
+            return {"error": f"Unsupported index symbol: {symbol}"}
+        
+        cur = conn.cursor()
+        
+        # 지수 데이터 조회
+        query = f"""
+            SELECT date, {column_name}
+            FROM index_closing_price
+            WHERE date BETWEEN %s AND %s AND {column_name} IS NOT NULL
+            ORDER BY date ASC
+        """
+        cur.execute(query, (start_date, end_date))
+        rows = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        if not rows:
             return {"error": f"No data found for symbol {symbol}"}
-        df = df.sort_index()
+        
+        # 데이터 구조화
+        dates = []
+        closes = []
+        
+        for row in rows:
+            # row[0]이 이미 문자열인 경우와 datetime 객체인 경우를 모두 처리
+            if isinstance(row[0], str):
+                dates.append(row[0])
+            else:
+                dates.append(row[0].strftime('%Y-%m-%d'))
+            closes.append(float(row[1]) if row[1] is not None else None)
+        
+        # index_closing_price 테이블에는 OHLV 데이터가 없으므로 close 값만 제공
+        # 호환성을 위해 opens, highs, lows는 closes와 동일한 값으로, volumes는 None으로 설정
         return {
-            "dates": [date.strftime('%Y-%m-%d') for date in df.index],
-            "closes": df['Close'].tolist(),
-            "opens": df['Open'].tolist(),
-            "highs": df['High'].tolist(),
-            "lows": df['Low'].tolist(),
-            "volumes": df['Volume'].tolist()
+            "dates": dates,
+            "closes": closes,
+            "opens": closes,  # 데이터베이스에 open 데이터가 없으므로 close와 동일하게 설정
+            "highs": closes,  # 데이터베이스에 high 데이터가 없으므로 close와 동일하게 설정
+            "lows": closes,   # 데이터베이스에 low 데이터가 없으므로 close와 동일하게 설정
+            "volumes": [None] * len(closes)  # 데이터베이스에 volume 데이터가 없음
         }
     except Exception as e:
-        return {"error": f"Error fetching index data from Stooq for {symbol}: {e}"}
+        return {"error": f"Error fetching index data from database for {symbol}: {e}"}
 
 def get_nasdaq_index_data(start_date: str, end_date: str) -> dict:
     """
@@ -866,41 +1015,111 @@ def get_commodity_prices_6months(fred_api_key: str, end_date: str) -> dict:
     except Exception as e:
         return {'error': f'Error fetching 6-month commodity prices from FRED: {e}'}
 
-def get_enhanced_stock_info(ticker: str) -> Dict:
+def get_enhanced_stock_info(ticker: str, end_date: str = None) -> Dict:
     """
-    stooq(데이터리더)로 불러올 수 있는 정보는 stooq로, 시가총액/유동주식수 등은 Alpha Vantage로 가져옵니다.
+    데이터베이스에서 주식 정보를 가져와 분석하고, 시가총액/유동주식수 등은 FMP API로 가져옵니다.
     """
     import numpy as np
     try:
-        # stooq용 티커 변환
-        stooq_ticker = ticker if ticker.endswith('.US') else ticker + '.US'
-        # 1년치 데이터
-        df_1y = web.DataReader(stooq_ticker, 'stooq', start=(datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d'), end=datetime.now().strftime('%Y-%m-%d'))
-        df_1y = df_1y.sort_index()
-        # 1개월치 데이터
-        df_1m = web.DataReader(stooq_ticker, 'stooq', start=(datetime.now() - timedelta(days=31)).strftime('%Y-%m-%d'), end=datetime.now().strftime('%Y-%m-%d'))
-        df_1m = df_1m.sort_index()
-        # 60일치 데이터
-        df_60d = web.DataReader(stooq_ticker, 'stooq', start=(datetime.now() - timedelta(days=60)).strftime('%Y-%m-%d'), end=datetime.now().strftime('%Y-%m-%d'))
-        df_60d = df_60d.sort_index()
-        if df_1y.empty or df_1m.empty or df_60d.empty:
-            return {"error": f"No historical data found for {ticker} (stooq)"}
-        # 현재가 (가장 최근 종가)
-        current_price = df_1y['Close'].iloc[-1] if not df_1y.empty else None
+        # 데이터베이스 연결
+        conn = check_db_connection()
+        if conn is None:
+            return {'error': 'Database connection failed'}
+        
+        # 티커 첫 글자에 따라 테이블 결정
+        first_letter = ticker[0].lower()
+        if 'a' <= first_letter <= 'd':
+            table_name = 'fnspid_stock_price_a'
+        elif 'e' <= first_letter <= 'm':
+            table_name = 'fnspid_stock_price_b'
+        elif 'n' <= first_letter <= 'z':
+            table_name = 'fnspid_stock_price_c'
+        else:
+            return {"error": f"Invalid ticker format: {ticker}"}
+        
+        # end_date 파라미터 처리
+        if end_date is None:
+            # end_date가 제공되지 않으면 기본값으로 2023-12-31 사용
+            final_end_date = '2023-12-31'
+        else:
+            # end_date가 2023년을 넘으면 2023-12-31로 조정
+            if end_date > '2023-12-31':
+                final_end_date = '2023-12-31'
+            else:
+                final_end_date = end_date
+        
+        # 기준 날짜로부터 1년, 1개월, 60일 전 날짜 계산
+        start_1y = (datetime.strptime(final_end_date, '%Y-%m-%d') - timedelta(days=365)).strftime('%Y-%m-%d')
+        start_1m = (datetime.strptime(final_end_date, '%Y-%m-%d') - timedelta(days=31)).strftime('%Y-%m-%d')
+        start_60d = (datetime.strptime(final_end_date, '%Y-%m-%d') - timedelta(days=60)).strftime('%Y-%m-%d')
+        
+        cur = conn.cursor()
+        
+        # 1년치 데이터 조회
+        query_1y = f"""
+            SELECT date, open, high, low, close, volume, "adj close"
+            FROM {table_name}
+            WHERE stock_symbol = %s AND date BETWEEN %s AND %s
+            ORDER BY date ASC
+        """
+        cur.execute(query_1y, (ticker, start_1y, final_end_date))
+        rows_1y = cur.fetchall()
+        
+        # 1개월치 데이터 조회
+        query_1m = f"""
+            SELECT date, open, high, low, close, volume, "adj close"
+            FROM {table_name}
+            WHERE stock_symbol = %s AND date BETWEEN %s AND %s
+            ORDER BY date ASC
+        """
+        cur.execute(query_1m, (ticker, start_1m, final_end_date))
+        rows_1m = cur.fetchall()
+        
+        # 60일치 데이터 조회
+        query_60d = f"""
+            SELECT date, open, high, low, close, volume, "adj close"
+            FROM {table_name}
+            WHERE stock_symbol = %s AND date BETWEEN %s AND %s
+            ORDER BY date ASC
+        """
+        cur.execute(query_60d, (ticker, start_60d, final_end_date))
+        rows_60d = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        # 데이터 확인
+        if not rows_1y or not rows_1m or not rows_60d:
+            return {"error": f"No historical data found for {ticker} in database"}
+        
+        # DataFrame 생성
+        columns = ['date', 'open', 'high', 'low', 'close', 'volume', 'adj_close']
+        df_1y = pd.DataFrame(rows_1y, columns=columns)
+        df_1m = pd.DataFrame(rows_1m, columns=columns)
+        df_60d = pd.DataFrame(rows_60d, columns=columns)
+        
+        # 날짜를 인덱스로 설정하고 정렬
+        for df in [df_1y, df_1m, df_60d]:
+            df['date'] = pd.to_datetime(df['date'])
+            df.set_index('date', inplace=True)
+            df.sort_index(inplace=True)
+        
+        # 현재가 (가장 최근 종가) - adj_close 사용
+        current_price = df_1y['adj_close'].iloc[-1] if not df_1y.empty else None
         # 52주 최고가/최저가
-        week_52_high = df_1y['High'].max() if not df_1y.empty else None
-        week_52_low = df_1y['Low'].min() if not df_1y.empty else None
+        week_52_high = df_1y['high'].max() if not df_1y.empty else None
+        week_52_low = df_1y['low'].min() if not df_1y.empty else None
         # 60일 평균거래량
-        avg_volume_60d = df_60d['Volume'].mean() if not df_60d.empty else None
+        avg_volume_60d = df_60d['volume'].mean() if not df_60d.empty else None
         # 1개월 변동성 (표준편차 기반, 연환산)
         if len(df_1m) > 1:
-            returns_1m = df_1m['Close'].pct_change().dropna()
+            returns_1m = df_1m['adj_close'].pct_change().dropna()
             volatility_1m = returns_1m.std() * (252 ** 0.5) * 100
         else:
             volatility_1m = None
         # 1년 변동성 (연환산)
         if len(df_1y) > 1:
-            returns_1y = df_1y['Close'].pct_change().dropna()
+            returns_1y = df_1y['adj_close'].pct_change().dropna()
             volatility_1y = returns_1y.std() * (252 ** 0.5) * 100
         else:
             volatility_1y = None
@@ -908,41 +1127,89 @@ def get_enhanced_stock_info(ticker: str) -> Dict:
         market_cap = None
         shares_outstanding = None
         float_shares = None
+        
+        # 안전한 숫자 변환 함수
+        def safe_int_convert(value):
+            if value is None:
+                return None
+            try:
+                return int(float(str(value).replace(',', '')))
+            except (ValueError, TypeError):
+                return None
+        
+        # 1단계: FMP Profile API 시도
         try:
             api_key = settings.FMP_API_KEY
             url = f"https://financialmodelingprep.com/api/v3/profile/{ticker}?apikey={api_key}"
-            print(f"🔍 FMP Profile URL: {url[:50]}...{url[-20:]}")  # API 키 부분 숨기기
+            print(f"🔍 FMP Profile URL: {url[:50]}...{url[-20:]}")
             resp = requests.get(url)
             print(f"📡 FMP Profile response status: {resp.status_code}")
             if resp.status_code == 200:
                 data = resp.json()
                 print(f"📊 FMP Profile data received: {len(data)} companies")
-                # FMP profile은 배열로 반환됨
                 if data and isinstance(data, list) and len(data) > 0:
                     company_data = data[0]
-                    # 안전한 숫자 변환
-                    def safe_int_convert(value):
-                        if value is None:
-                            return None
-                        try:
-                            return int(float(str(value).replace(',', '')))
-                        except (ValueError, TypeError):
-                            return None
+                    print(f"🔍 All available keys: {list(company_data.keys())}")
                     
-                    print(f"💰 Raw values - MarketCap: {company_data.get('mktCap')}, Shares: {company_data.get('sharesOutstanding')}")
                     market_cap = safe_int_convert(company_data.get('mktCap'))
-                    shares_outstanding = safe_int_convert(company_data.get('sharesOutstanding'))
-                    # FMP에서는 float shares 정보가 따로 없으므로 shares_outstanding과 동일하게 설정
-                    float_shares = shares_outstanding
-                    print(f"✅ Converted values - MarketCap: {market_cap}, Shares: {shares_outstanding}, Float: {float_shares}")
-                else:
-                    print(f"❌ FMP Profile: No data found for {ticker}")
-            # else: 그대로 None 유지
+                    
+                    # 여러 필드명 시도
+                    shares_fields = ['sharesOutstanding', 'weightedAverageShsOut', 'weightedAverageShares', 'commonStockSharesOutstanding']
+                    float_fields = ['floatShares', 'freeFloat', 'float', 'publicFloat', 'tradableShares']
+                    
+                    for field in shares_fields:
+                        if company_data.get(field) and shares_outstanding is None:
+                            shares_outstanding = safe_int_convert(company_data.get(field))
+                            print(f"✅ Found shares_outstanding in field: {field} = {shares_outstanding}")
+                            break
+                    
+                    for field in float_fields:
+                        if company_data.get(field) and float_shares is None:
+                            float_shares = safe_int_convert(company_data.get(field))
+                            print(f"✅ Found float_shares in field: {field} = {float_shares}")
+                            break
+                    
+                    # float_shares가 없으면 shares_outstanding으로 대체
+                    if float_shares is None and shares_outstanding is not None:
+                        float_shares = shares_outstanding
+                        print(f"📝 Using shares_outstanding as float_shares: {float_shares}")
+                    
+                    print(f"💰 Final values - MarketCap: {market_cap}, Shares: {shares_outstanding}, Float: {float_shares}")
         except Exception as e:
             print(f"❌ FMP Profile error for {ticker}: {e}")
-            market_cap = None
-            shares_outstanding = None
-            float_shares = None
+        
+        # 2단계: FMP Key Metrics API 시도 (profile에서 못 가져온 경우)
+        if shares_outstanding is None or float_shares is None:
+            try:
+                metrics_url = f"https://financialmodelingprep.com/api/v3/key-metrics/{ticker}?limit=1&apikey={api_key}"
+                print(f"🔍 Trying FMP Key Metrics: {metrics_url[:50]}...{metrics_url[-20:]}")
+                resp = requests.get(metrics_url)
+                if resp.status_code == 200:
+                    metrics_data = resp.json()
+                    if metrics_data and isinstance(metrics_data, list) and len(metrics_data) > 0:
+                        metrics = metrics_data[0]
+                        if shares_outstanding is None:
+                            shares_outstanding = safe_int_convert(metrics.get('sharesOutstanding'))
+                            print(f"✅ Got shares_outstanding from metrics: {shares_outstanding}")
+                        if float_shares is None:
+                            float_shares = safe_int_convert(metrics.get('freeFloatShares')) or shares_outstanding
+                            print(f"✅ Got float_shares from metrics: {float_shares}")
+            except Exception as e:
+                print(f"❌ FMP Key Metrics error: {e}")
+        
+        # 3단계: 거래량 기반 추론 (마지막 수단)
+        if shares_outstanding is None and avg_volume_60d is not None:
+            # 일반적으로 일평균거래량은 유통주식수의 0.1% ~ 5% 정도
+            # 보수적으로 1%로 추정
+            estimated_shares = int(avg_volume_60d * 100)  # 거래량의 100배로 추정
+            shares_outstanding = estimated_shares
+            print(f"📊 Estimated shares_outstanding from volume: {shares_outstanding}")
+        
+        if float_shares is None and shares_outstanding is not None:
+            # float_shares가 없으면 shares_outstanding의 80%로 추정 (일반적인 비율)
+            float_shares = int(shares_outstanding * 0.8)
+            print(f"📊 Estimated float_shares as 80% of outstanding: {float_shares}")
+        
         result = {
             "ticker": ticker,
             "current_price": round(current_price, 2) if current_price else None,
