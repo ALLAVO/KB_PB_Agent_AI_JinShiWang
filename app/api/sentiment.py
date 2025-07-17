@@ -36,7 +36,7 @@ def get_top3_articles_api(
     conn = check_db_connection()
     for row in rows:
         article, date, weekstart, article_title = row
-        # 감성 점수 한 번만 계산
+        # 기사의 감성 점수 계산
         score = get_sentiment_score_for_article(article, conn)
         # 기사를 전처리하여 단어 목록 생성
         words = preprocess_text(article)
@@ -52,7 +52,7 @@ def get_top3_articles_api(
             'article': article,
             'date': date,
             'weekstart': weekstart,
-            'score': score,  # 이미 계산된 score 사용
+            'score': score,
             'pos_cnt': pos_cnt,
             'neg_cnt': neg_cnt,
             'article_title': article_title
