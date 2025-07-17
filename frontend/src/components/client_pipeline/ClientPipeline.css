@@ -556,8 +556,10 @@
 }
 
 .coming-soon {
-  color: var(--kb-warning);
+  color: var(--kb-brown);
   font-style: italic;
+  font-size: 12px;
+  margin: 8px 5px;
 }
 
 /* 포트폴리오 요약 */
@@ -730,9 +732,9 @@
   align-items: center;
   margin-bottom: 20px;
   padding: 12px 16px;
-  background: var(--kb-yellow-light);
+  background: var(--kb-beige);
   border-radius: 6px;
-  border: 1px solid var(--kb-brown-light);
+  border: 2px solid var(--kb-brown-light);
 }
 
 .performance-info {
@@ -787,16 +789,16 @@
   font-size: 14px;
 }
 
-.performance-table tr:hover {
+/* .performance-table tr:hover {
   background: var(--kb-yellow-light);
   transition: background 0.2s ease;
-}
+} */
 
 .period-label {
   font-weight: bold;
   color: var(--kb-brown-dark);
   text-align: left !important;
-  background: var(--kb-yellow-light);
+  background: var(--kb-beige);
 }
 
 .return-value {
