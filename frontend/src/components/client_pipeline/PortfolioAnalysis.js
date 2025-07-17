@@ -1,6 +1,7 @@
 import React from 'react';
+import { goToIndustryAgent } from '../../connect_agent/go_industry';
 
-const PortfolioAnalysis = ({ portfolio, portfolioSummary }) => {
+const PortfolioAnalysis = ({ portfolio, portfolioSummary, periodEndDate }) => {
   if (!portfolio || !portfolioSummary) {
     return (
       <div className="portfolio-analysis-section">
@@ -11,6 +12,17 @@ const PortfolioAnalysis = ({ portfolio, portfolioSummary }) => {
       </div>
     );
   }
+
+  // 산업 agent 버튼 클릭 핸들러
+  const handleSectorButtonClick = (sector) => {
+    if (!periodEndDate) return;
+    goToIndustryAgent(sector, periodEndDate, (result) => {
+      // 예시: 결과 처리 또는 페이지 이동
+      // window.location.href = `/industry-agent?sector=${sector}&endDate=${periodEndDate}`;
+      // 또는 결과를 상위 컴포넌트로 전달
+      console.log('산업 agent 분석 결과:', result);
+    });
+  };
 
   return (
     <div className="portfolio-analysis-section">
@@ -36,7 +48,13 @@ const PortfolioAnalysis = ({ portfolio, portfolioSummary }) => {
               <span className="stat-label">투자 섹터</span>
               <div className="sectors-container">
                 {portfolioSummary.sectors.map((sector, index) => (
-                  <span key={index} className="sector-item">{sector}</span>
+                  <button
+                    key={index}
+                    className="sector-item sector-btn"
+                    onClick={() => handleSectorButtonClick(sector)}
+                  >
+                    {sector}
+                  </button>
                 ))}
               </div>
             </div>

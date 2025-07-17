@@ -103,6 +103,19 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
     return <div>고객 정보를 불러오고 있습니다...</div>;
   }
 
+  // periodEndDate 추출 로직 복사
+  let periodEndDate;
+  if (period && typeof period === 'string') {
+    const dateMatch = period.match(/(\d{2})\.(\d{2}) - (\d{2})\.(\d{2})/);
+    if (dateMatch) {
+      periodEndDate = `${year}-${dateMatch[3]}-${dateMatch[4]}`;
+    } else {
+      periodEndDate = new Date().toISOString().split('T')[0];
+    }
+  } else {
+    periodEndDate = new Date().toISOString().split('T')[0];
+  }
+
   const { client_info, portfolio, portfolio_summary } = clientData;
   const riskProfileInfo = getRiskProfileInfo(client_info.risk_profile);
 
@@ -197,7 +210,8 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
       {/* 종목 분석 */}
       <PortfolioAnalysis 
         portfolio={portfolio} 
-        portfolioSummary={portfolio_summary} 
+        portfolioSummary={portfolio_summary}
+        periodEndDate={periodEndDate}
       />
       
       {/* 포트폴리오 분석 - 포트폴리오 도넛 차트 섹션 */}
