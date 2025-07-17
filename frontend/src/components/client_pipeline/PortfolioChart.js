@@ -154,29 +154,19 @@ const PortfolioChart = ({ clientId }) => {
   const { client_name, risk_profile_info, client_portfolio, recommended_portfolio } = chartData;
 
   return (
-    <div className="portfolio-chart-section">
-      <h3 className="section-title">포트폴리오 분석</h3>
+    <>
       <div className="portfolio-charts-container">
-        <div className="chart-column">
+        <div className="chart-column" style={{ marginLeft: '40px', width: '380px' }}>
           {createDonutChart(client_portfolio, `${client_name}님 포트폴리오`)}
         </div>
-        <div className="chart-column">
+        <div className="chart-column" style={{ marginRight: '40px', width: '380px' }}>
           {createDonutChart(
             recommended_portfolio, 
             `${risk_profile_info?.korean_name || risk_profile_info?.label || '추천'} 위험군 포트폴리오`
           )}
         </div>
       </div>
-      <div className="portfolio-analysis-note">
-        <p>
-          <strong>{client_name}님의 투자성향:</strong> 
-          <span style={{ color: risk_profile_info?.color || '#666' }}>
-            {risk_profile_info?.korean_name || risk_profile_info?.label}
-          </span>
-        </p>
-        <p className="risk-description">{risk_profile_info?.description}</p>
-      </div>
-    </div>
+    </>
   );
 };
 

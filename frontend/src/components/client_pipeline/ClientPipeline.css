@@ -10,7 +10,7 @@
   --kb-cream: #FEFCF7;
   --kb-gray: #666666;
   --kb-gray-light: #F5F5F5;
-  --kb-success: #7BA05B;
+  --kb-success: #3A8DFF;
   --kb-warning: #D4B96A;
   --kb-danger: #C4756E;
 }
@@ -581,7 +581,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
+  padding: 10px 12px 10px 12px;
   border-bottom: 1px solid var(--kb-brown-light);
 }
 
@@ -607,6 +607,7 @@
   font-weight: 500;
   flex-shrink: 0;
   min-width: 120px;
+  text-align: left;
 }
 
 .stat-value {
@@ -630,7 +631,7 @@
   background: var(--kb-yellow);
   color: var(--kb-brown-dark);
   padding: 4px 10px;
-  border-radius: 14px;
+  border-radius: 10px;
   font-size: 11px;
   font-weight: bold;
   border: 1px solid var(--kb-brown-light);
@@ -684,11 +685,6 @@
   font-size: 14px;
 }
 
-.portfolio-table tr:hover {
-  background: var(--kb-yellow-light);
-  transition: background 0.2s ease;
-}
-
 .stock-name {
   font-weight: bold;
   color: var(--kb-brown-dark);
@@ -711,7 +707,7 @@
   background: var(--kb-yellow);
   color: var(--kb-brown-dark);
   padding: 4px 12px;
-  border-radius: 16px;
+  border-radius: 10px;
   font-size: 12px;
   font-weight: bold;
   border: 1px solid var(--kb-brown-light);
@@ -803,7 +799,7 @@
 
 .return-value {
   font-weight: bold;
-  font-family: 'Courier New', monospace;
+  /* font-family: 'Courier New', monospace; */
   font-size: 16px;
   position: relative;
 }
