@@ -7,6 +7,7 @@ from app.services.sentiment import (
     get_sentiment_score_for_article,
     get_top3_articles_closest_to_weekly_score_from_list,
 )
+from app.services.cache_manager import get_mcdonald_word_info
 from app.services.summarize import summarize_article
 from app.schemas.sentiment import (
     WeeklySentimentResponse,
@@ -35,27 +36,23 @@ def get_top3_articles_api(
     conn = check_db_connection()
     for row in rows:
         article, date, weekstart, article_title = row
-        # 기사의 감성 점수 계산
+        # 감성 점수 한 번만 계산
         score = get_sentiment_score_for_article(article, conn)
         # 기사를 전처리하여 단어 목록 생성
         words = preprocess_text(article)
         pos_cnt, neg_cnt = 0, 0
         for word in words:
-            cur = conn.cursor()
-            cur.execute("SELECT positive, negative FROM mcdonald_masterdictionary WHERE word = %s", (word,))
-            result = cur.fetchone()
-            cur.close()
-            if result:
-                positive, negative = result
-                if positive > 0:
+            word_info = get_mcdonald_word_info(word)
+            if word_info:
+                if word_info['positive'] > 0:
                     pos_cnt += 1
-                if negative > 0:
+                if word_info['negative'] > 0:
                     neg_cnt += 1
         articles.append({
             'article': article,
             'date': date,
             'weekstart': weekstart,
-            'score': score,
+            'score': score,  # 이미 계산된 score 사용
             'pos_cnt': pos_cnt,
             'neg_cnt': neg_cnt,
             'article_title': article_title
@@ -75,5 +72,3 @@ def get_top3_articles_api(
         content={"top3_articles": top3},
         headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"}
     )
-
-

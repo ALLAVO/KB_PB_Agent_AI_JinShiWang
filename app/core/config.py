@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY")
     FMP_API_KEY: str = Field(..., env="FMP_API_KEY")
 
+    # Cache Settings
+    cache_dir: str = "/app/cache"
+    mcdonald_cache_enabled: bool = True
+    cache_expiry_hours: int = 168
+    alphavantage_api_key: str = ""
+
     @property
     def DATABASE_URL(self) -> str:
         return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"

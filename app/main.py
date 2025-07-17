@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import customer, company, prediction, report, sentiment, market, summarize, keyword_extractor, stock_chart, return_analysis, industry, clients, portfolio_charts, financial_metrics, valuation
 from app.api.intention import router as intention
+from app.services.cache_manager import load_mcdonald_dictionary
 
 app = FastAPI(
     docs_url="/api/v1/docs",
@@ -42,3 +43,15 @@ app.include_router(valuation.router, prefix="/api/v1", tags=["valuation"])  # va
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
+
+@app.on_event("startup")
+async def startup_event():
+    """
+    애플리케이션 시작 시 실행되는 이벤트
+    """
+    print("🚀 FastAPI 애플리케이션이 시작됩니다.")
+    
+    # McDonald 사전을 메모리에 로드
+    load_mcdonald_dictionary()
+    
+    print("✅ 애플리케이션 초기화 완료")
