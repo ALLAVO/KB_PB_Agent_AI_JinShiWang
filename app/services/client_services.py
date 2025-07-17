@@ -428,7 +428,7 @@ def calculate_stock_metrics(symbol: str, period_end_date: str) -> Dict:
         with engine.connect() as conn:
             # 3년치 데이터 가져오기 (2023년까지만 있으므로)
             query = text(f"""
-                SELECT date, open, high, low, close, "adj close", volume
+                SELECT date, open, high, low, close, adj_close, volume
                 FROM {table_name}
                 WHERE stock_symbol = :symbol 
                 AND date BETWEEN :start_date AND :end_date
