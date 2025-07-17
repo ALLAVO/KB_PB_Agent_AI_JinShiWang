@@ -1,0 +1,164 @@
+.industry-companies-section {
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+.industry-companies-loading {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.industry-companies-nodata {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.companies-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+
+.companies-table-header {
+  background: rgba(234,227,215,0.7);
+  border-radius: 6px 6px 0 0;
+}
+
+.companies-table-header-row {
+  background: rgba(234,227,215,0.7);
+  height: 60px;
+}
+
+.companies-table-header-cell {
+  padding: 24px 0 24px 0;
+  text-align: center;
+  font-weight: 500;
+  font-size: 1.2rem;
+  color: #363532;
+  border: none;
+  letter-spacing: -1px;
+  min-width: 80px;
+  border-bottom: 1.5px solid #e5dfd3;
+}
+
+.companies-table-header-cell.ticker-header {
+  min-width: 80px;
+  border-top-left-radius: 6px;
+}
+
+.companies-table-header-cell.roe-header {
+  min-width: 80px;
+  border-top-right-radius: 6px;
+}
+
+.companies-table-body {
+  background: #fff;
+  border-radius: 0 0 6px 6px;
+}
+
+.companies-table-row {
+  background: #fff;
+  height: 44px;
+}
+
+.companies-table-row:not(.last-row) {
+  border-bottom: 1.5px solid #ede9e2;
+}
+
+.companies-table-cell {
+  padding: 6px 0;
+  text-align: center;
+  font-weight: 400;
+  font-size: 1.2rem;
+  color: #363532;
+  letter-spacing: -1px;
+}
+
+.companies-table-cell.ticker-cell {
+  border-bottom-left-radius: 0;
+}
+
+.companies-table-row.last-row .ticker-cell {
+  border-bottom-left-radius: 6px;
+}
+
+.companies-table-cell.roe-cell {
+  border-bottom-right-radius: 0;
+}
+
+.companies-table-row.last-row .roe-cell {
+  border-bottom-right-radius: 6px;
+}
+
+.companies-table-cell.return-cell {
+  font-weight: 500;
+}
+
+.companies-table-cell.return-cell.positive {
+  color: #ef4444;
+}
+
+.companies-table-cell.return-cell.negative {
+  color: #2563eb;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 1200px) {
+  .companies-table {
+    font-size: 0.9rem;
+  }
+  
+  .companies-table-header-cell {
+    font-size: 1rem;
+    padding: 16px 8px;
+  }
+  
+  .companies-table-cell {
+    font-size: 1rem;
+    padding: 8px 4px;
+  }
+}
+
+@media (max-width: 768px) {
+  .companies-table {
+    font-size: 0.8rem;
+    min-width: 100%;
+  }
+  
+  .companies-table-header-cell {
+    font-size: 0.9rem;
+    padding: 12px 4px;
+    min-width: auto;
+  }
+  
+  .companies-table-cell {
+    font-size: 0.9rem;
+    padding: 6px 2px;
+  }
+  
+  .industry-companies-section {
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .companies-table {
+    font-size: 0.7rem;
+  }
+  
+  .companies-table-header-cell {
+    font-size: 0.8rem;
+    padding: 8px 2px;
+  }
+  
+  .companies-table-cell {
+    font-size: 0.8rem;
+    padding: 4px 1px;
+  }
+}
