@@ -1,4 +1,5 @@
 from app.db.connection import check_db_connection
+from app.services.cache_manager import get_mcdonald_word_info
 import re
 
 def get_articles_by_stock_symbol(stock_symbol: str, start_date: str = None, end_date: str = None):
@@ -51,37 +52,32 @@ def preprocess_text(text: str) -> list:
 
 # 주어진 기사에 대한 감성 점수 계산 함수
 def get_sentiment_score_for_article(article: str, conn=None) -> float:
-    if conn is None:
-        conn = check_db_connection()
-        if conn is None:
-            return 0.0
-    cur = conn.cursor()
     words = preprocess_text(article)
     positive_count = 0
     negative_count = 0
     uncertainty_count = 0
     litigious_count = 0
     constraining_count = 0
+    
     for word in words:
-        cur.execute("SELECT positive, negative, uncertainty, litigious, constraining FROM mcdonald_masterdictionary WHERE word = %s", (word,))
-        result = cur.fetchone()
-        if result:
-            positive, negative, uncertainty, litigious, constraining = result
-            if positive > 0:
+        word_info = get_mcdonald_word_info(word)
+        if word_info:
+            if word_info['positive'] > 0:
                 positive_count += 1
-            if negative > 0:
+            if word_info['negative'] > 0:
                 negative_count += 1
-            if uncertainty > 0:
+            if word_info['uncertainty'] > 0:
                 uncertainty_count += 1
-            if litigious > 0:
+            if word_info['litigious'] > 0:
                 litigious_count += 1
-            if constraining > 0:
+            if word_info['constraining'] > 0:
                 constraining_count += 1
-    cur.close()
+    
     total_count = positive_count + negative_count + uncertainty_count + litigious_count + constraining_count
     if total_count == 0:
         print("[WARNING] 감성 사전에 매칭되는 단어가 없습니다. 기사 감성점수 0 반환.")
         return 0.0
+    
     # 가중치 적용 (예시)
     alpha = 0.7
     beta = 0.7
@@ -159,19 +155,17 @@ def get_weekly_sentiment_scores_by_stock_symbol(stock_symbol: str, start_date: s
             score = get_sentiment_score_for_article(article, conn)
             words = preprocess_text(article)
             pos_cnt, neg_cnt, pos_sum, neg_sum = 0, 0, 0.0, 0.0
+            
             for word in words:
-                cur = conn.cursor()
-                cur.execute("SELECT positive, negative FROM mcdonald_masterdictionary WHERE word = %s", (word,))
-                result = cur.fetchone()
-                cur.close()
-                if result:
-                    positive, negative = result
-                    if positive > 0:
+                word_info = get_mcdonald_word_info(word)
+                if word_info:
+                    if word_info['positive'] > 0:
                         pos_cnt += 1
-                        pos_sum += positive
-                    if negative > 0:
+                        pos_sum += word_info['positive']
+                    if word_info['negative'] > 0:
                         neg_cnt += 1
-                        neg_sum += negative
+                        neg_sum += word_info['negative']
+            
             week_key = week_start.strftime('%Y-%m-%d')
             if week_key not in weekly_scores:
                 weekly_scores[week_key] = 0.0
