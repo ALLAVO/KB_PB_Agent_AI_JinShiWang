@@ -359,7 +359,7 @@ def get_stock_price_chart_data(ticker: str, start_date: str, end_date: str) -> D
         
         # 차트 데이터 조회
         query = f"""
-            SELECT date, open, high, low, close, volume, "adj close"
+            SELECT date, open, high, low, close, volume, adj_close
             FROM {table_name}
             WHERE stock_symbol = %s AND date BETWEEN %s AND %s
             ORDER BY date ASC
@@ -1057,7 +1057,7 @@ def get_enhanced_stock_info(ticker: str, end_date: str = None) -> Dict:
         
         # 1년치 데이터 조회
         query_1y = f"""
-            SELECT date, open, high, low, close, volume, "adj close"
+            SELECT date, open, high, low, close, volume, adj_close
             FROM {table_name}
             WHERE stock_symbol = %s AND date BETWEEN %s AND %s
             ORDER BY date ASC
@@ -1067,7 +1067,7 @@ def get_enhanced_stock_info(ticker: str, end_date: str = None) -> Dict:
         
         # 1개월치 데이터 조회
         query_1m = f"""
-            SELECT date, open, high, low, close, volume, "adj close"
+            SELECT date, open, high, low, close, volume, adj_close
             FROM {table_name}
             WHERE stock_symbol = %s AND date BETWEEN %s AND %s
             ORDER BY date ASC
@@ -1077,7 +1077,7 @@ def get_enhanced_stock_info(ticker: str, end_date: str = None) -> Dict:
         
         # 60일치 데이터 조회
         query_60d = f"""
-            SELECT date, open, high, low, close, volume, "adj close"
+            SELECT date, open, high, low, close, volume, adj_close
             FROM {table_name}
             WHERE stock_symbol = %s AND date BETWEEN %s AND %s
             ORDER BY date ASC
