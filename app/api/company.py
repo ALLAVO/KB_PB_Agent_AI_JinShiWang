@@ -64,13 +64,16 @@ def get_company_info(
 
 # 상세 주식 정보 API
 @router.get("/companies/{stock_symbol}/enhanced-info")
-def get_company_enhanced_info(stock_symbol: str):
+def get_company_enhanced_info(
+    stock_symbol: str,
+    end_date: Optional[str] = Query(None, description="조회 종료일 (YYYY-MM-DD)")
+):
     """
     상세한 주식 정보를 반환합니다.
     현재가, 52주 최고가/최저가, 시가총액, 유동주식수, 변동성 등
     """
     try:
-        result = get_enhanced_stock_info(stock_symbol)
+        result = get_enhanced_stock_info(stock_symbol, end_date)
         
         if "error" in result:
             return {"success": False, "error": result["error"]}
