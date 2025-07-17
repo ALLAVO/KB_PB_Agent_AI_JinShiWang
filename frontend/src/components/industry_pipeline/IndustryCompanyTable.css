@@ -32,14 +32,14 @@
 
 .companies-table-header-row {
   background: rgba(234,227,215,0.7);
-  height: 60px;
+  height: 38px;
 }
 
 .companies-table-header-cell {
-  padding: 24px 0 24px 0;
+  padding: 10px 0 10px 0;
   text-align: center;
   font-weight: 500;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   color: #363532;
   border: none;
   letter-spacing: -1px;

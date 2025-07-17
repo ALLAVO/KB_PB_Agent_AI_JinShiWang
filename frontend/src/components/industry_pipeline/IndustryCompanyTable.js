@@ -30,12 +30,16 @@ function IndustryCompanyTable({ companiesData, loadingCompanies, showCompaniesTa
           <table className="companies-table">
             <thead className="companies-table-header">
               <tr className="companies-table-header-row">
-                <th className="companies-table-header-cell ticker-header">티커</th>
-                <th className="companies-table-header-cell">현재가($)</th>
-                <th className="companies-table-header-cell">시가총액(M$)</th>
-                <th className="companies-table-header-cell">1주 수익률</th>
-                <th className="companies-table-header-cell">1달 수익률</th>
-                <th className="companies-table-header-cell">1년 수익률</th>
+                <th className="companies-table-header-cell ticker-header" rowSpan="2">티커</th>
+                <th className="companies-table-header-cell" rowSpan="2">현재가($)</th>
+                <th className="companies-table-header-cell" rowSpan="2">시가총액(M$)</th>
+                <th className="companies-table-header-cell" colSpan="3">수익률</th>
+                <th className="companies-table-header-cell roe-header" colSpan="3">Valuation 지표</th>
+              </tr>
+              <tr className="companies-table-header-row">
+                <th className="companies-table-header-cell">1W</th>
+                <th className="companies-table-header-cell">1M</th>
+                <th className="companies-table-header-cell">1Y</th>
                 <th className="companies-table-header-cell">P/E(배)</th>
                 <th className="companies-table-header-cell">P/B(배)</th>
                 <th className="companies-table-header-cell roe-header">ROE(%)</th>
