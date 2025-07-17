@@ -167,8 +167,9 @@ def get_client_portfolio(client_id: str) -> List[Dict]:
         raise
 
 def calculate_portfolio_return(portfolio: List[Dict], start_date: str, end_date: str) -> float:
-    """포트폴리오의 가중평균 수익률을 계산합니다."""
+    """포트폴리오의 가중평균 수익률을 계산합니다. DB 사용"""
     try:
+        engine = get_database_connection()
         total_value_start = 0
         total_value_end = 0
         
@@ -180,16 +181,38 @@ def calculate_portfolio_return(portfolio: List[Dict], start_date: str, end_date:
                 continue
                 
             try:
-                # yfinance를 사용하여 주가 데이터 가져오기
-                ticker = yf.Ticker(symbol)
-                hist = ticker.history(start=start_date, end=end_date)
+                # 적절한 테이블 선택
+                table_name = get_stock_price_table(symbol)
                 
-                if len(hist) < 2:
-                    logger.warning(f"Insufficient data for {symbol}")
+                with engine.connect() as conn:
+                    # 시작일과 종료일에 가장 가까운 데이터 가져오기
+                    query = text(f"""
+                        SELECT date, close
+                        FROM {table_name}
+                        WHERE stock_symbol = :symbol 
+                        AND date BETWEEN :start_date AND :end_date
+                        ORDER BY date ASC
+                    """)
+                    
+                    result = conn.execute(query, {
+                        "symbol": symbol,
+                        "start_date": start_date,
+                        "end_date": end_date
+                    })
+                    
+                    rows = result.fetchall()
+                
+                if len(rows) < 2:
+                    logger.warning(f"Insufficient data for {symbol} between {start_date} and {end_date}")
                     continue
                 
-                start_price = hist['Close'].iloc[0]
-                end_price = hist['Close'].iloc[-1]
+                # 시작 가격과 종료 가격
+                start_price = float(rows[0][1]) if rows[0][1] else 0.0
+                end_price = float(rows[-1][1]) if rows[-1][1] else 0.0
+                
+                if start_price <= 0 or end_price <= 0:
+                    logger.warning(f"Invalid price data for {symbol}: start={start_price}, end={end_price}")
+                    continue
                 
                 value_start = start_price * quantity
                 value_end = end_price * quantity
@@ -197,13 +220,18 @@ def calculate_portfolio_return(portfolio: List[Dict], start_date: str, end_date:
                 total_value_start += value_start
                 total_value_end += value_end
                 
+                logger.debug(f"{symbol}: {start_price} -> {end_price}, qty={quantity}, value_start={value_start}, value_end={value_end}")
+                
             except Exception as e:
                 logger.warning(f"Error fetching data for {symbol}: {e}")
                 continue
         
         if total_value_start > 0:
-            return ((total_value_end - total_value_start) / total_value_start) * 100
+            portfolio_return = ((total_value_end - total_value_start) / total_value_start) * 100
+            logger.info(f"Portfolio return: {portfolio_return:.2f}% (start={total_value_start:.2f}, end={total_value_end:.2f})")
+            return portfolio_return
         else:
+            logger.warning("Total portfolio start value is 0 or negative")
             return 0.0
             
     except Exception as e:
@@ -211,85 +239,62 @@ def calculate_portfolio_return(portfolio: List[Dict], start_date: str, end_date:
         return 0.0
 
 def calculate_benchmark_return(benchmark: str, start_date: str, end_date: str) -> float:
-    """벤치마크의 수익률을 계산합니다."""
+    """벤치마크의 수익률을 계산합니다. DB 사용"""
     try:
-        # 벤치마크 심볼 매핑 (더 정확한 심볼 사용)
-        benchmark_symbols = {
-            'S&P 500': '^GSPC',
-            'S&P500': '^GSPC',
-            'SP500': '^GSPC',
-            'NASDAQ': '^IXIC',
-            'NASDAQ 100': '^NDX',
-            'DOW': '^DJI',
-            'Dow Jones': '^DJI',
-            'Russell 2000': '^RUT',
-            'VTI': 'VTI',
-            'SPY': 'SPY',
-            'QQQ': 'QQQ',
-            'MSCI World': 'URTH',
-            'Total Stock Market': 'VTI'
+        engine = get_database_connection()
+        
+        # 벤치마크 이름을 DB 컬럼명으로 매핑
+        benchmark_column_mapping = {
+            'S&P 500': 'sp500',
+            'S&P500': 'sp500',
+            'SP500': 'sp500',
+            'NASDAQ': 'nasdaq',
+            'NASDAQ Composite': 'nasdaq',
+            'DOW': 'dow',
+            'Dow Jones': 'dow',
+            'Dow Jones Industrial Average': 'dow',
+            '^GSPC': 'sp500',
+            '^IXIC': 'nasdaq',
+            '^DJI': 'dow'
         }
         
-        # 벤치마크 심볼 결정
-        symbol = benchmark_symbols.get(benchmark, benchmark)
+        # 벤치마크 컬럼 결정
+        column_name = benchmark_column_mapping.get(benchmark, 'sp500')  # 기본값은 sp500
         
-        # 날짜 형식 확인 및 조정
-        from datetime import datetime, timedelta
-        start_dt = datetime.strptime(start_date, '%Y-%m-%d')
-        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        logger.info(f"Fetching benchmark data for {benchmark} (column: {column_name}) from {start_date} to {end_date}")
         
-        # 주말을 고려하여 시작일을 조금 앞당김
-        extended_start = start_dt - timedelta(days=5)
-        extended_end = end_dt + timedelta(days=5)
+        with engine.connect() as conn:
+            # 시작일과 종료일에 가장 가까운 데이터 가져오기
+            query = text(f"""
+                SELECT date, {column_name}
+                FROM index_closing_price
+                WHERE date BETWEEN :start_date AND :end_date
+                AND {column_name} IS NOT NULL
+                ORDER BY date ASC
+            """)
+            
+            result = conn.execute(query, {
+                "start_date": start_date,
+                "end_date": end_date
+            })
+            
+            rows = result.fetchall()
         
-        logger.info(f"Fetching benchmark data for {symbol} ({benchmark}) from {extended_start.date()} to {extended_end.date()}")
-        
-        ticker = yf.Ticker(symbol)
-        hist = ticker.history(
-            start=extended_start.strftime('%Y-%m-%d'), 
-            end=extended_end.strftime('%Y-%m-%d'),
-            interval='1d'
-        )
-        
-        if hist.empty:
-            logger.warning(f"No benchmark data found for {symbol}")
+        if len(rows) < 2:
+            logger.warning(f"Insufficient benchmark data for {benchmark} between {start_date} and {end_date} (found {len(rows)} points)")
             return 0.0
         
-        # 실제 요청 기간에 가장 가까운 데이터 찾기
-        hist = hist.dropna()
-        if len(hist) < 2:
-            logger.warning(f"Insufficient benchmark data for {symbol} (only {len(hist)} points)")
-            return 0.0
+        # 시작 가격과 종료 가격
+        start_price = float(rows[0][1]) if rows[0][1] else 0.0
+        end_price = float(rows[-1][1]) if rows[-1][1] else 0.0
         
-        # 시작일과 종료일에 가장 가까운 데이터 포인트 찾기
-        start_idx = 0
-        end_idx = len(hist) - 1
-        
-        # 실제 거래일 기준으로 가장 가까운 날짜 찾기
-        for i, date in enumerate(hist.index):
-            if date.date() >= start_dt.date():
-                start_idx = i
-                break
-        
-        for i in range(len(hist) - 1, -1, -1):
-            if hist.index[i].date() <= end_dt.date():
-                end_idx = i
-                break
-        
-        if start_idx >= end_idx:
-            logger.warning(f"Invalid date range for benchmark {symbol}: start_idx={start_idx}, end_idx={end_idx}")
-            return 0.0
-        
-        start_price = hist['Close'].iloc[start_idx]
-        end_price = hist['Close'].iloc[end_idx]
-        
-        if start_price <= 0:
-            logger.warning(f"Invalid start price for benchmark {symbol}: {start_price}")
+        if start_price <= 0 or end_price <= 0:
+            logger.warning(f"Invalid price data for {benchmark}: start={start_price}, end={end_price}")
             return 0.0
         
         return_pct = ((end_price - start_price) / start_price) * 100
         
-        logger.info(f"Benchmark {symbol} return: {return_pct:.2f}% (from {start_price:.2f} to {end_price:.2f})")
+        logger.info(f"Benchmark {benchmark} return: {return_pct:.2f}% (from {start_price:.2f} to {end_price:.2f})")
         return return_pct
         
     except Exception as e:
@@ -400,58 +405,81 @@ def get_client_performance_analysis(client_id: str, period_end_date: str) -> Dic
         logger.error(f"Error calculating client performance for {client_id}: {e}")
         return {"error": f"Error calculating performance: {str(e)}"}
 
+def get_stock_price_table(symbol: str) -> str:
+    """ticker의 첫 글자에 따라 적절한 stock price 테이블명을 반환합니다."""
+    first_char = symbol[0].lower()
+    if 'a' <= first_char <= 'd':
+        return 'fnspid_stock_price_a'
+    elif 'e' <= first_char <= 'm':
+        return 'fnspid_stock_price_b'
+    else:  # n-z
+        return 'fnspid_stock_price_c'
+
 def calculate_stock_metrics(symbol: str, period_end_date: str) -> Dict:
-    """개별 종목의 현재가, 수익률, 변동성을 계산합니다. Stooq 사용"""
+    """개별 종목의 현재가, 수익률, 변동성을 계산합니다. DB 사용"""
     try:
+        engine = get_database_connection()
         period_end = datetime.strptime(period_end_date, '%Y-%m-%d')
-        week_ago = period_end - timedelta(days=7)
-        month_ago = period_end - timedelta(days=30)
         three_years_ago = period_end - timedelta(days=3*365)
-
-        # Stooq 심볼 변환 (예: AAPL -> AAPL.US)
-        stooq_symbol = symbol.upper()
-        if not stooq_symbol.endswith('.US'):
-            stooq_symbol += '.US'
-
-        # Stooq에서 데이터 가져오기
-        try:
-            hist_3y = pdr.DataReader(stooq_symbol, 'stooq', three_years_ago, period_end + timedelta(days=1))
-        except Exception as e:
-            logger.warning(f"Stooq data fetch error for {symbol}: {e}")
+        
+        # 적절한 테이블 선택
+        table_name = get_stock_price_table(symbol)
+        
+        with engine.connect() as conn:
+            # 3년치 데이터 가져오기 (2023년까지만 있으므로)
+            query = text(f"""
+                SELECT date, open, high, low, close, "adj close", volume
+                FROM {table_name}
+                WHERE stock_symbol = :symbol 
+                AND date BETWEEN :start_date AND :end_date
+                ORDER BY date ASC
+            """)
+            
+            result = conn.execute(query, {
+                "symbol": symbol,
+                "start_date": three_years_ago.strftime('%Y-%m-%d'),
+                "end_date": period_end_date
+            })
+            
+            rows = result.fetchall()
+            
+        if not rows:
+            logger.warning(f"No data found for {symbol} in DB")
             return {
                 "current_price": 0.0,
                 "weekly_return": 0.0,
                 "monthly_return": 0.0,
                 "volatility": 0.0,
-                "error": f"Stooq fetch error: {e}"
+                "error": f"No data available for {symbol} in DB"
             }
 
-        if hist_3y.empty:
-            logger.warning(f"No data found for {symbol} (Stooq)")
-            return {
-                "current_price": 0.0,
-                "weekly_return": 0.0,
-                "monthly_return": 0.0,
-                "volatility": 0.0,
-                "error": f"No data available for {symbol} (Stooq)"
-            }
+        # 데이터를 딕셔너리 리스트로 변환
+        price_data = []
+        for row in rows:
+            price_data.append({
+                'date': row[0] if isinstance(row[0], str) else row[0].strftime('%Y-%m-%d'),
+                'close': float(row[4]) if row[4] else 0.0
+            })
 
-        # Stooq은 최신 데이터가 맨 위에 있으므로 정렬
-        hist_3y = hist_3y.sort_index()
-
-        # 현재가 (기준일 종가)
-        current_price = hist_3y['Close'].iloc[-1] if len(hist_3y) > 0 else 0.0
+        # 현재가 (기준일 종가 또는 가장 최근 종가)
+        current_price = price_data[-1]['close'] if price_data else 0.0
 
         # 1주일 수익률
         weekly_return = 0.0
         try:
             week_price = None
-            for i in range(min(10, len(hist_3y))):
+            for i in range(min(10, len(price_data))):
                 check_date = period_end - timedelta(days=7+i)
                 date_str = check_date.strftime('%Y-%m-%d')
-                if date_str in hist_3y.index.strftime('%Y-%m-%d'):
-                    week_price = hist_3y.loc[hist_3y.index.strftime('%Y-%m-%d') == date_str, 'Close'].iloc[0]
+                
+                # 해당 날짜 이전의 가장 가까운 데이터 찾기
+                for data_point in reversed(price_data):
+                    if data_point['date'] <= date_str and data_point['close'] > 0:
+                        week_price = data_point['close']
+                        break
+                if week_price:
                     break
+                    
             if week_price and week_price > 0:
                 weekly_return = ((current_price - week_price) / week_price) * 100
         except Exception as e:
@@ -461,25 +489,39 @@ def calculate_stock_metrics(symbol: str, period_end_date: str) -> Dict:
         monthly_return = 0.0
         try:
             month_price = None
-            for i in range(min(10, len(hist_3y))):
+            for i in range(min(10, len(price_data))):
                 check_date = period_end - timedelta(days=30+i)
                 date_str = check_date.strftime('%Y-%m-%d')
-                if date_str in hist_3y.index.strftime('%Y-%m-%d'):
-                    month_price = hist_3y.loc[hist_3y.index.strftime('%Y-%m-%d') == date_str, 'Close'].iloc[0]
+                
+                # 해당 날짜 이전의 가장 가까운 데이터 찾기
+                for data_point in reversed(price_data):
+                    if data_point['date'] <= date_str and data_point['close'] > 0:
+                        month_price = data_point['close']
+                        break
+                if month_price:
                     break
+                    
             if month_price and month_price > 0:
                 monthly_return = ((current_price - month_price) / month_price) * 100
         except Exception as e:
             logger.warning(f"Error calculating monthly return for {symbol}: {e}")
 
-        # 변동성 계산 (3년치 데이터 사용)
+        # 변동성 계산 (가용한 데이터 사용)
         volatility = 0.0
         try:
-            if len(hist_3y) > 1:
-                daily_returns = hist_3y['Close'].pct_change().dropna()
-                if len(daily_returns) > 1:
-                    daily_std = daily_returns.std()
-                    volatility = daily_std * np.sqrt(20) * 100
+            if len(price_data) > 1:
+                import numpy as np
+                closes = [data['close'] for data in price_data if data['close'] > 0]
+                if len(closes) > 1:
+                    daily_returns = []
+                    for i in range(1, len(closes)):
+                        if closes[i-1] > 0:
+                            daily_return = (closes[i] - closes[i-1]) / closes[i-1]
+                            daily_returns.append(daily_return)
+                    
+                    if daily_returns:
+                        daily_std = np.std(daily_returns)
+                        volatility = daily_std * np.sqrt(20) * 100  # 20일 변동성
         except Exception as e:
             logger.warning(f"Error calculating volatility for {symbol}: {e}")
 
