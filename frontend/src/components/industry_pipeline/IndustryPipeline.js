@@ -186,7 +186,7 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
           {!loadingCompanies && (
             <>
               <div className="pipeline-title">
-                <img src={titlecloud} alt="cloud" />{inputSymbol} 핵심 기업
+                <img src={titlecloud} alt="cloud" />{inputSymbol} 산업 핵심 기업
               </div>
               <IndustryCompanyTable 
                 companiesData={companiesData}
