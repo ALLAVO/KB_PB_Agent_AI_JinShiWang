@@ -3,6 +3,8 @@ from app.core.config import settings
 from typing import List, Dict, Optional
 import logging
 from collections import defaultdict
+from openai import OpenAI
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +22,7 @@ def get_database_connection():
         logger.error(f"Database connection error: {e}")
         raise
 
+# 도넛 차트에 대한 고객 포트폴리오 데이터와 고객이 속한 유형의 데이터를 반환하는 함수
 def get_client_portfolio_chart_data(client_id: str) -> Dict:
     """고객의 포트폴리오 차트 데이터를 반환합니다."""
     try:
@@ -155,3 +158,48 @@ def get_risk_profile_info(risk_profile: str) -> Dict:
         'color': '#666',
         'korean_name': risk_profile
     })
+
+def generate_portfolio_comparison_prompt(client_name, risk_profile, client_portfolio, recommended_portfolio):
+    """
+    고객의 실제 포트폴리오와 추천 포트폴리오를 비교하여 AI 요약 프롬프트를 생성합니다.
+    """
+    prompt = f"""
+당신은 금융 전문가입니다. 아래는 {client_name} 고객님의 실제 포트폴리오와 {risk_profile} 투자성향에 따른 추천 포트폴리오입니다.
+
+[고객 실제 포트폴리오]
+{', '.join([f"{item['sector']} {item['percentage']}%" for item in client_portfolio])}
+
+[추천 포트폴리오]
+{', '.join([f"{item['sector']} {item['percentage']}%" for item in recommended_portfolio])}
+
+두 포트폴리오의 차이점, 유사점, 그리고 고객에게 도움이 될 만한 투자 조언을 3~5문장으로 요약해 주세요.
+    """.strip()
+    return prompt
+
+def get_portfolio_chart_ai_summary(client_id: str) -> str:
+    """
+    고객의 포트폴리오와 추천 포트폴리오를 비교하여 AI 요약을 반환합니다.
+    """
+
+    ai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
+
+    data = get_client_portfolio_chart_data(client_id)
+    if "error" in data:
+        return "포트폴리오 데이터를 불러올 수 없습니다."
+
+    client_name = data.get("client_name", "")
+    risk_profile = data.get("risk_profile", "")
+    client_portfolio = data.get("client_portfolio", [])
+    recommended_portfolio = data.get("recommended_portfolio", [])
+
+    prompt = generate_portfolio_comparison_prompt(
+        client_name, risk_profile, client_portfolio, recommended_portfolio
+    )
+
+    # openai_client는 외부에서 주입 (예: FastAPI Dependency)
+    response = ai_client.create_chat_completion(
+        prompt=prompt,
+        max_tokens=400,
+        temperature=0.7,
+    )
+    return response["choices"][0]["message"]["content"].strip()

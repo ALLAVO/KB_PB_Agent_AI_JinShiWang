@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchClientSummary, fetchClientPerformance } from '../../api/clients';
+import { fetchClientSummary, fetchClientPerformance, fetchClientPortfolioChartAISummary } from '../../api/clients';
 import PortfolioChart from './PortfolioChart';
 import PortfolioAnalysis from './PortfolioAnalysis';
 import PerformanceChart from './PerformanceChart';
@@ -11,13 +11,17 @@ import Markdown from 'react-markdown';
 const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbol }) => {
   const [clientData, setClientData] = useState(null);
   const [performanceData, setPerformanceData] = useState(null);
+  const [portfolioChartAISummary, setPortfolioChartAISummary] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [portfolioChartAISummaryLoading, setPortfolioChartAISummaryLoading] = useState(false);
 
   useEffect(() => {
     if (client && client.id) {
       loadClientDetail();
+      loadPortfolioChartAISummary();
     }
+    // eslint-disable-next-line
   }, [client, period]);
 
   const loadClientDetail = async () => {
@@ -49,6 +53,18 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
       console.error('Client detail loading error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPortfolioChartAISummary = async () => {
+    setPortfolioChartAISummaryLoading(true);
+    try {
+      const res = await fetchClientPortfolioChartAISummary(client.id);
+      setPortfolioChartAISummary(res.ai_summary || '');
+    } catch (e) {
+      setPortfolioChartAISummary('AI 요약을 불러오지 못했습니다.');
+    } finally {
+      setPortfolioChartAISummaryLoading(false);
     }
   };
 
@@ -225,8 +241,14 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
       </div>
       
       {/* 포트폴리오 분석 - 포트폴리오 도넛 차트 섹션 */}
-      <PortfolioChart clientId={client.id} 
-      />
+      <PortfolioChart clientId={client.id} />
+
+      {/* AI 포트폴리오 비교 요약 */}
+      <div className="ai-summary-text" style={{ marginLeft: '40px', width: '800px', marginTop: '24px' }}>
+        {portfolioChartAISummaryLoading
+          ? 'AI가 고객님의 포트폴리오와 추천 포트폴리오를 비교 분석 중입니다...'
+          : portfolioChartAISummary}
+      </div>
 
       {/* 페이지 말단에 back-btn 배치 */}
       <div style={{ display: 'flex', justifyContent: 'center', margin: '10px 0' }}>
