@@ -6,10 +6,12 @@ from app.db.connection import check_db_connection
 from app.core.config import settings
 
 # 캐시 설정
-CACHE_DIR = settings.cache_dir if hasattr(settings, 'cache_dir') else "/Users/hyungjuncho/Documents/SNU_BFA/KB_capstone/KB_PB_Agent_AI_JinShiWang/app/cache"
+CACHE_DIR = getattr(settings, 'cache_dir', None)
+if not CACHE_DIR:
+    CACHE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../cache'))
 MCDONALD_CACHE_FILE = os.path.join(CACHE_DIR, "mcdonald_dict.json.gz")
 CACHE_METADATA_FILE = os.path.join(CACHE_DIR, "cache_metadata.json")
-CACHE_EXPIRY_HOURS = settings.cache_expiry_hours if hasattr(settings, 'cache_expiry_hours') else 168  # 7일
+CACHE_EXPIRY_HOURS = getattr(settings, 'cache_expiry_hours', 48)  # 7일
 
 # 전역 변수: McDonald 사전 메모리 캐시
 _mcdonald_dict = None
