@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchClientSummary, fetchClientPerformance } from '../../api/clients';
+import { fetchClientSummary, fetchClientPerformance, fetchClientPortfolioChart } from '../../api/clients';
 import PortfolioChart from './PortfolioChart';
 import PortfolioAnalysis from './PortfolioAnalysis';
 import PerformanceChart from './PerformanceChart';
@@ -12,19 +12,23 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
   const [clientData, setClientData] = useState(null);
   const [performanceData, setPerformanceData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [performanceLoading, setPerformanceLoading] = useState(false);
   const [error, setError] = useState('');
+  const [portfolioChartData, setPortfolioChartData] = useState(null);
+  const [portfolioChartLoading, setPortfolioChartLoading] = useState(false);
 
   useEffect(() => {
     if (client && client.id) {
-      loadClientDetail();
+      loadClientSummary();
+      loadPortfolioChart(client.id);
     }
   }, [client, period]);
 
-  const loadClientDetail = async () => {
+  // 1단계: 고객 요약 먼저 불러오기
+  const loadClientSummary = async () => {
     setLoading(true);
     setError('');
     try {
-      // period에서 종료일 추출 - null/undefined 체크 추가
       let periodEndDate;
       if (period && typeof period === 'string') {
         const dateMatch = period.match(/(\d{2})\.(\d{2}) - (\d{2})\.(\d{2})/);
@@ -36,19 +40,42 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
       } else {
         periodEndDate = new Date().toISOString().split('T')[0];
       }
-
-      const [summary, performance] = await Promise.all([
-        fetchClientSummary(client.id, periodEndDate),
-        fetchClientPerformance(client.id, periodEndDate)
-      ]);
-      
+      const summary = await fetchClientSummary(client.id, periodEndDate);
       setClientData(summary);
-      setPerformanceData(performance);
+      setLoading(false);
+      // 2단계: 성과 데이터 비동기 호출
+      loadClientPerformance(client.id, periodEndDate);
     } catch (err) {
       setError('고객 상세 정보를 불러오는데 실패했습니다: ' + err.message);
-      console.error('Client detail loading error:', err);
-    } finally {
       setLoading(false);
+      console.error('Client detail loading error:', err);
+    }
+  };
+
+  // 2단계: 성과 데이터 비동기 호출
+  const loadClientPerformance = async (clientId, periodEndDate) => {
+    setPerformanceLoading(true);
+    try {
+      const performance = await fetchClientPerformance(clientId, periodEndDate);
+      setPerformanceData(performance);
+    } catch (err) {
+      // 성과 데이터 에러는 전체 에러로 처리하지 않음
+      setPerformanceData(null);
+    } finally {
+      setPerformanceLoading(false);
+    }
+  };
+
+  // 포트폴리오 차트 데이터 병렬 호출
+  const loadPortfolioChart = async (clientId) => {
+    setPortfolioChartLoading(true);
+    try {
+      const chartData = await fetchClientPortfolioChart(clientId);
+      setPortfolioChartData(chartData);
+    } catch (err) {
+      setPortfolioChartData(null);
+    } finally {
+      setPortfolioChartLoading(false);
     }
   };
 
@@ -82,9 +109,8 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
 
   if (loading) {
     return (
-      <div className="client-detail-loading">
-        <div className="loading-spinner"></div>
-        <span>고객 상세 정보를 불러오는 중...</span>
+      <div className="industry-loading-message">
+        고객 상세 정보를 불러오는 중...
       </div>
     );
   }
@@ -121,8 +147,12 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
 
   return (
     <>
+    <div className="pipeline-title">
+          <img src={titlecloud} alt="cloud" />{inputSymbol} 인적사항
+    </div>
+
       {/* 메인 콘텐츠 */}
-      <div className="client-detail-content" style={{ marginLeft: '-50px' }}>
+      <div className="client-detail-content" style={{ marginLeft: '-50px', marginTop: '-50px' }}>
         {/* 좌측: 고객 이미지 */}
         <div className="client-image-section">
           <div className="client-profile-image">
@@ -182,28 +212,19 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
       </div>
 
       <div className="pipeline-title">
-          <img src={titlecloud} alt="cloud" />{inputSymbol} 진시황의 투자 분석 요약
-      </div>
-
-      {/* AI 투자 분석 요약 */}
-      {performanceData && performanceData.ai_summary && (
-        <div className="ai-summary-text">
-          <Markdown>{performanceData.ai_summary}</Markdown>
-        </div>
-      )}
-
-      <div style={{height:'50px' }} />
-
-      <div className="pipeline-title">
-          <img src={titlecloud} alt="cloud" />{inputSymbol} 수익률 표
+          <img src={titlecloud} alt="cloud" />{inputSymbol} 수익률 한 눈에 보기
       </div>
 
       {/* 고객 수익률 차트 */}
-      <PerformanceChart 
-        clientName={client_info.name}
-        performanceData={performanceData}
-        loading={loading}
-      />
+      {performanceLoading ? (
+        <div className="return-chart-loading">수익률 데이터를 불러오는 중...</div>
+      ) : (
+        <PerformanceChart 
+          clientName={client_info.name}
+          performanceData={performanceData}
+          loading={performanceLoading}
+        />
+      )}
 
       <div style={{height:'50px' }} />
 
@@ -221,12 +242,32 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
       <div style={{height:'50px' }} />
 
       <div className="pipeline-title">
+          <img src={titlecloud} alt="cloud" />{inputSymbol} 진시황의 투자 분석 요약
+      </div>
+
+      {/* AI 투자 분석 요약 */}
+      {performanceLoading ? (
+        <div className="return-chart-loading">AI 투자 분석 요약을 불러오는 중...</div>
+      ) : (
+        performanceData && performanceData.ai_summary && (
+          <div className="ai-summary-text">
+            <Markdown>{performanceData.ai_summary}</Markdown>
+          </div>
+        )
+      )}
+
+      <div style={{height:'50px' }} />
+
+      <div className="pipeline-title">
           <img src={titlecloud} alt="cloud" />{inputSymbol} 포트폴리오 분석
       </div>
       
       {/* 포트폴리오 분석 - 포트폴리오 도넛 차트 섹션 */}
-      <PortfolioChart clientId={client.id} 
-      />
+      {portfolioChartLoading ? (
+        <div className="return-chart-loading">포트폴리오 차트를 불러오는 중...</div>
+      ) : (
+        <PortfolioChart chartData={portfolioChartData} />
+      )}
 
       {/* 페이지 말단에 back-btn 배치 */}
       <div style={{ display: 'flex', justifyContent: 'center', margin: '10px 0' }}>

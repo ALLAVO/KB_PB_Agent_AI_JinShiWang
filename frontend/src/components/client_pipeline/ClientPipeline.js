@@ -73,6 +73,10 @@ const ClientPipeline = ({ year, month, weekStr, period, onSetReportTitle, autoCu
     );
   }
 
+  if (loading) {
+    return <div className="client-pipeline-container"></div>;
+  }
+
   return (
     <div className="client-pipeline-container">
       {view === 'list' ? (

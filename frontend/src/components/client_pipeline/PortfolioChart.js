@@ -1,31 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { fetchClientPortfolioChart } from '../../api/clients';
+import React from 'react';
 
-const PortfolioChart = ({ clientId }) => {
-  const [chartData, setChartData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (clientId) {
-      loadChartData();
-    }
-  }, [clientId]);
-
-  const loadChartData = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const data = await fetchClientPortfolioChart(clientId);
-      setChartData(data);
-    } catch (err) {
-      setError('포트폴리오 차트 데이터를 불러오는데 실패했습니다: ' + err.message);
-      console.error('Portfolio chart loading error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+const PortfolioChart = ({ chartData }) => {
   const createDonutChart = (data, title) => {
     if (!data || data.length === 0) {
       return (
@@ -129,23 +104,6 @@ const PortfolioChart = ({ clientId }) => {
       </div>
     );
   };
-
-  if (loading) {
-    return (
-      <div className="portfolio-chart-loading">
-        <div className="loading-spinner"></div>
-        <span>포트폴리오 차트를 불러오는 중...</span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="portfolio-chart-error">
-        <p>{error}</p>
-      </div>
-    );
-  }
 
   if (!chartData) {
     return <div>차트 데이터를 불러오고 있습니다...</div>;
