@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { 
   ComposedChart, 
   Line, 
@@ -10,17 +10,9 @@ import {
   Legend, 
   ResponsiveContainer 
 } from 'recharts';
-import { fetchCombinedStockChart, fetchStockChartSummary, fetchEnhancedStockInfo } from '../../api/stockChart';
 import './StockChart.css';
 
-const StockChart = ({ symbol, startDate, endDate }) => {
-  const [chartData, setChartData] = useState([]);
-  const [chartSummary, setChartSummary] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [selectedPeriod, setSelectedPeriod] = useState('6M');
-  const [showPeriodOptions, setShowPeriodOptions] = useState(false);
-
+const StockChart = ({ chartData, chartSummary, loading, error, selectedPeriod, onPeriodChange }) => {
   const periodOptions = [
     { value: '1W', label: '1주' },
     { value: '1M', label: '1개월' },
@@ -28,112 +20,6 @@ const StockChart = ({ symbol, startDate, endDate }) => {
     { value: '6M', label: '6개월' },
     { value: '1Y', label: '1년' }
   ];
-
-  // 기간에 따른 날짜 계산
-  const calculateDateRange = (period, endDate) => {
-    const end = new Date(endDate);
-    const start = new Date(end);
-    
-    switch (period) {
-      case '1W':
-        start.setDate(end.getDate() - 7);
-        break;
-      case '1M':
-        start.setMonth(end.getMonth() - 1);
-        break;
-      case '3M':
-        start.setMonth(end.getMonth() - 3);
-        break;
-      case '6M':
-        start.setMonth(end.getMonth() - 6);
-        break;
-      case '1Y':
-        start.setFullYear(end.getFullYear() - 1);
-        break;
-      default:
-        start.setMonth(end.getMonth() - 1);
-    }
-    
-    return {
-      startDate: start.toISOString().split('T')[0],
-      endDate: end.toISOString().split('T')[0]
-    };
-  };
-
-  // 차트 데이터 로드
-  const loadChartData = async () => {
-    if (!symbol) return;
-    
-    setLoading(true);
-    setError('');
-    
-    try {
-      const { startDate: calcStartDate, endDate: calcEndDate } = calculateDateRange(selectedPeriod, endDate);
-      const fixedChartTypes = ['price', 'volume'];
-      
-      console.log('🚀 Loading chart data:', { 
-        symbol, 
-        period: selectedPeriod,
-        types: fixedChartTypes, 
-      });
-      
-      // 차트 데이터, 요약 정보, 상세 정보를 동시에 가져오기
-      const [data, summaryData, enhancedData] = await Promise.all([
-        fetchCombinedStockChart(
-          symbol, 
-          calcStartDate, 
-          calcEndDate, 
-          fixedChartTypes,
-        ),
-        fetchStockChartSummary(symbol, calcStartDate, calcEndDate),
-        fetchEnhancedStockInfo(symbol)
-      ]);
-      
-      console.log('📦 Received chart data:', data);
-      console.log('📈 Received enhanced data:', enhancedData);
-      
-      // 차트 데이터 변환
-      const transformedData = data.dates.map((date, index) => {
-        const item = { date };
-        
-        // 주가 데이터
-        if (data.data.price) {
-          item.close = data.data.price.closes[index];
-          item.open = data.data.price.opens[index];
-          item.high = data.data.price.highs[index];
-          item.low = data.data.price.lows[index];
-        }
-        
-        // 거래량 데이터
-        if (data.data.volume) {
-          item.volume = data.data.volume.volumes[index];
-        }
-        
-        return item;
-      });
-      
-      console.log('🎯 Transformed data sample:', transformedData.slice(0, 3));
-      
-      // 상세 정보를 요약 정보에 병합
-      const mergedSummary = {
-        ...summaryData,
-        ...enhancedData
-      };
-      
-      setChartData(transformedData);
-      setChartSummary(mergedSummary);
-    } catch (err) {
-      setError('차트 데이터를 불러오는데 실패했습니다: ' + err.message);
-      console.error('Chart data loading error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 기간이나 차트 타입이 변경될 때 데이터 새로고침
-  useEffect(() => {
-    loadChartData();
-  }, [symbol, selectedPeriod]);
 
   // 거래량 포맷터
   const formatVolume = (value) => {
@@ -201,7 +87,6 @@ const StockChart = ({ symbol, startDate, endDate }) => {
     return <div className="stock-chart-error">{error}</div>;
   }
 
-  // 기존에는 모든 내용을 stock-chart-container로 감쌌으나, 이제 각각의 요소를 개별적으로 렌더링
   return (
     <>
       {/* 차트 요약 정보 */}
@@ -210,7 +95,7 @@ const StockChart = ({ symbol, startDate, endDate }) => {
           <div className="summary-grid summary-grid-4rows">
             {/* 1행: 현재가-평균거래량-52주 최고가-1M 변동성 */}
             <div className="summary-item">
-              <span className="summary-label">현재가:</span>
+              <span className="summary-label">금요일 종가:</span>
               <span className="summary-value">${chartSummary.current_price || chartSummary.end_price}</span>
             </div>
             <div className="summary-item">
@@ -252,7 +137,7 @@ const StockChart = ({ symbol, startDate, endDate }) => {
             <button
               key={option.value}
               className={`control-btn period-btn${selectedPeriod === option.value ? ' active' : ''}`}
-              onClick={() => setSelectedPeriod(option.value)}
+              onClick={() => onPeriodChange(option.value)}
             >
               {option.label}
             </button>
@@ -261,7 +146,7 @@ const StockChart = ({ symbol, startDate, endDate }) => {
       </div>
       {/* 차트 */}
       <div className="stock-chart-wrapper">
-        {chartData.length > 0 ? (
+        {chartData && chartData.length > 0 ? (
           <ResponsiveContainer width="103%" height={400}>
             <ComposedChart data={chartData} margin={{ top: 20, right: 80, bottom: 20, left: 20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -273,8 +158,6 @@ const StockChart = ({ symbol, startDate, endDate }) => {
                   return `${date.getMonth() + 1}/${date.getDate()}`;
                 }}
               />
-              
-              {/* 주가용 Y축 (왼쪽) */}
               <YAxis 
                 yAxisId="price" 
                 orientation="left"
@@ -282,8 +165,6 @@ const StockChart = ({ symbol, startDate, endDate }) => {
                 tickFormatter={formatPrice}
                 label={{ value: '주가 ($)', angle: -90, position: 'insideLeft' }}
               />
-              
-              {/* 거래량용 Y축 (오른쪽) - 거래량이 선택된 경우 */}
               <YAxis 
                 yAxisId="volume" 
                 orientation="right"
@@ -291,11 +172,7 @@ const StockChart = ({ symbol, startDate, endDate }) => {
                 tickFormatter={formatVolume}
                 label={{ value: '거래량', angle: 90, position: 'insideRight' }}
               />
-              
               <Tooltip content={<CustomTooltip />} />
-              {/* <Legend /> */}
-              
-              {/* 주가 라인 */}
               <Line
                 yAxisId="price"
                 type="monotone"
@@ -305,8 +182,6 @@ const StockChart = ({ symbol, startDate, endDate }) => {
                 dot={false}
                 name="종가"
               />
-              
-              {/* 거래량 바 차트 */}
               <Bar
                 yAxisId="volume"
                 dataKey="volume"

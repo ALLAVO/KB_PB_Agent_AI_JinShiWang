@@ -32,7 +32,7 @@ function StockPredictionCard({ currentSymbol, getNextWeekInfo, loading, error, p
         background: '#ede8dd',
         borderRadius: '10px',
         padding: '20px 25px',
-        minWidth: '450px',
+        minWidth: '550px',
         maxWidth: '900px',
         fontSize: '15px',
         color: '#222',
@@ -42,17 +42,22 @@ function StockPredictionCard({ currentSymbol, getNextWeekInfo, loading, error, p
         border: 'none',
         display: 'flex',
         alignItems: 'left',
+        justifyContent: 'left',
         minHeight: '80px',
         textAlign: 'justify'
       }}>
-        {loading ? null : error && error !== '종목코드를 입력해주세요' ? (
-          <span style={{ color: '#d32f2f', fontStyle: 'italic', fontSize: '18px' }}>
+        {loading ? (
+          <span style={{ color: '#666', fontSize: '16px'}}>
+            주가 전망을 불러오는 중...
+          </span>
+        ) : error && error !== '종목코드를 입력해주세요' ? (
+          <span style={{ color: '#d32f2f', fontSize: '16px' }}>
             주가 전망 데이터를 불러오지 못했습니다.
           </span>
         ) : prediction && prediction.summary ? (
           prediction.summary
         ) : (
-          <span style={{ color: '#666', fontStyle: 'italic', fontSize: '18px' }}>
+          <span style={{ color: '#666', fontSize: '16px' }}>
             주가 전망 데이터가 없습니다.
           </span>
         )}

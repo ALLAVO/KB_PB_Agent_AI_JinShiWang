@@ -550,11 +550,11 @@ function PipelinePanel({ name, year, month, weekStr, period, onSetReportTitle, a
 }
 
 function App() {
-  const [selectedMenu, setSelectedMenu] = useState("진시황의 혜안");
-  const [selectedSubMenu, setSelectedSubMenu] = useState("증시");
-  const [year, setYear] = useState(2025);
-  const [month, setMonth] = useState(6);
-  const [period, setPeriod] = useState("06.01 - 06.07 (1주차)");
+  const [selectedMenu, setSelectedMenu] = useState("고객 관리");
+  const [selectedSubMenu, setSelectedSubMenu] = useState(""); // 고객 관리에는 서브메뉴 없음
+  const [year, setYear] = useState(2023);
+  const [month, setMonth] = useState(5);
+  const [period, setPeriod] = useState("05.14 - 05.20 (3주차)");
   const [showIntro, setShowIntro] = useState(true);
   // 자동 고객/기업/산업 리포트 트리거 상태 추가
   const [autoCustomerName, setAutoCustomerName] = useState("");

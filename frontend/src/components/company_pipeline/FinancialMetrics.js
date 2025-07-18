@@ -2,14 +2,7 @@ import React from 'react';
 import './FinancialMetrics.css';
 
 function FinancialMetrics({ loading, error, financialMetrics }) {
-  if (loading) {
-    return (
-      <div className="financial-metrics-container">
-        <div className="loading-spinner">재무지표 로딩 중...</div>
-      </div>
-    );
-  }
-
+  // 로딩 화면 삭제
   if (error) {
     return (
       <div className="financial-metrics-container">

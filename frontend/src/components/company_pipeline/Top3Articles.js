@@ -3,7 +3,9 @@ import React from 'react';
 function Top3Articles({ loading, error, top3Articles, findKeywordsForArticle, findSummaryForArticle, handleArticleClick }) {
   return (
     <div className="top3-articles" style={{ width: '900px', maxWidth: '140%'}}>
-      {loading ? '로딩 중...'
+      {loading ? (
+        <div className="stock-chart-loading">핵심 뉴스 데이터를 불러오는 중...</div>
+      )
         : error && error !== '종목코드를 입력해주세요'
           ? error
         : top3Articles && top3Articles.top3_articles && top3Articles.top3_articles.length > 0 ? (

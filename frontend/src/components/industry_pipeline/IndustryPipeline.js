@@ -92,17 +92,17 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
       setError('산업군 이름을 입력해주세요');
       return;
     }
-    
     setError("");
     setStarted(true);
     setLoading(true);
     setIndustryData(null);
-    
     if (onSetReportTitle) {
       onSetReportTitle(`${categoryToUse.trim()} 산업 리포트`);
     }
-    
     try {
+      // 기업 정보 먼저 로드
+      await handleLoadCompanies(categoryToUse);
+      // 기사 데이터 로드
       console.log('산업 API 호출', { sector: categoryToUse.trim(), endDate });
       const data = await fetchIndustryTop3Articles({ 
         sector: categoryToUse.trim(), 
@@ -110,9 +110,6 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
       });
       setIndustryData(data);
       console.log('산업 데이터:', data);
-      
-      // 기사 로드 완료 후 기업 정보도 자동으로 로드
-      await handleLoadCompanies(categoryToUse);
     } catch (e) {
       console.error('산업 API 호출 오류:', e);
       setError('데이터를 불러오지 못했습니다.');
@@ -148,7 +145,6 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
               {error}
             </div>
           )}
-          
           {/* 산업 섹터 버튼들 */}
           <div className="sector-selection-container">
             <h4 className="sector-selection-title">
@@ -166,7 +162,6 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
               ))}
             </div>
           </div>
-
           <label style={{marginBottom: 0}}>
             <input
               type="text"
@@ -181,40 +176,48 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
       )}
       {started && (
         <>
-          
-          <div className="pipeline-title">
-                <img src={titlecloud} alt="cloud" />{inputSymbol} 상위 10개 기업
-          </div>
+          {/* 기업 정보 로딩 중일 때만 전체 로딩 메시지 표시 */}
+          {loadingCompanies && (
+            <div className="industry-loading-message">
+              산업 데이터를 불러오는 중...
+            </div>
+          )}
           {/* 기업 정보 테이블 섹션 */}
-          <IndustryCompanyTable 
-            companiesData={companiesData}
-            loadingCompanies={loadingCompanies}
-            showCompaniesTable={showCompaniesTable}
-          />
-          <div className="pipeline-title">
-            <img src={titlecloud} alt="cloud" />{inputSymbol} 산업 핵심 뉴스
-          </div>
-          {/* 전 주에 핫한 기사 Top 3 섹션 */}
-          <div className="industry-top3-section">
-            {loading ? (
-              <div className="industry-top3-loading">
-                AI가 산업 트렌드를 분석하고 있습니다...
+          {!loadingCompanies && (
+            <>
+              <div className="pipeline-title">
+                <img src={titlecloud} alt="cloud" />{inputSymbol} 산업 핵심 기업
               </div>
-            ) : error && error !== '산업군 이름을 입력해주세요' ? (
-              <div className="industry-top3-error">
-                {error}
+              <IndustryCompanyTable 
+                companiesData={companiesData}
+                loadingCompanies={loadingCompanies}
+                showCompaniesTable={showCompaniesTable}
+              />
+              {/* 기사 섹션 */}
+              <div className="pipeline-title">
+                <img src={titlecloud} alt="cloud" />{inputSymbol} 산업 핵심 뉴스
               </div>
-            ) : industryData && industryData.top3_articles && industryData.top3_articles.length > 0 ? (
-              <IndustryArticleList articles={industryData.top3_articles} onArticleClick={handleArticleClick} />
-            ) : (
-              <div className="industry-top3-nodata">
-                해당 산업의 데이터가 없습니다.
+              <div className="industry-top3-section">
+                {loading ? (
+                  <div className="industry-top3-loading">
+                    산업 핵심 뉴스 데이터를 불러오는 중...
+                  </div>
+                ) : error && error !== '산업군 이름을 입력해주세요' ? (
+                  <div className="industry-top3-error">
+                    {error}
+                  </div>
+                ) : industryData && industryData.top3_articles && industryData.top3_articles.length > 0 ? (
+                  <IndustryArticleList articles={industryData.top3_articles} onArticleClick={handleArticleClick} />
+                ) : (
+                  <div className="industry-top3-nodata">
+                    해당 산업의 데이터가 없습니다.
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          <div style={{height: '50px' }} />
-          {/* 기사 상세 모달 */}
-          <ArticleDetailModal article={showModal && selectedArticle} onClose={closeModal} />
+              <div style={{height: '50px' }} />
+              <ArticleDetailModal article={showModal && selectedArticle} onClose={closeModal} />
+            </>
+          )}
         </>
       )}
     </div>

@@ -22,40 +22,6 @@ const PortfolioAnalysis = ({ portfolio, portfolioSummary, periodEndDate }) => {
 
   return (
     <>
-      {/* 포트폴리오 요약 */}
-      <div className="portfolio-summary" style={{ marginLeft: '40px', width: '770px' }}>
-        <div className="summary-stats">
-          <div className="stat-item">
-            <div className="stat-content">
-              <span className="stat-label">보유 종목 수</span>
-              <span className="stat-value">{portfolioSummary.total_stocks}개</span>
-            </div>
-          </div>
-          <div className="stat-item full-width">
-            <div className="stat-content">
-              <span className="stat-label">총 보유 수량</span>
-              <span className="stat-value">{portfolioSummary.total_quantity.toLocaleString()}주</span>
-            </div>
-          </div>
-          <div className="stat-item full-width">
-            <div className="stat-content">
-              <span className="stat-label">투자 섹터</span>
-              <div className="sectors-container">
-                {portfolioSummary.sectors.map((sector, index) => (
-                  <button
-                    key={index}
-                    className="sector-item sector-btn"
-                    onClick={() => handleSectorButtonClick(sector)}
-                  >
-                    {sector}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* 포트폴리오 테이블 */}
       {portfolio.length > 0 ? (
         <div className="portfolio-table-container" style={{ marginLeft: '40px', width: '800px' }}>

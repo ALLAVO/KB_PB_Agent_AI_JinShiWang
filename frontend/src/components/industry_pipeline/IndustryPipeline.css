@@ -297,3 +297,18 @@
   color: #666;
 }
 
+/* 산업 데이터 로딩 메시지 스타일 */
+.industry-loading-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  width: 95%;
+  max-width: 900px;
+  margin: 300px 0 auto 0;
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-size: 1.1rem;
+}
+
