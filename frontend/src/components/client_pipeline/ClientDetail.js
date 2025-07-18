@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchClientSummary, fetchClientPerformance, fetchClientPortfolioChart } from '../../api/clients';
+import { fetchClientSummary, fetchClientPerformance, fetchClientPortfolioChart, fetchClientPortfolioChartAISummary } from '../../api/clients';
 import PortfolioChart from './PortfolioChart';
 import PortfolioAnalysis from './PortfolioAnalysis';
 import PerformanceChart from './PerformanceChart';
@@ -17,11 +17,14 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
   const [error, setError] = useState('');
   const [portfolioChartData, setPortfolioChartData] = useState(null);
   const [portfolioChartLoading, setPortfolioChartLoading] = useState(false);
+  const [portfolioChartAISummaryLoading, setPortfolioChartAISummaryLoading] = useState(false);
+
 
   useEffect(() => {
     if (client && client.id) {
       loadClientSummary();
-      loadPortfolioChart(client.id);
+      loadPortfolioChart(client.id);      
+      loadPortfolioChartAISummary();
     }
     // eslint-disable-next-line
   }, [client, period]);
@@ -282,6 +285,16 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
       ) : (
         <PortfolioChart chartData={portfolioChartData} />
       )}
+
+      {/* 포트폴리오 분석 - 포트폴리오 도넛 차트 섹션 */}
+      <PortfolioChart clientId={client.id} />
+
+      {/* AI 포트폴리오 비교 요약 */}
+      <div className="ai-summary-text" style={{ marginLeft: '40px', width: '800px', marginTop: '24px' }}>
+        {portfolioChartAISummaryLoading
+          ? 'AI가 고객님의 포트폴리오와 추천 포트폴리오를 비교 분석 중입니다...'
+          : portfolioChartAISummary}
+      </div>
 
       {/* 페이지 말단에 back-btn 배치 */}
       <div style={{ display: 'flex', justifyContent: 'center', margin: '10px 0' }}>
