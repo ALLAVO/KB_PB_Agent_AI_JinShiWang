@@ -382,6 +382,7 @@ def get_client_performance_analysis(client_id: str, period_end_date: str) -> Dic
                 "performance_start": performance_start_str,
                 "period_end": period_end_date
             },
+            "portfolio_stocks": [item["stock"] for item in portfolio],  # 추가된 부분
             "debug_info": {
                 "portfolio_holdings": len(portfolio),
                 "benchmark_symbol_used": benchmark,

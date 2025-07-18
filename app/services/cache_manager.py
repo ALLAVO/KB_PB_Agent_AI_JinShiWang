@@ -11,7 +11,7 @@ if not CACHE_DIR:
     CACHE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../cache'))
 MCDONALD_CACHE_FILE = os.path.join(CACHE_DIR, "mcdonald_dict.json.gz")
 CACHE_METADATA_FILE = os.path.join(CACHE_DIR, "cache_metadata.json")
-CACHE_EXPIRY_HOURS = getattr(settings, 'cache_expiry_hours', 48)  # 7일
+CACHE_EXPIRY_HOURS = getattr(settings, 'cache_expiry_hours', 48)  # 2일
 
 # 전역 변수: McDonald 사전 메모리 캐시
 _mcdonald_dict = None
