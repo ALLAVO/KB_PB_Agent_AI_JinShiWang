@@ -1,35 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
-function CompanyInfo({ symbol }) {
-  const [companyData, setCompanyData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (!symbol) return;
-
-    const fetchCompanyInfo = async () => {
-      setLoading(true);
-      setError("");
-      
-      try {
-        const response = await fetch(`/api/v1/companies/${symbol}/info`);
-        if (!response.ok) {
-          throw new Error('기업 정보를 불러오는데 실패했습니다.');
-        }
-        const data = await response.json();
-        setCompanyData(data);
-      } catch (e) {
-        console.error('기업 정보 조회 오류:', e);
-        setError(e.message || '데이터를 불러오지 못했습니다.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCompanyInfo();
-  }, [symbol]);
-
+function CompanyInfo({ companyData, loading, error }) {
   if (loading) {
     return (
       <div style={{ 

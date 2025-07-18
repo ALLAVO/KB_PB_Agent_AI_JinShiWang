@@ -14,6 +14,8 @@ import Top3Articles from './Top3Articles';
 import ArticleDetailModal from './ArticleDetailModal';
 import StockChart from './StockChart';
 import ReturnAnalysisChart from './ReturnAnalysisChart';
+import { fetchCombinedStockChart, fetchStockChartSummary, fetchEnhancedStockInfo } from '../../api/stockChart';
+import { fetchCombinedReturnChart } from '../../api/returnAnalysis';
 import './StockChart.css';
 import './Top3Articles.css';
 
@@ -31,6 +33,26 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [currentSymbol, setCurrentSymbol] = useState(""); // 현재 처리 중인 심볼 저장
+  const [companyData, setCompanyData] = useState(null);
+  const [companyLoading, setCompanyLoading] = useState(false);
+  const [companyError, setCompanyError] = useState("");
+  const [chartData, setChartData] = useState([]);
+  const [chartSummary, setChartSummary] = useState(null);
+  const [chartLoading, setChartLoading] = useState(false);
+  const [chartError, setChartError] = useState("");
+  const [returnChartData, setReturnChartData] = useState([]);
+  const [returnTableData, setReturnTableData] = useState(null);
+  const [returnLoading, setReturnLoading] = useState(false);
+  const [returnError, setReturnError] = useState("");
+  const [selectedPeriod, setSelectedPeriod] = useState('6M');
+
+  // 섹션별 로딩/에러 상태 추가
+  const [section1Loading, setSection1Loading] = useState(false);
+  const [section1Error, setSection1Error] = useState("");
+  const [section2Loading, setSection2Loading] = useState(false);
+  const [section2Error, setSection2Error] = useState("");
+  const [section3Loading, setSection3Loading] = useState(false);
+  const [section3Error, setSection3Error] = useState("");
 
   const textSummary = `${year}년 ${month}월 ${weekStr} 기업 데이터 분석 요약입니다.`;
 
@@ -130,67 +152,162 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
     return null;
   };
 
+  // 섹션별 API 호출 함수
+  const fetchSection1 = async (symbol) => {
+    setSection1Loading(true);
+    setSection1Error("");
+    setCompanyLoading(true);
+    try {
+      const [companyRes, financialData, valuationData] = await Promise.all([
+        fetch(`/api/v1/companies/${symbol}/info`).then(res => {
+          if (!res.ok) throw new Error('기업 정보를 불러오는데 실패했습니다.');
+          return res.json();
+        }),
+        fetchFinancialMetrics({ symbol, endDate }),
+        fetchValuationMetrics({ symbol, endDate })
+      ]);
+      setCompanyData(companyRes);
+      setFinancialMetrics(financialData);
+      setValuationMetrics(valuationData);
+    } catch (e) {
+      setSection1Error(e.message || '섹션1 데이터를 불러오지 못했습니다.');
+      setCompanyError(e.message || '기업 정보를 불러오지 못했습니다.');
+    } finally {
+      setSection1Loading(false);
+      setCompanyLoading(false);
+    }
+  };
+
+  const fetchSection2 = async (symbol) => {
+    setSection2Loading(true);
+    setSection2Error("");
+    setChartLoading(true);
+    setReturnLoading(true);
+    try {
+      // 기간 계산 (차트)
+      const end = new Date(endDate);
+      const start = new Date(end);
+      switch (selectedPeriod) {
+        case '1W': start.setDate(end.getDate() - 7); break;
+        case '1M': start.setMonth(end.getMonth() - 1); break;
+        case '3M': start.setMonth(end.getMonth() - 3); break;
+        case '6M': start.setMonth(end.getMonth() - 6); break;
+        case '1Y': start.setFullYear(end.getFullYear() - 1); break;
+        default: start.setMonth(end.getMonth() - 1);
+      }
+      const calcStartDate = start.toISOString().split('T')[0];
+      const calcEndDate = end.toISOString().split('T')[0];
+      const fixedChartTypes = ['price', 'volume'];
+      // 18개월 고정 기간 (수익률)
+      const startReturn = new Date(end);
+      startReturn.setMonth(end.getMonth() - 18);
+      const calcReturnStartDate = startReturn.toISOString().split('T')[0];
+      // 병렬 호출
+      const [chartRes, chartSummaryRes, enhancedRes, returnRes] = await Promise.all([
+        fetchCombinedStockChart(symbol, calcStartDate, calcEndDate, fixedChartTypes),
+        fetchStockChartSummary(symbol, calcStartDate, calcEndDate),
+        fetchEnhancedStockInfo(symbol),
+        fetchCombinedReturnChart(symbol, calcReturnStartDate, calcEndDate)
+      ]);
+      // 차트 데이터 변환
+      const transformedData = chartRes.dates.map((date, index) => {
+        const item = { date };
+        if (chartRes.data.price) {
+          item.close = chartRes.data.price.closes[index];
+          item.open = chartRes.data.price.opens[index];
+          item.high = chartRes.data.price.highs[index];
+          item.low = chartRes.data.price.lows[index];
+        }
+        if (chartRes.data.volume) {
+          item.volume = chartRes.data.volume.volumes[index];
+        }
+        return item;
+      });
+      setChartData(transformedData);
+      setChartSummary({ ...chartSummaryRes, ...enhancedRes });
+      // 수익률 데이터 변환
+      const sixMonthsAgo = new Date(endDate);
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      const sixMonthsAgoStr = sixMonthsAgo.toISOString().split('T')[0];
+      const transformedReturnData = returnRes.chart_data.dates
+        .map((date, index) => ({
+          date,
+          stock_index: returnRes.chart_data.stock_index[index],
+          benchmark_index: returnRes.chart_data.sp500_index[index]
+        }))
+        .filter(item => item.date >= sixMonthsAgoStr);
+      setReturnChartData(transformedReturnData);
+      setReturnTableData(returnRes.table_data);
+    } catch (e) {
+      setSection2Error(e.message || '섹션2 데이터를 불러오지 못했습니다.');
+      setChartError(e.message || '차트 데이터를 불러오지 못했습니다.');
+      setReturnError(e.message || '수익률 데이터를 불러오지 못했습니다.');
+    } finally {
+      setSection2Loading(false);
+      setChartLoading(false);
+      setReturnLoading(false);
+    }
+  };
+
+  const fetchSection3 = async (symbol) => {
+    setSection3Loading(true);
+    setSection3Error("");
+    setLoading(true);
+    try {
+      const [predictionRes, articlesRes, summariesRes, keywordsRes] = await Promise.all([
+        fetchPredictionSummary({ symbol, startDate, endDate }),
+        fetchTop3Articles({ symbol, startDate, endDate }),
+        fetchWeeklySummaries({ symbol, startDate, endDate }),
+        fetchWeeklyKeywords({ symbol, startDate, endDate })
+      ]);
+      setPrediction(predictionRes);
+      setTop3Articles(articlesRes);
+      setSummaries(summariesRes);
+      setKeywords(keywordsRes);
+    } catch (e) {
+      setSection3Error(e.message || '섹션3 데이터를 불러오지 못했습니다.');
+      setError(e.message || '데이터를 불러오지 못했습니다.');
+    } finally {
+      setSection3Loading(false);
+      setLoading(false);
+      if (onAutoCompanyDone) onAutoCompanyDone();
+    }
+  };
+
+  // 전체 검색 핸들러
   const handleSearch = async (overrideSymbol, isAuto) => {
-    setStarted(true); // 버튼 클릭 시 바로 started 상태로 전환
+    setStarted(true);
     const symbolToUse = overrideSymbol !== undefined ? overrideSymbol : inputSymbol;
-    
-    // symbol 값을 문자열로 변환하고 trim 처리
     const cleanSymbol = typeof symbolToUse === 'string' ? symbolToUse.trim() : String(symbolToUse || '').trim();
-    
     if (!cleanSymbol) {
       setError('종목코드를 입력해주세요');
       return;
     }
-    
-    // 현재 처리 중인 심볼 저장
     setCurrentSymbol(cleanSymbol);
-    setLoading(true);
     setError("");
+    setCompanyData(null);
+    setFinancialMetrics(null);
+    setValuationMetrics(null);
+    setChartData([]);
+    setChartSummary(null);
+    setReturnChartData([]);
+    setReturnTableData(null);
+    setPrediction(null);
     setTop3Articles(null);
     setSummaries(null);
     setKeywords(null);
-    setPrediction(null);
-    setFinancialMetrics(null);
-    setValuationMetrics(null);
-    
-    // 리포트 제목 설정
+    setCompanyError("");
+    setChartError("");
+    setReturnError("");
+    setSection1Error("");
+    setSection2Error("");
+    setSection3Error("");
     if (onSetReportTitle) {
       onSetReportTitle(`${cleanSymbol} 리포트`);
     }
-    
-    // 실제 API 호출 파라미터 확인
-    console.log('API 호출', { symbol: cleanSymbol, startDate, endDate });
-    try {
-      // 여섯 API를 병렬로 호출 - cleanSymbol을 사용
-      const [articlesData, summariesData, keywordsData, predictionData, financialData, valuationData] = await Promise.all([
-        fetchTop3Articles({ symbol: cleanSymbol, startDate, endDate }),
-        fetchWeeklySummaries({ symbol: cleanSymbol, startDate, endDate }),
-        fetchWeeklyKeywords({ symbol: cleanSymbol, startDate, endDate }),
-        fetchPredictionSummary({ symbol: cleanSymbol, startDate, endDate }),
-        fetchFinancialMetrics({ symbol: cleanSymbol, endDate }),
-        fetchValuationMetrics({ symbol: cleanSymbol, endDate })
-      ]);
-      setTop3Articles(articlesData);
-      setSummaries(summariesData);
-      setKeywords(keywordsData);
-      setPrediction(predictionData);
-      setFinancialMetrics(financialData);
-      setValuationMetrics(valuationData);
-      console.log('기사 데이터:', articlesData);
-      console.log('요약 데이터:', summariesData);
-      console.log('키워드 데이터:', keywordsData);
-      console.log('예측 데이터:', predictionData);
-      console.log('재무지표 데이터:', financialData);
-      console.log('벨류에이션 지표 데이터:', valuationData);
-    } catch (e) {
-      console.error('API 호출 오류:', e);
-      setError('데이터를 불러오지 못했습니다.');
-    } finally {
-      setLoading(false);
-      if (isAuto && onAutoCompanyDone) {
-        onAutoCompanyDone();
-      }
-    }
+    await fetchSection1(cleanSymbol);
+    await fetchSection2(cleanSymbol);
+    await fetchSection3(cleanSymbol);
   };
 
   // 자동 입력 및 자동 검색 트리거
@@ -241,19 +358,23 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
       )}
       {started && (
         <>
+          {/* 섹션1: 기업 정보, 재무지표, 벨류에이션 지표 */}
           <div className="pipeline-title">
             <img src={titlecloud} alt="cloud" /> {currentSymbol ? `기업 정보` : '기업 정보'}
           </div>
-          <CompanyInfo symbol={currentSymbol} />
-          
+          <CompanyInfo 
+            companyData={companyData}
+            loading={section1Loading}
+            error={section1Error || companyError}
+          />
           <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', marginBottom: '24px' }}>
             <div style={{ flex: 1 }}>
               <div className="pipeline-title">
                 <img src={titlecloud} alt="cloud" /> {currentSymbol ? `재무지표` : '재무지표'}
               </div>
               <FinancialMetrics 
-                loading={loading}
-                error={error}
+                loading={section1Loading}
+                error={section1Error}
                 financialMetrics={financialMetrics}
               />
             </div>
@@ -262,62 +383,63 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
                 <img src={titlecloud} alt="cloud" /> {currentSymbol ? `벨류에이션 지표` : '벨류에이션 지표'}
               </div>
               <ValuationMetrics 
-                loading={loading}
-                error={error}
+                loading={section1Loading}
+                error={section1Error}
                 valuationMetrics={valuationMetrics}
               />
             </div>
           </div>
+          {/* 섹션2: 주가 차트, 수익률 차트 */}
           <div className="pipeline-title">
             <img src={titlecloud} alt="cloud" /> {currentSymbol ? `주가 동향` : '주가 동향'}
           </div>
-          {/* 주가 차트 컴포넌트 추가 - currentSymbol 사용 */}
-          
           {currentSymbol && startDate && endDate && (
             <StockChart 
-              symbol={currentSymbol}
-              startDate={startDate}
-              endDate={endDate}
+              chartData={chartData}
+              chartSummary={chartSummary}
+              loading={section2Loading}
+              error={section2Error || chartError}
+              selectedPeriod={selectedPeriod}
+              onPeriodChange={setSelectedPeriod}
             />
           )}
           <div className="pipeline-title">
             <img src={titlecloud} alt="cloud" /> {currentSymbol ? `지수 대비 수익률 분석` : '지수 대비 수익률 분석'}
           </div>
-          {/* 주가 차트 아래에 ReturnAnalysisChart 분리 렌더링 */}
           {currentSymbol && startDate && endDate && (
             <ReturnAnalysisChart 
+              chartData={returnChartData}
+              tableData={returnTableData}
+              loading={section2Loading}
+              error={section2Error || returnError}
               symbol={currentSymbol}
-              startDate={startDate}
-              endDate={endDate}
             />
           )}
+          {/* 섹션3: 주가 전망 카드, top3 기사 */}
           <div className="pipeline-title">
             <img src={titlecloud} alt="cloud" /> {` ${getNextWeekInfo()} 진시황의 혜안`}
           </div>
-          {/* 주가 전망 카드 - currentSymbol 사용 */}
           {started && (
             <StockPredictionCard 
               currentSymbol={currentSymbol}
               getNextWeekInfo={getNextWeekInfo}
-              loading={loading}
-              error={error}
+              loading={section3Loading}
+              error={section3Error || error}
               prediction={prediction}
             />
           )}
           <div className="pipeline-title" style={{ marginBottom: '8px' }}>
             <img src={titlecloud} alt="cloud" /> {`${getCurrentWeekInfo()} 핵심 뉴스`}
           </div>
-          {/* top3 기사 표시 */}
           <Top3Articles
-            loading={loading}
-            error={error}
+            loading={section3Loading}
+            error={section3Error || error}
             top3Articles={top3Articles}
             findKeywordsForArticle={findKeywordsForArticle}
             findSummaryForArticle={findSummaryForArticle}
             handleArticleClick={handleArticleClick}
           />
           <div style={{ background: '#fff', height: '50px', width: '100%', borderRadius: '8px', marginTop: '24px' }} />
-          {/* 기사 상세 모달 */}
           <ArticleDetailModal show={showModal} article={selectedArticle} onClose={closeModal} />
         </>
       )}

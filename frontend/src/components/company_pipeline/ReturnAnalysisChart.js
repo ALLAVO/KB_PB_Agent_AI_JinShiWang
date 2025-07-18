@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   LineChart,
   Line,
@@ -8,64 +8,9 @@ import {
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
-import { fetchCombinedReturnChart } from '../../api/returnAnalysis';
 import './ReturnAnalysisChart.css';
 
-const ReturnAnalysisChart = ({ symbol, startDate, endDate }) => {
-  const [chartData, setChartData] = useState([]);
-  const [tableData, setTableData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  // 18개월 고정 기간 계산 (12M 데이터를 위해 충분한 기간 확보)
-  const calculate18MDateRange = (endDate) => {
-    const end = new Date(endDate);
-    const start = new Date(end);
-    start.setMonth(end.getMonth() - 18);
-    return {
-      startDate: start.toISOString().split('T')[0],
-      endDate: end.toISOString().split('T')[0]
-    };
-  };
-
-  // 차트 데이터 로드
-  const loadReturnData = async () => {
-    if (!symbol) return;
-    setLoading(true);
-    setError('');
-    try {
-      const { startDate: calcStartDate, endDate: calcEndDate } = calculate18MDateRange(endDate);
-      const data = await fetchCombinedReturnChart(symbol, calcStartDate, calcEndDate);
-      
-      // 차트용 데이터는 6개월만 표시 (최근 6개월)
-      const sixMonthsAgo = new Date(endDate);
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-      const sixMonthsAgoStr = sixMonthsAgo.toISOString().split('T')[0];
-      
-      // 차트 데이터 변환 (6개월 데이터만 필터링)
-      const transformedData = data.chart_data.dates
-        .map((date, index) => ({
-          date,
-          stock_index: data.chart_data.stock_index[index],
-          benchmark_index: data.chart_data.sp500_index[index]
-        }))
-        .filter(item => item.date >= sixMonthsAgoStr);
-      
-      setChartData(transformedData);
-      setTableData(data.table_data);
-    } catch (err) {
-      setError('수익률 데이터를 불러오는데 실패했습니다: ' + err.message);
-      console.error('Return analysis data loading error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadReturnData();
-    // eslint-disable-next-line
-  }, [symbol, endDate]);
-
+const ReturnAnalysisChart = ({ chartData, tableData, loading, error, symbol }) => {
   // 수익률 색상 결정
   const getReturnColor = (value) => {
     if (value > 0) return 'return-positive';
@@ -100,7 +45,7 @@ const ReturnAnalysisChart = ({ symbol, startDate, endDate }) => {
   return (
     <div className="return-chart-container">
       <div className="return-chart-wrapper">
-        {chartData.length > 0 ? (
+        {chartData && chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={chartData} margin={{ top: 20, right: 40, bottom: 20, left: 40 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
@@ -158,7 +103,6 @@ const ReturnAnalysisChart = ({ symbol, startDate, endDate }) => {
           <div className="no-return-data">수익률 데이터가 없습니다.</div>
         )}
       </div>
-      
       {/* 수익률 분석 표 */}
       {tableData && (
         <div style={{ marginTop: '16px', marginBottom: '16px' }}>
