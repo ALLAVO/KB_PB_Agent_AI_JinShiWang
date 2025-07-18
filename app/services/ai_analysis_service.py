@@ -31,6 +31,15 @@ def generate_performance_summary(performance_data: Dict[str, Any]) -> Dict[str, 
         portfolio_stocks = performance_data.get('portfolio_stocks', [])
         portfolio_stocks_str = ', '.join(portfolio_stocks) if portfolio_stocks else '없음'
 
+        # 종목별 1주일 수익률 정보 추출 및 문자열 변환
+        stocks_weekly_return = performance_data.get('stocks_weekly_return', [])
+        if stocks_weekly_return:
+            stocks_weekly_return_str = "; ".join(
+                [f"{item['stock']}: {item['weekly_return']:+.2f}%" for item in stocks_weekly_return]
+            )
+        else:
+            stocks_weekly_return_str = "없음"
+
         # 프롬프트 생성
         prompt = f"""
                 당신은 KB국민은행의 전문 PB(Private Banker)입니다. 다음 고객의 투자 성과 데이터를 분석하여 통합된 투자 분석 리포트를 작성해주세요.
@@ -49,6 +58,8 @@ def generate_performance_summary(performance_data: Dict[str, Any]) -> Dict[str, 
                 - {period_months}개월 포트폴리오 수익률: {performance_portfolio:+.2f}%
                 - {period_months}개월 벤치마크 수익률: {performance_benchmark:+.2f}%
                 - {period_months}개월 초과수익률: {performance_outperformance:+.2f}%p
+
+                - 종목별 1주일 수익률: {stocks_weekly_return_str}
 
                 다음 내용을 포함하여 5-6줄로 통합된 투자 분석을 작성해주세요:
                 1. 현재 투자 성과에 대한 간단한 평가
