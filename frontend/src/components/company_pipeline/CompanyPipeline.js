@@ -356,91 +356,122 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
           <button className="company-search-btn" onClick={() => handleSearch()}>리포트 출력</button>
         </div>
       )}
-      {started && (
+      {/* 전체 덮는 로딩 화면: 처음 검색 시 section1Loading && !companyData */}
+      {started && section1Loading && !companyData && (
+        <div className="industry-loading-message">
+          기업 데이터를 불러오는 중...
+        </div>
+      )}
+      {/* 기존 섹션별 로딩 화면: section1Loading && companyData (또는 section1Loading만) */}
+      {started && (!section1Loading || companyData) && (
         <>
           {/* 섹션1: 기업 정보, 재무지표, 벨류에이션 지표 */}
           <div className="pipeline-title">
             <img src={titlecloud} alt="cloud" /> {currentSymbol ? `기업 정보` : '기업 정보'}
           </div>
-          <CompanyInfo 
-            companyData={companyData}
-            loading={section1Loading}
-            error={section1Error || companyError}
-          />
-          <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', marginBottom: '24px' }}>
-            <div style={{ flex: 1 }}>
-              <div className="pipeline-title">
-                <img src={titlecloud} alt="cloud" /> {currentSymbol ? `재무지표` : '재무지표'}
-              </div>
-              <FinancialMetrics 
-                loading={section1Loading}
-                error={section1Error}
-                financialMetrics={financialMetrics}
-              />
+          {section1Loading ? (
+            <div className="company-loading-message" style={{ textAlign: 'center', margin: '32px 0' }}>
+              기업 데이터를 불러오는 중...
             </div>
-            <div style={{ flex: 1 }}>
-              <div className="pipeline-title">
-                <img src={titlecloud} alt="cloud" /> {currentSymbol ? `벨류에이션 지표` : '벨류에이션 지표'}
-              </div>
-              <ValuationMetrics 
+          ) : (
+            <>
+              <CompanyInfo 
+                companyData={companyData}
                 loading={section1Loading}
-                error={section1Error}
-                valuationMetrics={valuationMetrics}
+                error={section1Error || companyError}
               />
-            </div>
-          </div>
+              <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', marginBottom: '24px' }}>
+                <div style={{ flex: 1 }}>
+                  <div className="pipeline-title">
+                    <img src={titlecloud} alt="cloud" /> {currentSymbol ? `재무지표` : '재무지표'}
+                  </div>
+                  <FinancialMetrics 
+                    loading={section1Loading}
+                    error={section1Error}
+                    financialMetrics={financialMetrics}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div className="pipeline-title">
+                    <img src={titlecloud} alt="cloud" /> {currentSymbol ? `벨류에이션 지표` : '벨류에이션 지표'}
+                  </div>
+                  <ValuationMetrics 
+                    loading={section1Loading}
+                    error={section1Error}
+                    valuationMetrics={valuationMetrics}
+                  />
+                </div>
+              </div>
+            </>
+          )}
           {/* 섹션2: 주가 차트, 수익률 차트 */}
           <div className="pipeline-title">
             <img src={titlecloud} alt="cloud" /> {currentSymbol ? `주가 동향` : '주가 동향'}
           </div>
-          {currentSymbol && startDate && endDate && (
-            <StockChart 
-              chartData={chartData}
-              chartSummary={chartSummary}
-              loading={section2Loading}
-              error={section2Error || chartError}
-              selectedPeriod={selectedPeriod}
-              onPeriodChange={setSelectedPeriod}
-            />
-          )}
-          <div className="pipeline-title">
-            <img src={titlecloud} alt="cloud" /> {currentSymbol ? `지수 대비 수익률 분석` : '지수 대비 수익률 분석'}
-          </div>
-          {currentSymbol && startDate && endDate && (
-            <ReturnAnalysisChart 
-              chartData={returnChartData}
-              tableData={returnTableData}
-              loading={section2Loading}
-              error={section2Error || returnError}
-              symbol={currentSymbol}
-            />
+          {section1Loading ? (
+            <div className="company-loading-message" style={{ textAlign: 'center', margin: '32px 0' }}>
+              주가 및 수익률 데이터를 불러오는 중...
+            </div>
+          ) : (
+            <>
+              {currentSymbol && startDate && endDate && (
+                <StockChart 
+                  chartData={chartData}
+                  chartSummary={chartSummary}
+                  loading={section2Loading}
+                  error={section2Error || chartError}
+                  selectedPeriod={selectedPeriod}
+                  onPeriodChange={setSelectedPeriod}
+                />
+              )}
+              <div className="pipeline-title">
+                <img src={titlecloud} alt="cloud" /> {currentSymbol ? `지수 대비 수익률 분석` : '지수 대비 수익률 분석'}
+              </div>
+              {currentSymbol && startDate && endDate && (
+                <ReturnAnalysisChart 
+                  chartData={returnChartData}
+                  tableData={returnTableData}
+                  loading={section2Loading}
+                  error={section2Error || returnError}
+                  symbol={currentSymbol}
+                />
+              )}
+            </>
           )}
           {/* 섹션3: 주가 전망 카드, top3 기사 */}
           <div className="pipeline-title">
             <img src={titlecloud} alt="cloud" /> {` ${getNextWeekInfo()} 진시황의 혜안`}
           </div>
-          {started && (
-            <StockPredictionCard 
-              currentSymbol={currentSymbol}
-              getNextWeekInfo={getNextWeekInfo}
-              loading={section3Loading}
-              error={section3Error || error}
-              prediction={prediction}
-            />
+          {section1Loading ? (
+            <div className="company-loading-message" style={{ textAlign: 'center', margin: '32px 0' }}>
+              기업 핵심 뉴스 데이터를 불러오는 중...
+            </div>
+          ) : (
+            <>
+              {started && (
+                <StockPredictionCard 
+                  currentSymbol={currentSymbol}
+                  getNextWeekInfo={getNextWeekInfo}
+                  loading={section3Loading || (!top3Articles && !section3Error)}
+                  error={section3Error || error}
+                  prediction={prediction}
+                />
+              )}
+              <div className="pipeline-title" style={{ marginBottom: '8px' }}>
+                <img src={titlecloud} alt="cloud" /> {`${getCurrentWeekInfo()} 핵심 뉴스`}
+              </div>
+              <Top3Articles
+                loading={section3Loading || (!top3Articles && !section3Error)}
+                error={section3Error || error}
+                top3Articles={top3Articles}
+                findKeywordsForArticle={findKeywordsForArticle}
+                findSummaryForArticle={findSummaryForArticle}
+                handleArticleClick={handleArticleClick}
+              />
+              <div style={{ background: '#fff', height: '50px', width: '100%', borderRadius: '8px', marginTop: '24px' }} />
+              <ArticleDetailModal show={showModal} article={selectedArticle} onClose={closeModal} />
+            </>
           )}
-          <div className="pipeline-title" style={{ marginBottom: '8px' }}>
-            <img src={titlecloud} alt="cloud" /> {`${getCurrentWeekInfo()} 핵심 뉴스`}
-          </div>
-          <Top3Articles
-            loading={section3Loading}
-            error={section3Error || error}
-            top3Articles={top3Articles}
-            findKeywordsForArticle={findKeywordsForArticle}
-            findSummaryForArticle={findSummaryForArticle}
-            handleArticleClick={handleArticleClick}
-          />
-          <div style={{ background: '#fff', height: '50px', width: '100%', borderRadius: '8px', marginTop: '24px' }} />
-          <ArticleDetailModal show={showModal} article={selectedArticle} onClose={closeModal} />
         </>
       )}
     </div>

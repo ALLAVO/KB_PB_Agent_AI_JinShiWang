@@ -1,19 +1,6 @@
 import React from 'react';
 
 function CompanyInfo({ companyData, loading, error }) {
-  if (loading) {
-    return (
-      <div style={{ 
-        background: '#fff', 
-        padding: '20px', 
-        borderRadius: '8px', 
-        marginBottom: '20px' 
-      }}>
-        <p>기업 정보를 불러오는 중...</p>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div style={{ 

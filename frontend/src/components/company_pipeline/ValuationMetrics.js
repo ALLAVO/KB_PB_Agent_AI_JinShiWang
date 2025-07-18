@@ -2,14 +2,6 @@ import React from 'react';
 import './ValuationMetrics.css';
 
 function ValuationMetrics({ loading, error, valuationMetrics }) {
-  if (loading) {
-    return (
-      <div className="valuation-metrics-table-container">
-        <div className="valuation-loading">벨류에이션 지표를 불러오는 중...</div>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="valuation-metrics-table-container">
