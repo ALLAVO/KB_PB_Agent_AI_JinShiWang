@@ -62,7 +62,7 @@ const ReturnAnalysisChart = ({ chartData, tableData, loading, error, symbol }) =
                 yAxisId="left"
                 orientation="left"
                 tick={{ fontSize: 12 }}
-                label={{ value: 'S&P500 상대 수익률(%)', angle: -90, position: 'insideLeft', dx: -10, dy: 100 }}
+                label={{ value: 'S&P500 상대 주가(%)', angle: -90, position: 'insideLeft', dx: -10, dy: 95 }}
                 domain={['auto', 'auto']}
                 stroke="#999"
               />
@@ -85,7 +85,7 @@ const ReturnAnalysisChart = ({ chartData, tableData, loading, error, symbol }) =
                 stroke="#988A7C"
                 strokeWidth={3}
                 dot={false}
-                name="S&P500 상대 수익률 (좌측)"
+                name="S&P500 상대 주가 (좌측)"
               />
               {/* 주가 라인 */}
               <Line
@@ -131,7 +131,7 @@ const ReturnAnalysisChart = ({ chartData, tableData, loading, error, symbol }) =
                 }}></th>
                 {['1M', '3M', '6M', '12M'].map((period, idx) => (
                   <th key={period} style={{
-                    padding: '24px 0 24px 0',
+                    padding: '16px 0 16px 0',
                     textAlign: 'center',
                     fontWeight: 500,
                     fontSize: '1.2rem',
@@ -154,7 +154,7 @@ const ReturnAnalysisChart = ({ chartData, tableData, loading, error, symbol }) =
                 <td style={{
                   padding: '6px 0',
                   textAlign: 'center',
-                  fontWeight: 500,
+                  fontWeight: 400,
                   fontSize: '1.2rem',
                   color: '#363532',
                   letterSpacing: '-1px',
@@ -170,7 +170,7 @@ const ReturnAnalysisChart = ({ chartData, tableData, loading, error, symbol }) =
                     <td key={period} style={{
                       padding: '6px 0',
                       textAlign: 'center',
-                      fontWeight: 500,
+                      fontWeight: 400,
                       fontSize: '1.2rem',
                       color: value !== null && value !== undefined ? color : '#363532',
                       letterSpacing: '-1px',

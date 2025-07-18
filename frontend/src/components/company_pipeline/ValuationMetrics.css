@@ -54,7 +54,7 @@
   background: #fff;
 }
 .valuation-td.value {
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .valuation-loading, .valuation-error, .valuation-no-data {

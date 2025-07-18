@@ -95,7 +95,7 @@ const StockChart = ({ chartData, chartSummary, loading, error, selectedPeriod, o
           <div className="summary-grid summary-grid-4rows">
             {/* 1행: 현재가-평균거래량-52주 최고가-1M 변동성 */}
             <div className="summary-item">
-              <span className="summary-label">현재가:</span>
+              <span className="summary-label">금요일 종가:</span>
               <span className="summary-value">${chartSummary.current_price || chartSummary.end_price}</span>
             </div>
             <div className="summary-item">
