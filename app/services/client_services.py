@@ -363,6 +363,14 @@ def get_client_performance_analysis(client_id: str, period_end_date: str) -> Dic
         if weekly_benchmark_return == 0.0 and performance_benchmark_return == 0.0:
             logger.warning(f"Benchmark returns are both 0.0 - this might indicate data fetching issues for {benchmark}")
         
+        # 향상된 포트폴리오 정보 가져오기 (종목별 수익률 등)
+        enhanced_portfolio = get_enhanced_client_portfolio(client_id, period_end_date)
+        # 종목별 1주일 수익률 리스트 생성
+        stocks_weekly_return = [
+            {"stock": item["stock"], "weekly_return": item.get("weekly_return", 0.0)}
+            for item in enhanced_portfolio
+        ]
+        
         performance_data = {
             "client_name": client_info['name'],
             "benchmark": benchmark_display,
@@ -382,7 +390,8 @@ def get_client_performance_analysis(client_id: str, period_end_date: str) -> Dic
                 "performance_start": performance_start_str,
                 "period_end": period_end_date
             },
-            "portfolio_stocks": [item["stock"] for item in portfolio],  # 추가된 부분
+            "portfolio_stocks": [item["stock"] for item in portfolio],
+            "stocks_weekly_return": stocks_weekly_return,  # 추가된 부분
             "debug_info": {
                 "portfolio_holdings": len(portfolio),
                 "benchmark_symbol_used": benchmark,
