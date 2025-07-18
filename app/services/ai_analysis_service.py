@@ -26,7 +26,11 @@ def generate_performance_summary(performance_data: Dict[str, Any]) -> Dict[str, 
         # 초과수익률 계산
         weekly_outperformance     = weekly_portfolio   - weekly_benchmark
         performance_outperformance = performance_portfolio - performance_benchmark
-        
+
+        # 포트폴리오 종목 리스트 추출
+        portfolio_stocks = performance_data.get('portfolio_stocks', [])
+        portfolio_stocks_str = ', '.join(portfolio_stocks) if portfolio_stocks else '없음'
+
         # 프롬프트 생성
         prompt = f"""
                 당신은 KB국민은행의 전문 PB(Private Banker)입니다. 다음 고객의 투자 성과 데이터를 분석하여 통합된 투자 분석 리포트를 작성해주세요.
@@ -35,6 +39,7 @@ def generate_performance_summary(performance_data: Dict[str, Any]) -> Dict[str, 
                 - 고객명: {client_name}
                 - 벤치마크: {benchmark}
                 - 성과 구간: {period_months}개월
+                - 포트폴리오 종목: {portfolio_stocks_str}
 
                 **성과 데이터:**
                 - 일주일간 포트폴리오 수익률: {weekly_portfolio:+.2f}%

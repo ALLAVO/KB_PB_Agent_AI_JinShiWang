@@ -11,6 +11,7 @@ import Markdown from 'react-markdown';
 const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbol }) => {
   const [clientData, setClientData] = useState(null);
   const [performanceData, setPerformanceData] = useState(null);
+  const [portfolioChartAISummary, setPortfolioChartAISummary] = useState('');
   const [loading, setLoading] = useState(false);
   const [performanceLoading, setPerformanceLoading] = useState(false);
   const [error, setError] = useState('');
@@ -22,6 +23,7 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
       loadClientSummary();
       loadPortfolioChart(client.id);
     }
+    // eslint-disable-next-line
   }, [client, period]);
 
   // 1단계: 고객 요약 먼저 불러오기
@@ -76,6 +78,18 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
       setPortfolioChartData(null);
     } finally {
       setPortfolioChartLoading(false);
+    }
+  };
+
+  const loadPortfolioChartAISummary = async () => {
+    setPortfolioChartAISummaryLoading(true);
+    try {
+      const res = await fetchClientPortfolioChartAISummary(client.id);
+      setPortfolioChartAISummary(res.ai_summary || '');
+    } catch (e) {
+      setPortfolioChartAISummary('AI 요약을 불러오지 못했습니다.');
+    } finally {
+      setPortfolioChartAISummaryLoading(false);
     }
   };
 

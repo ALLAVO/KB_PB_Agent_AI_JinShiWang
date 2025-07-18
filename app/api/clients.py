@@ -1,6 +1,9 @@
 from fastapi import APIRouter, HTTPException, Path, Query
 from typing import List, Dict
 from app.services.client_services import get_all_clients, get_client_by_id, get_client_portfolio, get_client_summary, get_client_performance_analysis
+from app.core.config import settings
+from app.services.portfolio_chart_service import get_portfolio_chart_ai_summary
+from openai import OpenAI
 import logging
 
 router = APIRouter()
@@ -72,4 +75,17 @@ async def fetch_client_performance(
         raise
     except Exception as e:
         logger.error(f"Error in fetch_client_performance: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@router.get("/clients/{client_id}/portfolio-chart-ai-summary", response_model=Dict)
+async def fetch_client_portfolio_chart_ai_summary(client_id: str = Path(..., description="고객 ID")):
+    """
+    고객의 포트폴리오와 추천 포트폴리오 비교 AI 요약을 반환합니다.
+    """
+    try:
+        # .env에서 OPENAI_API_KEY를 읽어 OpenAIClient 인스턴스 생성
+        summary = get_portfolio_chart_ai_summary(client_id)
+        return {"ai_summary": summary}
+    except Exception as e:
+        logger.error(f"Error in fetch_client_portfolio_chart_ai_summary: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

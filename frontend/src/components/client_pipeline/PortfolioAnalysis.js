@@ -1,5 +1,4 @@
 import React from 'react';
-import { goToIndustryAgent } from '../../connect_agent/go_industry';
 
 const PortfolioAnalysis = ({ portfolio, portfolioSummary, periodEndDate }) => {
   if (!portfolio || !portfolioSummary) {

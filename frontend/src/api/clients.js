@@ -82,3 +82,16 @@ export const fetchClientPortfolioChart = async (clientId) => {
     throw error;
   }
 };
+
+export const fetchClientPortfolioChartAISummary = async (clientId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/clients/${clientId}/portfolio-chart-ai-summary`);
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Client portfolio chart AI summary API error:', error);
+    throw error;
+  }
+};
