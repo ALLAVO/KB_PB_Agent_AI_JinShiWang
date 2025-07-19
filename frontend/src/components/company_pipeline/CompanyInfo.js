@@ -1,6 +1,19 @@
 import React from 'react';
 
-function CompanyInfo({ companyData, loading, error }) {
+// 인라인 스타일 정의
+const sectorLinkStyle = {
+  marginLeft: '8px',
+  color: '#6D5A42',
+  cursor: 'pointer',
+  textDecoration: 'underline',
+  fontSize: '12px',
+  fontWeight: 'normal',
+  transition: 'color 0.2s ease'
+};
+
+function CompanyInfo({ companyData, loading, error, onIndustryClick, companySector }) {
+  // DB에서 가져온 섹터 정보 우선 사용
+  const sectorInfo = companySector?.sector || companyData?.sector || null;
   if (error) {
     return (
       <div style={{ 
@@ -33,7 +46,26 @@ function CompanyInfo({ companyData, loading, error }) {
           <div style={{ fontSize: '1.0rem', color: '#302A24', marginLeft: '20px', marginBottom: '18px', lineHeight: 1.5, textAlign: 'left', display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
             <div><strong>기업명:</strong> {companyData.company_name || '정보 없음'}</div>
             {/* <div><strong>종목코드:</strong> {companyData.stock_symbol || '정보 없음'}</div> */}
-            <div><strong>섹터:</strong> {companyData.sector || '정보 없음'}</div>
+            <div>
+              <strong>섹터:</strong> {sectorInfo || '정보 없음'}
+              {sectorInfo && sectorInfo !== '정보 없음' && onIndustryClick && (
+                <span 
+                  onClick={() => onIndustryClick(sectorInfo)}
+                  style={sectorLinkStyle}
+                  title={`${sectorInfo} 산업 분석으로 이동`}
+                  onMouseEnter={(e) => {
+                    e.target.style.color = '#8B7355';
+                    e.target.style.textDecoration = 'underline';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.color = '#6D5A42';
+                    e.target.style.textDecoration = 'underline';
+                  }}
+                >
+                  (더 알아보기)
+                </span>
+              )}
+            </div>
             <div><strong>산업:</strong> {companyData.industry || '정보 없음'}</div>
             <div><strong>주소:</strong> {companyData.address || '정보 없음'}</div>
           </div>

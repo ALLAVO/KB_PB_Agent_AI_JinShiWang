@@ -451,7 +451,7 @@ function MarketPipeline({ year, month, weekStr, period, autoStart }) {
   );
 }
 
-function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone, setSelectedMenu, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, setSelectedSubMenu, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone, autoMarketTrigger }) {
+function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone, setSelectedMenu, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, setSelectedSubMenu, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone, autoMarketTrigger, onStockClick, onIndustryClick, onMarketClick }) {
   // 주차 정보 추출 (예: "(1주차)")
   const weekMatch = period.match(/\((\d+주차)\)/);
   const weekStr = weekMatch ? weekMatch[1] : "";
@@ -534,6 +534,9 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCus
             autoIndustryTrigger={pipelineName === 'industry' ? autoIndustryTrigger : undefined}
             onAutoIndustryDone={pipelineName === 'industry' ? onAutoIndustryDone : undefined}
             autoStartMarket={pipelineName === 'market' ? autoStartMarket : undefined}
+            onStockClick={onStockClick}
+            onIndustryClick={onIndustryClick}
+            onMarketClick={onMarketClick}
           />
         )}
       </div>
@@ -541,11 +544,11 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCus
   );
 }
 
-function PipelinePanel({ name, year, month, weekStr, period, onSetReportTitle, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone, autoStartMarket }) {
-  if (name === 'customer') return <ClientPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} autoCustomerName={autoCustomerName} autoCustomerTrigger={autoCustomerTrigger} onAutoCustomerDone={onAutoCustomerDone} />;
+function PipelinePanel({ name, year, month, weekStr, period, onSetReportTitle, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone, autoStartMarket, onStockClick, onIndustryClick, onMarketClick }) {
+  if (name === 'customer') return <ClientPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} autoCustomerName={autoCustomerName} autoCustomerTrigger={autoCustomerTrigger} onAutoCustomerDone={onAutoCustomerDone} onStockClick={onStockClick} onIndustryClick={onIndustryClick} onMarketClick={onMarketClick} />;
   if (name === 'market') return <MarketPipeline year={year} month={month} weekStr={weekStr} period={period} autoStart={autoStartMarket} />;
-  if (name === 'industry') return <IndustryPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} autoIndustryCategory={autoIndustryCategory} autoIndustryTrigger={autoIndustryTrigger} onAutoIndustryDone={onAutoIndustryDone} />;
-  if (name === 'company') return <CompanyPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} autoCompanySymbol={autoCompanySymbol} autoCompanyTrigger={autoCompanyTrigger} onAutoCompanyDone={onAutoCompanyDone} />;
+  if (name === 'industry') return <IndustryPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} autoIndustryCategory={autoIndustryCategory} autoIndustryTrigger={autoIndustryTrigger} onAutoIndustryDone={onAutoIndustryDone} onStockClick={onStockClick} />;
+  if (name === 'company') return <CompanyPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} autoCompanySymbol={autoCompanySymbol} autoCompanyTrigger={autoCompanyTrigger} onAutoCompanyDone={onAutoCompanyDone} onIndustryClick={onIndustryClick} onMarketClick={onMarketClick} />;
   return null;
 }
 
@@ -581,6 +584,29 @@ function App() {
   const handleAutoIndustryDone = () => {
     setAutoIndustryCategory("");
     setAutoIndustryTrigger(false);
+  };
+
+  // 종목 클릭 핸들러 (기업 파이프라인으로 이동)
+  const handleStockClick = (stockSymbol) => {
+    setSelectedMenu("진시황의 혜안");
+    setSelectedSubMenu("기업");
+    setAutoCompanySymbol(stockSymbol);
+    setAutoCompanyTrigger(true);
+  };
+
+  // 산업 클릭 핸들러 (산업 파이프라인으로 이동)
+  const handleIndustryClick = (industryCategory) => {
+    setSelectedMenu("진시황의 혜안");
+    setSelectedSubMenu("산업");
+    setAutoIndustryCategory(industryCategory);
+    setAutoIndustryTrigger(true);
+  };
+
+  // 증시 클릭 핸들러 (증시 파이프라인으로 이동)
+  const handleMarketClick = () => {
+    setSelectedMenu("진시황의 혜안");
+    setSelectedSubMenu("증시");
+    setAutoMarketTrigger(true);
   };
 
   if (showIntro) {
@@ -622,6 +648,9 @@ function App() {
         autoIndustryTrigger={autoIndustryTrigger}
         onAutoIndustryDone={handleAutoIndustryDone}
         autoMarketTrigger={autoMarketTrigger}
+        onStockClick={handleStockClick}
+        onIndustryClick={handleIndustryClick}
+        onMarketClick={handleMarketClick}
       />
       <ChatPanel
         onPersonalIntent={(customerName) => {

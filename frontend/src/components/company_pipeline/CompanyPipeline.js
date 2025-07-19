@@ -10,6 +10,7 @@ import { fetchWeeklyKeywords } from '../../api/keyword';
 import { fetchPredictionSummary } from '../../api/prediction';
 import { fetchFinancialMetrics } from '../../api/financialMetrics';
 import { fetchValuationMetrics } from '../../api/valuation';
+import { fetchCompanySector } from '../../api/companySector';
 import Top3Articles from './Top3Articles';
 import ArticleDetailModal from './ArticleDetailModal';
 import StockChart from './StockChart';
@@ -19,7 +20,7 @@ import { fetchCombinedReturnChart } from '../../api/returnAnalysis';
 import './StockChart.css';
 import './Top3Articles.css';
 
-function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone }) {
+function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, onIndustryClick, onMarketClick }) {
   const [started, setStarted] = useState(false);
   const [inputSymbol, setInputSymbol] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,6 +46,10 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
   const [returnLoading, setReturnLoading] = useState(false);
   const [returnError, setReturnError] = useState("");
   const [selectedPeriod, setSelectedPeriod] = useState('6M');
+  // 섹터 정보 상태 추가
+  const [companySector, setCompanySector] = useState(null);
+  const [sectorLoading, setSectorLoading] = useState(false);
+  const [sectorError, setSectorError] = useState("");
 
   // 섹션별 로딩/에러 상태 추가
   const [section1Loading, setSection1Loading] = useState(false);
@@ -157,24 +162,31 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
     setSection1Loading(true);
     setSection1Error("");
     setCompanyLoading(true);
+    setSectorLoading(true);
     try {
-      const [companyRes, financialData, valuationData] = await Promise.all([
+      const [companyRes, financialData, valuationData, sectorData] = await Promise.all([
         fetch(`/api/v1/companies/${symbol}/info`).then(res => {
           if (!res.ok) throw new Error('기업 정보를 불러오는데 실패했습니다.');
           return res.json();
         }),
         fetchFinancialMetrics({ symbol, endDate }),
-        fetchValuationMetrics({ symbol, endDate })
+        fetchValuationMetrics({ symbol, endDate }),
+        fetchCompanySector(symbol).catch(err => {
+          console.warn('섹터 정보 로드 실패:', err);
+          return null;
+        })
       ]);
       setCompanyData(companyRes);
       setFinancialMetrics(financialData);
       setValuationMetrics(valuationData);
+      setCompanySector(sectorData);
     } catch (e) {
       setSection1Error(e.message || '섹션1 데이터를 불러오지 못했습니다.');
       setCompanyError(e.message || '기업 정보를 불러오지 못했습니다.');
     } finally {
       setSection1Loading(false);
       setCompanyLoading(false);
+      setSectorLoading(false);
     }
   };
 
@@ -296,9 +308,11 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
     setTop3Articles(null);
     setSummaries(null);
     setKeywords(null);
+    setCompanySector(null);
     setCompanyError("");
     setChartError("");
     setReturnError("");
+    setSectorError("");
     setSection1Error("");
     setSection2Error("");
     setSection3Error("");
@@ -379,8 +393,10 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
                 companyData={companyData}
                 loading={section1Loading}
                 error={section1Error || companyError}
+                onIndustryClick={onIndustryClick}
+                companySector={companySector}
               />
-              <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', marginBottom: '24px', marginTop : '16px' }}>
                 <div style={{ flex: 1 }}>
                   <div className="pipeline-title">
                     <img src={titlecloud} alt="cloud" /> {currentSymbol ? `재무지표` : '재무지표'}
@@ -391,7 +407,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
                     financialMetrics={financialMetrics}
                   />
                 </div>
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1}}>
                   <div className="pipeline-title">
                     <img src={titlecloud} alt="cloud" /> {currentSymbol ? `벨류에이션 지표` : '벨류에이션 지표'}
                   </div>
@@ -425,7 +441,31 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
                 />
               )}
               <div className="pipeline-title">
-                <img src={titlecloud} alt="cloud" /> {currentSymbol ? `지수 대비 수익률 분석` : '지수 대비 수익률 분석'}
+                <img src={titlecloud} alt="cloud" /> 
+                <span>지수 대비 수익률 분석</span>
+                {onMarketClick && (
+                  <span 
+                    onClick={onMarketClick}
+                    style={{
+                      marginLeft: '12px',
+                      color: '#B8A48A', // 더 연한 색상
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      fontSize: '16px', // 더 큰 글씨
+                      fontWeight: 'normal',
+                      transition: 'color 0.2s ease'
+                    }}
+                    title="증시 분석으로 이동"
+                    onMouseEnter={(e) => {
+                      e.target.style.color = '#D2C2B0'; // hover 시 더 연하게
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.color = '#B8A48A';
+                    }}
+                  >
+                    (더 알아보기)
+                  </span>
+                )}
               </div>
               {currentSymbol && startDate && endDate && (
                 <ReturnAnalysisChart 

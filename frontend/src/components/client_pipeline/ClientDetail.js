@@ -8,7 +8,7 @@ import './ClientDetails.css';
 import titlecloud from '../../assets/titlecloud.png';
 import Markdown from 'react-markdown';
 
-const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbol }) => {
+const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbol, onStockClick, onIndustryClick, onMarketClick }) => {
   const [clientData, setClientData] = useState(null);
   const [performanceData, setPerformanceData] = useState(null);
   const [portfolioChartAISummary, setPortfolioChartAISummary] = useState('');
@@ -240,6 +240,7 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
           clientName={client_info.name}
           performanceData={performanceData}
           loading={performanceLoading}
+          onMarketClick={onMarketClick}
         />
       )}
 
@@ -254,6 +255,7 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
         portfolio={portfolio} 
         portfolioSummary={portfolio_summary}
         periodEndDate={periodEndDate}
+        onStockClick={onStockClick}
       />
 
       <div style={{height:'50px' }} />
@@ -283,7 +285,10 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
       {portfolioChartLoading ? (
         <div className="return-chart-loading">포트폴리오 차트를 불러오는 중...</div>
       ) : (
-        <PortfolioChart chartData={portfolioChartData} />
+        <PortfolioChart 
+          chartData={portfolioChartData} 
+          onIndustryClick={onIndustryClick}
+        />
       )}
 
       {/* AI 포트폴리오 비교 요약 */}
