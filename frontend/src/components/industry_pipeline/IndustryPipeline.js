@@ -5,7 +5,7 @@ import IndustryArticleList from "./IndustryArticleList";
 import ArticleDetailModal from "./ArticleDetailModal";
 import IndustryCompanyTable from "./IndustryCompanyTable";
 
-function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone }) {
+function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone, onStockClick }) {
   const [started, setStarted] = useState(false);
   const [inputSymbol, setInputSymbol] = useState("");
   const [error, setError] = useState("");
@@ -192,6 +192,7 @@ function IndustryPipeline({ year, month, weekStr, period, onSetReportTitle, auto
                 companiesData={companiesData}
                 loadingCompanies={loadingCompanies}
                 showCompaniesTable={showCompaniesTable}
+                onStockClick={onStockClick}
               />
               {/* 기사 섹션 */}
               <div className="pipeline-title">

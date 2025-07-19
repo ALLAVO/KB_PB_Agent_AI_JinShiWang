@@ -1,7 +1,8 @@
 import React from 'react';
 import './IndustryCompanyTable.css';
+import magnifierIcon from '../../assets/magnifier.png';
 
-function IndustryCompanyTable({ companiesData, loadingCompanies, showCompaniesTable }) {
+function IndustryCompanyTable({ companiesData, loadingCompanies, showCompaniesTable, onStockClick }) {
   const formatNumber = (num) => {
     if (num === null || num === undefined) return 'N/A';
     if (typeof num === 'number') {
@@ -13,6 +14,13 @@ function IndustryCompanyTable({ companiesData, loadingCompanies, showCompaniesTa
   const formatPercentage = (num) => {
     if (num === null || num === undefined) return 'N/A';
     return `${num >= 0 ? '+' : ''}${num}%`;
+  };
+
+  // 종목 클릭 핸들러
+  const handleStockClick = (ticker) => {
+    if (onStockClick) {
+      onStockClick(ticker);
+    }
   };
 
   if (!showCompaniesTable) {
@@ -48,7 +56,30 @@ function IndustryCompanyTable({ companiesData, loadingCompanies, showCompaniesTa
             <tbody className="companies-table-body">
               {companiesData.companies.map((company, index) => (
                 <tr key={company.ticker} className={`companies-table-row ${index === companiesData.companies.length - 1 ? 'last-row' : ''}`}>
-                  <td className="companies-table-cell ticker-cell">{company.ticker}</td>
+                  <td className="companies-table-cell ticker-cell" style={{ textAlign: 'center' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', width: '100%' }}>
+                      {company.ticker}
+                      <button 
+                        className="stock-magnifier-btn"
+                        onClick={() => handleStockClick(company.ticker)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '2px',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                        title={`${company.ticker} 종목 상세로 이동`}
+                      >
+                        <img 
+                          src={magnifierIcon} 
+                          alt="상세보기"
+                          style={{ width: '16px', height: '16px' }}
+                        />
+                      </button>
+                    </span>
+                  </td>
                   <td className="companies-table-cell">${company.current_price || 'N/A'}</td>
                   <td className="companies-table-cell">{formatNumber(company.market_cap_millions)}</td>
                   <td className={`companies-table-cell return-cell ${company.return_1week >= 0 ? 'positive' : 'negative'}`}>
