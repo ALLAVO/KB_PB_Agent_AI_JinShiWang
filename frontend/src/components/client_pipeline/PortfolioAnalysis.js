@@ -1,6 +1,7 @@
 import React from 'react';
+import magnifierIcon from '../../assets/magnifier_brown.png';
 
-const PortfolioAnalysis = ({ portfolio, portfolioSummary, periodEndDate }) => {
+const PortfolioAnalysis = ({ portfolio, portfolioSummary, periodEndDate, onStockClick }) => {
   if (!portfolio || !portfolioSummary) {
     return (
       <div className="portfolio-loading">
@@ -9,15 +10,11 @@ const PortfolioAnalysis = ({ portfolio, portfolioSummary, periodEndDate }) => {
     );
   }
 
-  // 산업 agent 버튼 클릭 핸들러
-  const handleSectorButtonClick = (sector) => {
-    if (!periodEndDate) return;
-    goToIndustryAgent(sector, periodEndDate, (result) => {
-      // 예시: 결과 처리 또는 페이지 이동
-      // window.location.href = `/industry-agent?sector=${sector}&endDate=${periodEndDate}`;
-      // 또는 결과를 상위 컴포넌트로 전달
-      console.log('산업 agent 분석 결과:', result);
-    });
+  // 종목 클릭 핸들러
+  const handleStockClick = (stockName) => {
+    if (onStockClick) {
+      onStockClick(stockName);
+    }
   };
 
   return (
@@ -34,13 +31,34 @@ const PortfolioAnalysis = ({ portfolio, portfolioSummary, periodEndDate }) => {
                 <th>1주일 수익률</th>
                 <th>1달 수익률</th>
                 <th>변동성</th>
-                <th>섹터</th>
               </tr>
             </thead>
             <tbody>
               {portfolio.map((item, index) => (
                 <tr key={index}>
-                  <td className="stock-name">{item.stock}</td>
+                  <td className="stock-name" style={{ textAlign: 'center' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', width: '100%' }}>
+                      {item.stock}
+                      <button 
+                        className="stock-magnifier-btn"
+                        onClick={() => handleStockClick(item.stock)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '2px',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <img 
+                          src={magnifierIcon} 
+                          alt="상세보기"
+                          style={{ width: '16px', height: '16px' }}
+                        />
+                      </button>
+                    </span>
+                  </td>
                   <td className="stock-weight">{item.weight}%</td>
                   <td className="stock-quantity">{item.quantity.toLocaleString()}주</td>
                   <td className={`return-value ${item.weekly_return >= 0 ? 'positive' : 'negative'}`}>
@@ -50,9 +68,6 @@ const PortfolioAnalysis = ({ portfolio, portfolioSummary, periodEndDate }) => {
                     {item.monthly_return >= 0 ? '+' : ''}{item.monthly_return}%
                   </td>
                   <td className="stock-volatility">{item.volatility}%</td>
-                  <td className="stock-sector">
-                    <span className="sector-badge">{item.sector}</span>
-                  </td>
                 </tr>
               ))}
             </tbody>
