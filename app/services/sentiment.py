@@ -79,9 +79,9 @@ def get_sentiment_score_for_article(article: str, conn=None) -> float:
         return 0.0
     
     # 가중치 적용 (예시)
-    alpha = 0.7
-    beta = 0.7
-    gamma = 0.5
+    alpha = 1.0
+    beta = 1.0
+    gamma = 1.0
     sentiment_score = (
         positive_count - negative_count
         - alpha * uncertainty_count
