@@ -1,6 +1,6 @@
 import React from 'react';
 
-const PerformanceChart = ({ clientName, performanceData, loading }) => {
+const PerformanceChart = ({ clientName, performanceData, loading, onMarketClick }) => {
   return (
     <div>
       <div>
@@ -12,7 +12,32 @@ const PerformanceChart = ({ clientName, performanceData, loading }) => {
                 <span className="performance-value">{performanceData.period_end}</span>
               </div>
               <div className="performance-info">
-                <span className="performance-label">벤치마크:</span>
+                <span className="performance-label">
+                  벤치마크
+                  {onMarketClick && (
+                    <span 
+                      onClick={onMarketClick}
+                      style={{
+                        marginLeft: '8px',
+                        color: '#6D5A42',
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                        fontSize: '12px',
+                        fontWeight: 'normal'
+                      }}
+                      title="증시 분석으로 이동"
+                      onMouseEnter={(e) => {
+                        e.target.style.color = '#8B7355';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.color = '#6D5A42';
+                      }}
+                    >
+                      (더 알아보기)
+                    </span>
+                  )}
+                  :
+                </span>
                 <span className="performance-value">
                   {performanceData.benchmark}
                   {performanceData.benchmark_symbol && (

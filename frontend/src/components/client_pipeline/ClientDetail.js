@@ -8,7 +8,7 @@ import './ClientDetails.css';
 import titlecloud from '../../assets/titlecloud.png';
 import Markdown from 'react-markdown';
 
-const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbol, onStockClick, onIndustryClick }) => {
+const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbol, onStockClick, onIndustryClick, onMarketClick }) => {
   const [clientData, setClientData] = useState(null);
   const [performanceData, setPerformanceData] = useState(null);
   const [portfolioChartAISummary, setPortfolioChartAISummary] = useState('');
@@ -240,6 +240,7 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
           clientName={client_info.name}
           performanceData={performanceData}
           loading={performanceLoading}
+          onMarketClick={onMarketClick}
         />
       )}
 
