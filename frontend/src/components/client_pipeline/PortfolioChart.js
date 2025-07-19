@@ -1,6 +1,6 @@
 import React from 'react';
 
-const PortfolioChart = ({ chartData }) => {
+const PortfolioChart = ({ chartData, onIndustryClick }) => {
   const createDonutChart = (data, title) => {
     if (!data || data.length === 0) {
       return (
@@ -90,13 +90,48 @@ const PortfolioChart = ({ chartData }) => {
           </svg>
           <div className="chart-legend">
             {data.map((item, index) => (
-              <div key={index} className="legend-item">
+              <div 
+                key={index} 
+                className="legend-item"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '4px 0'
+                }}
+              >
                 <div 
                   className="legend-color" 
                   style={{ backgroundColor: colors[index % colors.length] }}
                 ></div>
                 <span className="legend-label">{item.sector}</span>
                 <span className="legend-value">{item.percentage}%</span>
+                {onIndustryClick && (
+                  <button
+                    onClick={() => onIndustryClick(item.sector)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '2px',
+                      marginLeft: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    title={`${item.sector} 산업 분석으로 이동`}
+                  >
+                    <img 
+                      src={require('../../assets/arrow.png')} 
+                      alt="arrow" 
+                      style={{ 
+                        width: '12px', 
+                        height: '12px',
+                        opacity: 0.7
+                      }} 
+                    />
+                  </button>
+                )}
               </div>
             ))}
           </div>

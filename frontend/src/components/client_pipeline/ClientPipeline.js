@@ -4,7 +4,7 @@ import ClientList from './ClientList';
 import ClientDetail from './ClientDetail';
 import './ClientPipeline.css';
 
-const ClientPipeline = ({ year, month, weekStr, period, onSetReportTitle, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone, onStockClick }) => {
+const ClientPipeline = ({ year, month, weekStr, period, onSetReportTitle, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone, onStockClick, onIndustryClick }) => {
   const [clients, setClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -96,6 +96,7 @@ const ClientPipeline = ({ year, month, weekStr, period, onSetReportTitle, autoCu
           weekStr={weekStr}
           period={period} // period prop 전달
           onStockClick={onStockClick}
+          onIndustryClick={onIndustryClick}
         />
       )}
     </div>

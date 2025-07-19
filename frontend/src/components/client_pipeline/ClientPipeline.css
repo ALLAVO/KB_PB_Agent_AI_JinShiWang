@@ -657,7 +657,7 @@
   color: var(--kb-brown-dark);
   padding: 16px;
   font-weight: bold;
-  font-size: 14px;
+  font-size: 16px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -1081,10 +1081,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  background: var(--kb-yellow-light);
-  border: 1px solid var(--kb-brown-light);
+  padding: 4px 0;
 }
 
 .legend-color {

@@ -380,7 +380,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
                 loading={section1Loading}
                 error={section1Error || companyError}
               />
-              <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', marginBottom: '24px', marginTop : '16px' }}>
                 <div style={{ flex: 1 }}>
                   <div className="pipeline-title">
                     <img src={titlecloud} alt="cloud" /> {currentSymbol ? `재무지표` : '재무지표'}
@@ -391,7 +391,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
                     financialMetrics={financialMetrics}
                   />
                 </div>
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1}}>
                   <div className="pipeline-title">
                     <img src={titlecloud} alt="cloud" /> {currentSymbol ? `벨류에이션 지표` : '벨류에이션 지표'}
                   </div>

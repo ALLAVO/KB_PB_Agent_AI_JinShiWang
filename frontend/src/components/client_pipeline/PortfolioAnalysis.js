@@ -50,6 +50,7 @@ const PortfolioAnalysis = ({ portfolio, portfolioSummary, periodEndDate, onStock
                           display: 'flex',
                           alignItems: 'center'
                         }}
+                        title={`${item.stock} 종목 상세로 이동`}
                       >
                         <img 
                           src={magnifierIcon} 
