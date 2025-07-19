@@ -20,7 +20,7 @@ import { fetchCombinedReturnChart } from '../../api/returnAnalysis';
 import './StockChart.css';
 import './Top3Articles.css';
 
-function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, onIndustryClick }) {
+function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, onIndustryClick, onMarketClick }) {
   const [started, setStarted] = useState(false);
   const [inputSymbol, setInputSymbol] = useState("");
   const [loading, setLoading] = useState(false);
@@ -441,7 +441,31 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle, autoC
                 />
               )}
               <div className="pipeline-title">
-                <img src={titlecloud} alt="cloud" /> {currentSymbol ? `지수 대비 수익률 분석` : '지수 대비 수익률 분석'}
+                <img src={titlecloud} alt="cloud" /> 
+                <span>지수 대비 수익률 분석</span>
+                {onMarketClick && (
+                  <span 
+                    onClick={onMarketClick}
+                    style={{
+                      marginLeft: '12px',
+                      color: '#B8A48A', // 더 연한 색상
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      fontSize: '16px', // 더 큰 글씨
+                      fontWeight: 'normal',
+                      transition: 'color 0.2s ease'
+                    }}
+                    title="증시 분석으로 이동"
+                    onMouseEnter={(e) => {
+                      e.target.style.color = '#D2C2B0'; // hover 시 더 연하게
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.color = '#B8A48A';
+                    }}
+                  >
+                    (더 알아보기)
+                  </span>
+                )}
               </div>
               {currentSymbol && startDate && endDate && (
                 <ReturnAnalysisChart 
