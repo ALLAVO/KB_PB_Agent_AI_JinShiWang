@@ -62,7 +62,7 @@ const ReturnAnalysisChart = ({ chartData, tableData, loading, error, symbol }) =
                 yAxisId="left"
                 orientation="left"
                 tick={{ fontSize: 12 }}
-                label={{ value: 'S&P500 상대 주가(%)', angle: -90, position: 'insideLeft', dx: -10, dy: 95 }}
+                label={{ value: 'S&P500 상대 주가(%)', angle: -90, position: 'insideLeft', dx: -10, dy: 90 }}
                 domain={['auto', 'auto']}
                 stroke="#999"
               />
@@ -71,7 +71,7 @@ const ReturnAnalysisChart = ({ chartData, tableData, loading, error, symbol }) =
                 yAxisId="right"
                 orientation="right"
                 tick={{ fontSize: 12 }}
-                label={{ value: '주가($)', angle: 90, position: 'insideRight', dx: 10, dy: 20 }}
+                label={{ value: '주가($)', angle: 90, position: 'insideRight', dx: 10, dy: 25 }}
                 domain={['auto', 'auto']}
                 stroke="#1e3a5c"
               />
@@ -188,7 +188,7 @@ const ReturnAnalysisChart = ({ chartData, tableData, loading, error, symbol }) =
                 <td style={{
                   padding: '6px 0',
                   textAlign: 'center',
-                  fontWeight: 500,
+                  fontWeight: 400,
                   fontSize: '1.2rem',
                   color: '#363532',
                   letterSpacing: '-1px',
@@ -204,7 +204,7 @@ const ReturnAnalysisChart = ({ chartData, tableData, loading, error, symbol }) =
                     <td key={period} style={{
                       padding: '6px 0',
                       textAlign: 'center',
-                      fontWeight: 500,
+                      fontWeight: 400,
                       fontSize: '1.2rem',
                       color: value !== null && value !== undefined ? color : '#363532',
                       letterSpacing: '-1px',

@@ -1,7 +1,7 @@
 # FastAPI 앱 실행 엔트리포인트
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import customer, company, prediction, report, sentiment, market, summarize, keyword_extractor, stock_chart, return_analysis, industry, clients, portfolio_charts, financial_metrics, valuation
+from app.api import customer, company, prediction, report, sentiment, market, summarize, keyword_extractor, stock_chart, return_analysis, industry, clients, portfolio_charts, financial_metrics, valuation, company_sector
 from app.api.intention import router as intention
 from app.services.cache_manager import load_mcdonald_dictionary
 
@@ -39,6 +39,7 @@ app.include_router(clients.router, prefix="/api/v1", tags=["clients"])  # client
 app.include_router(portfolio_charts.router, prefix="/api/v1", tags=["portfolio-charts"])  # portfolio_charts 라우터 추가
 app.include_router(financial_metrics.router, prefix="/api/v1", tags=["financial-metrics"])  # financial_metrics 라우터 추가
 app.include_router(valuation.router, prefix="/api/v1", tags=["valuation"])  # valuation 라우터 추가
+app.include_router(company_sector.router, prefix="/api/v1", tags=["company-sector"])  # company_sector 라우터 추가
 
 @app.get("/")
 def read_root():
