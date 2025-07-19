@@ -180,8 +180,7 @@ def get_portfolio_chart_ai_summary(client_id: str) -> str:
     """
     고객의 포트폴리오와 추천 포트폴리오를 비교하여 AI 요약을 반환합니다.
     """
-
-    ai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
     data = get_client_portfolio_chart_data(client_id)
     if "error" in data:
@@ -196,10 +195,14 @@ def get_portfolio_chart_ai_summary(client_id: str) -> str:
         client_name, risk_profile, client_portfolio, recommended_portfolio
     )
 
-    # openai_client는 외부에서 주입 (예: FastAPI Dependency)
-    response = ai_client.create_chat_completion(
-        prompt=prompt,
+    # OpenAI ChatCompletion API 올바른 사용법
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}],
         max_tokens=400,
         temperature=0.7,
     )
-    return response["choices"][0]["message"]["content"].strip()
+    summary = response.choices[0].message.content.strip()
+    logger.info(f"AI summary generated for client {client_id}: {summary}")
+
+    return summary
