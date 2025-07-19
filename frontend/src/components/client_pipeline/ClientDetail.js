@@ -286,9 +286,6 @@ const ClientDetail = ({ client, onBack, year, month, weekStr, period, inputSymbo
         <PortfolioChart chartData={portfolioChartData} />
       )}
 
-      {/* 포트폴리오 분석 - 포트폴리오 도넛 차트 섹션 */}
-      <PortfolioChart clientId={client.id} />
-
       {/* AI 포트폴리오 비교 요약 */}
       <div className="ai-summary-text" style={{ marginLeft: '40px', width: '800px', marginTop: '24px' }}>
         {portfolioChartAISummaryLoading
