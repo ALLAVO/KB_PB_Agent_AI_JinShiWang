@@ -159,7 +159,7 @@ const ReturnAnalysisChart = ({ chartData, tableData, loading, error, symbol }) =
                   color: '#363532',
                   letterSpacing: '-1px',
                   borderBottomLeftRadius: '6px',
-                }}><strong>절대수익률</strong></td>
+                }}><strong>절대수익률(%)</strong></td>
                 {['1M', '3M', '6M', '12M'].map((period, idx) => {
                   const row = tableData.table_data.find(r => r.period === period);
                   const value = row?.absolute_return;
@@ -193,7 +193,7 @@ const ReturnAnalysisChart = ({ chartData, tableData, loading, error, symbol }) =
                   color: '#363532',
                   letterSpacing: '-1px',
                   borderBottomLeftRadius: '6px',
-                }}><strong>상대수익률</strong></td>
+                }}><strong>상대수익률(%)</strong></td>
                 {['1M', '3M', '6M', '12M'].map((period, idx) => {
                   const row = tableData.table_data.find(r => r.period === period);
                   const value = row?.relative_return;
