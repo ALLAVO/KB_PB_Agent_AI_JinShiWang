@@ -39,7 +39,7 @@ function IndustryCompanyTable({ companiesData, loadingCompanies, showCompaniesTa
             <thead className="companies-table-header">
               <tr className="companies-table-header-row">
                 <th className="companies-table-header-cell ticker-header" rowSpan="2">티커</th>
-                <th className="companies-table-header-cell" rowSpan="2">현재가($)</th>
+                <th className="companies-table-header-cell" rowSpan="2">금요일 종가($)</th>
                 <th className="companies-table-header-cell" rowSpan="2">시가총액(M$)</th>
                 <th className="companies-table-header-cell" colSpan="3">수익률</th>
                 <th className="companies-table-header-cell roe-header" colSpan="3">Valuation 지표</th>
@@ -80,7 +80,7 @@ function IndustryCompanyTable({ companiesData, loadingCompanies, showCompaniesTa
                       </button>
                     </span>
                   </td>
-                  <td className="companies-table-cell">${company.current_price || 'N/A'}</td>
+                  <td className="companies-table-cell">{company.current_price || 'N/A'}</td>
                   <td className="companies-table-cell">{formatNumber(company.market_cap_millions)}</td>
                   <td className={`companies-table-cell return-cell ${company.return_1week >= 0 ? 'positive' : 'negative'}`}>
                     {formatPercentage(company.return_1week)}
@@ -93,7 +93,7 @@ function IndustryCompanyTable({ companiesData, loadingCompanies, showCompaniesTa
                   </td>
                   <td className="companies-table-cell">{company.pe_ratio || 'N/A'}</td>
                   <td className="companies-table-cell">{company.pb_ratio || 'N/A'}</td>
-                  <td className="companies-table-cell roe-cell">{company.roe ? `${company.roe}%` : 'N/A'}</td>
+                  <td className="companies-table-cell roe-cell">{company.roe ?? 'N/A'}</td>
                 </tr>
               ))}
             </tbody>
