@@ -1,5 +1,5 @@
 # Stage 1: 프론트엔드 빌드
-FROM node:18-alpine as frontend-builder
+FROM node:18-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
@@ -9,7 +9,7 @@ RUN npm ci --only=production
 
 # 프론트엔드 소스 코드 복사 및 빌드
 COPY frontend/ ./
-RUN npm start
+RUN npm run build
 
 # Stage 2: 백엔드 + 빌드된 프론트엔드
 FROM python:3.9-slim
@@ -42,7 +42,7 @@ COPY --from=frontend-builder /app/frontend/build ./static
 ENV PORT=8080
 ENV PYTHONPATH=/app
 
-EXPOSE $PORT
+EXPOSE 8080
 
 # FastAPI 서버 실행 (app 폴더 안의 main.py 실행)
-CMD exec uvicorn app.main:app --host 0.0.0.0 --port $PORT
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
