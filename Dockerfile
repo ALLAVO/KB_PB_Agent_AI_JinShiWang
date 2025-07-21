@@ -43,7 +43,7 @@ COPY --from=frontend-builder /app/frontend/build ./static
 # === tokenizer_cache 미리 다운로드 (bart-large-cnn, paraphrase-mpnet-base-v2) ===
 RUN mkdir -p /app/tokenizer_cache && \
     python -c "from transformers import AutoTokenizer; AutoTokenizer.from_pretrained('facebook/bart-large-cnn', cache_dir='/app/tokenizer_cache')" && \
-    python -c \"from sentence_transformers import SentenceTransformer; SentenceTransformer('paraphrase-mpnet-base-v2', cache_folder='/app/tokenizer_cache')\"
+    python -c 'from sentence_transformers import SentenceTransformer; SentenceTransformer(\"paraphrase-mpnet-base-v2\", cache_folder=\"/app/tokenizer_cache\")'
 
 # Cloud Run 포트 설정
 ENV PORT=8080
