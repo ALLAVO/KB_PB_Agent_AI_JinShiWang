@@ -46,7 +46,6 @@ RUN python /tmp/download_bart.py || echo "BART download failed, continuing..."
 RUN echo "from sentence_transformers import SentenceTransformer; print('Downloading SentenceTransformer...'); SentenceTransformer('paraphrase-mpnet-base-v2'); print('SentenceTransformer downloaded')" > /tmp/download_st.py || true
 RUN python /tmp/download_st.py || echo "SentenceTransformer download failed, continuing..."
 
-# 임시 파일 정리
 RUN rm -f /tmp/download_bart.py /tmp/download_st.py
 
 # 백엔드 코드 복사
@@ -59,7 +58,6 @@ COPY --from=frontend-builder /app/frontend/build ./static
 ENV PYTHONPATH=/app
 ENV PORT=8080
 
-# 포트 노출
 EXPOSE $PORT
 
 # 애플리케이션 유저 생성 (보안 강화)
@@ -68,4 +66,4 @@ RUN chown -R app:app /app
 USER app
 
 # FastAPI 서버 실행
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1", "--log-level", "info"]
+CMD ["sh", "-c", "python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080} --workers 1 --log-level info"]
