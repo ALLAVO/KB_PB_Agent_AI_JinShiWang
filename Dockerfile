@@ -34,12 +34,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app/ ./app/
 
 # tokenizer_cache 폴더를 /app/tokenizer_cache로 복사 (WORKDIR /app 기준)
-COPY tokenizer_cache/ tokenizer_cache/
+# tokenizer_cache 폴더가 없을 때 오류 방지: 아래 COPY 명령을 주석 처리하거나 삭제
+# COPY tokenizer_cache/ tokenizer_cache/
 
 # 빌드된 프론트엔드 정적 파일 복사
 COPY --from=frontend-builder /app/frontend/build ./static
-# 또는 프론트엔드가 dist 폴더에 빌드된다면:
-# COPY --from=frontend-builder /app/frontend/dist ./static
 
 # === tokenizer_cache 미리 다운로드 (bart-large-cnn, paraphrase-mpnet-base-v2) ===
 RUN mkdir -p /app/tokenizer_cache && \
