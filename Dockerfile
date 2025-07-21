@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Python 의존성 설치
+# Python 의존성 설치 
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
