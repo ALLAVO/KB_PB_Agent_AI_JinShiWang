@@ -33,17 +33,18 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 백엔드 코드 복사
 COPY app/ ./app/
 
-# tokenizer_cache 폴더를 /app/tokenizer_cache로 복사 (WORKDIR /app 기준)
-# tokenizer_cache 폴더가 없을 때 오류 방지: 아래 COPY 명령을 주석 처리하거나 삭제
-# COPY tokenizer_cache/ tokenizer_cache/
-
 # 빌드된 프론트엔드 정적 파일 복사
 COPY --from=frontend-builder /app/frontend/build ./static
 
-# === tokenizer_cache 미리 다운로드 (bart-large-cnn, paraphrase-mpnet-base-v2) ===
+# === 캐시 디렉토리 설정 및 모델 미리 다운로드 ===
+# 캐시 디렉토리 환경변수 설정
+ENV HF_HOME=/app/tokenizer_cache
+ENV TRANSFORMERS_CACHE=/app/tokenizer_cache
+
+# 캐시 디렉토리 생성 및 모델 다운로드
 RUN mkdir -p /app/tokenizer_cache && \
-    python -c "from transformers import AutoTokenizer; AutoTokenizer.from_pretrained('facebook/bart-large-cnn', cache_dir='/app/tokenizer_cache')" && \
-    python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('paraphrase-mpnet-base-v2', cache_dir='/app/tokenizer_cache')"
+    python -c "from transformers import AutoTokenizer; AutoTokenizer.from_pretrained('facebook/bart-large-cnn')" && \
+    python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('paraphrase-mpnet-base-v2')"
 
 # Cloud Run 포트 설정
 ENV PORT=8080
