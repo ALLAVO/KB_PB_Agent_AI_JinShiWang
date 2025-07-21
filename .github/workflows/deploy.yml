@@ -26,9 +26,12 @@ jobs:
       - name: Configure Docker for Google Cloud
         run: gcloud auth configure-docker
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Docker build
         run: |
-          docker build -t asia-northeast3-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/jinshiwang-docker-repo/jinshiwang-pb-agent-ai:$GITHUB_SHA .
+          docker buildx build --builder default --load -t asia-northeast3-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/jinshiwang-docker-repo/jinshiwang-pb-agent-ai:$GITHUB_SHA .
 
       - name: Docker push
         run: |
