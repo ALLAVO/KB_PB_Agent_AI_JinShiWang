@@ -191,7 +191,7 @@
 }
 
 .sidebar-period {
-  margin: 12px 0 5px 0;
+  margin: 12px 0 20px 0;
   width: 100%;
   display: flex;
   justify-content: center;
@@ -263,6 +263,7 @@
 
 .main-panel {
   flex: 2.5;
+  overflow-y: auto;
   background: #fff;
   padding: 36px 24px 0 32px;
   min-width: 600px;
@@ -272,7 +273,8 @@
   position: relative;
   margin-left: 250px; /* left sidebar를 위한 margin */
   /* margin-right: 100px;  */
-  overflow-y: auto; /* main-panel만 스크롤 가능 */
+  overflow-y: auto; /* main-panel만 세로 스크롤 가능 */
+  overflow-x: hidden; /* 좌우 스크롤 금지 */
   height: 100vh; /* 전체 높이 */
 }
 
@@ -324,14 +326,16 @@
 .chat-title-row {
   display: flex;
   align-items: center;
-  justify-content: left;
-  padding-top: 35px;
-  padding-left: 30px;
+  justify-content: space-between;
+  padding: 30px 32px 0 0;
 }
 
 .chat-title {
   font-size: 1.25rem;
   color: #302A24;
+  flex: 1;
+  text-align: left;
+  margin-left: 30px;
 }
 
 .chat-send-icon {
@@ -520,7 +524,6 @@
 }
 
 .customer-search-form,
-.industry-search-form,
 .company-search-form {
   margin: 350px 0px 0px 50px;
   display: flex;
@@ -532,9 +535,7 @@
 .company-search-btn,
 .company-symbol-input,
 .customer-search-btn,
-.customer-symbol-input,
-.industry-search-btn,
-.industry-symbol-input {
+.customer-symbol-input {
   width: 250px !important;
   min-width: 250px !important;
   max-width: 250px !important;
@@ -640,67 +641,6 @@
   background: #fffde7;
 }
 
-.industry-search-btn,
-.industry-symbol-input {
-  width: 250px !important;
-  min-width: 250px !important;
-  max-width: 250px !important;
-  box-sizing: border-box;
-}
-.industry-search-btn {
-  height: 54px;
-  margin: 10px 0;
-  padding: 0;
-  font-size: 1.5rem;
-  background: linear-gradient(90deg, #ffe066 0%, #ffd43b 100%);
-  color: #302A24;
-  border: none;
-  border-radius: 16px;
-  font-weight: 500;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.05);
-  cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
-  letter-spacing: 0.02em;
-  display: block;
-  text-align: center;
-  line-height: 54px;
-}
-.industry-search-btn:hover {
-  background: linear-gradient(90deg, #fff3bf 0%, #ffe066 100%);
-  transform: translateY(-2px) scale(1.03);
-}
-.industry-symbol-input {
-  height: 54px;
-  font-size: 1.0rem;
-  padding: 0 10px;
-  border: none;
-  border-radius: 16px;
-  background: #fffbe6;
-  color: #302A24;
-  outline: none;
-  margin-left: 0;
-  transition: border 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 16px rgba(255, 224, 102, 0.1);
-  display: block;
-}
-.industry-symbol-input.center-text {
-  text-align: center;
-}
-.industry-symbol-input:focus {
-  border: 1.5px solid #ffd43b;
-  box-shadow: 0 2px 12px rgba(255, 212, 59, 0.18);
-  background: #fffde7;
-}
-
-.stack-icon-decoration {
-  position: absolute;
-  right: 32px;
-  top: 38px;
-  width: 25px;
-  height: 25px;
-  z-index: 2;
-}
-
 .cloud-decoration {
   position: absolute;
   width: 50%;
@@ -725,471 +665,149 @@
   position: relative;
 }
 
-.error-message {
-  color: red;
-  font-weight: bold;
-  margin-bottom: 8px;
-}
-
-/* Stock Chart Styles */
-.stock-chart-container {
-  background: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  margin-top: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.stock-chart-title h3 {
-  margin: 0 0 20px 0;
-  color: #302a24;
-  font-size: 1.5rem;
-  font-weight: 600;
-}
-
-/* 차트 요약 정보 스타일 */
-.chart-summary {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 20px;
-  border: 1px solid #dee2e6;
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.summary-item {
+/* 채팅 말풍선 스타일 */
+.chat-message-list {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 6px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  flex-direction: column;
+  gap: 18px;
+  margin: 0 0 30px 0;
 }
 
-.summary-label {
-  font-weight: 600;
-  color: #495057;
-  font-size: 0.9rem;
-}
-
-.summary-value {
-  font-weight: 500;
-  color: #212529;
-  font-size: 0.9rem;
-}
-
-.summary-value.positive {
-  color: #28a745;
-}
-
-.summary-value.negative {
-  color: #dc3545;
-}
-
-/* 컨트롤 섹션 스타일 */
-.stock-chart-controls {
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.control-section {
-  margin-bottom: 20px;
-}
-
-.control-section:last-child {
-  margin-bottom: 0;
-}
-
-.control-title {
-  margin: 0 0 10px 0;
-  font-weight: 600;
-  color: #302a24;
-  font-size: 1rem;
+.chat-message {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
+  max-width: 80%;
+  word-break: break-word;
+  font-size: 1.08rem;
+  line-height: 1.6;
+  margin: 20px 30px 0 30px;
 }
 
-.control-title:before {
-  content: '';
-  width: 4px;
-  height: 16px;
-  background: #b08d57;
-  margin-right: 8px;
-  border-radius: 2px;
+.chat-message-user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
 }
 
-.control-buttons {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+.chat-message-bot {
+  align-self: flex-start;
 }
 
-.control-btn {
-  padding: 8px 16px;
-  border: 2px solid #e9ecef;
-  border-radius: 8px;
-  background: #fff;
-  color: #495057;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
+.chat-message-user span {
+  background: #ede8df;
+  color: #4d3c2b;
+  border-radius: 18px 4px 18px 18px;
+  padding: 12px 18px;
+  margin-left: 8px;
+  margin-right: 0;
+  box-shadow: 0 2px 8px #0001;
   position: relative;
-  overflow: hidden;
 }
 
-.control-btn:before {
+.chat-message-bot span {
+  background: #a89c91;
+  color: #fff;
+  border-radius: 4px 18px 18px 18px;
+  padding: 12px 18px;
+  margin-right: 8px;
+  margin-left: 0;
+  box-shadow: 0 2px 8px #0001;
+  position: relative;
+}
+
+/* 말풍선 꼬리 */
+.chat-message-user span::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(176, 141, 87, 0.2), transparent);
-  transition: left 0.5s;
+  right: -10px;
+  top: 18px;
+  width: 0;
+  height: 0;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-left: 10px solid #ede8df;
 }
 
-.control-btn:hover {
-  border-color: #b08d57;
-  background: #f8f6f2;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(176, 141, 87, 0.2);
-}
-
-.control-btn:hover:before {
-  left: 100%;
-}
-
-.control-btn.active {
-  background: linear-gradient(135deg, #b08d57 0%, #9a7a4f 100%);
-  border-color: #b08d57;
-  color: #fff;
-  box-shadow: 0 3px 6px rgba(176, 141, 87, 0.3);
-}
-
-.control-btn.active:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(176, 141, 87, 0.4);
-}
-
-/* 특정 버튼 타입별 스타일 */
-.period-btn.active {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  border-color: #2563eb;
-}
-
-.chart-type-btn.active {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
-  border-color: #059669;
-}
-
-.ma-btn.active {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  border-color: #dc2626;
-}
-
-.stock-chart-wrapper {
-  background: #fafafa;
-  border-radius: 6px;
-  padding: 10px;
-}
-
-.stock-chart-loading,
-.stock-chart-error {
-  height: 400px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #666;
-  font-size: 1rem;
-}
-
-.stock-chart-error {
-  color: #d32f2f;
-}
-
-.no-chart-data {
-  height: 400px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #999;
-  font-size: 1rem;
-}
-
-.stock-chart-tooltip {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 8px;
-  font-size: 0.875rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.stock-chart-tooltip .tooltip-label {
-  font-weight: 600;
-  margin-bottom: 4px;
-  color: #302a24;
-}
-
-.stock-chart-tooltip p {
-  margin: 2px 0;
-}
-
-/* Return Analysis Chart Styles */
-.return-chart-container {
-  background: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  margin-top: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.return-chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.return-chart-header h3 {
-  margin: 0;
-  color: #302a24;
-  font-size: 1.5rem;
-  font-weight: 600;
-}
-
-.view-mode-toggle {
-  display: flex;
-  gap: 8px;
-}
-
-.toggle-btn {
-  padding: 8px 16px;
-  border: 2px solid #e9ecef;
-  border-radius: 8px;
-  background: #fff;
-  color: #495057;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.toggle-btn:hover {
-  border-color: #6f42c1;
-  background: #f8f6ff;
-}
-
-.toggle-btn.active {
-  background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
-  border-color: #6f42c1;
-  color: #fff;
-  box-shadow: 0 3px 6px rgba(111, 66, 193, 0.3);
-}
-
-/* 수익률 분석 컨트롤 스타일 (주가 차트와 동일) */
-.return-chart-controls {
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.return-chart-controls .control-section {
-  margin-bottom: 20px;
-}
-
-.return-chart-controls .control-section:last-child {
-  margin-bottom: 0;
-}
-
-.return-chart-controls .control-title {
-  margin: 0 0 10px 0;
-  font-weight: 600;
-  color: #302a24;
-  font-size: 1rem;
-  display: flex;
-  align-items: center;
-}
-
-.return-chart-controls .control-title:before {
-  content: '';
-  width: 4px;
-  height: 16px;
-  background: #6f42c1;
-  margin-right: 8px;
-  border-radius: 2px;
-}
-
-.return-chart-controls .control-buttons {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.return-chart-controls .control-btn {
-  padding: 8px 16px;
-  border: 2px solid #e9ecef;
-  border-radius: 8px;
-  background: #fff;
-  color: #495057;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.return-chart-controls .control-btn:before {
+.chat-message-bot span::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(111, 66, 193, 0.2), transparent);
-  transition: left 0.5s;
+  left: -10px;
+  top: 18px;
+  width: 0;
+  height: 0;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-right: 10px solid #a89c91;
 }
 
-.return-chart-controls .control-btn:hover {
-  border-color: #6f42c1;
-  background: #f8f6ff;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(111, 66, 193, 0.2);
+.chat-message-user {
+  margin-left: auto;
 }
 
-.return-chart-controls .control-btn:hover:before {
-  left: 100%;
+.chat-message-bot {
+  margin-right: auto;
 }
 
-.return-chart-controls .control-btn.active {
-  background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
-  border-color: #6f42c1;
-  color: #fff;
-  box-shadow: 0 3px 6px rgba(111, 66, 193, 0.3);
+.chat-title-buttons {
+  display: flex;
+  gap: 8px;
 }
 
-.return-chart-controls .control-btn.active:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(111, 66, 193, 0.4);
-}
-
-/* 수익률 요약 정보 스타일 */
-.return-summary {
-  background: linear-gradient(135deg, #f1f3f4 0%, #e8eaed 100%);
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 20px;
-  border: 1px solid #dadce0;
-}
-
-.return-chart-wrapper {
-  background: #fafafa;
-  border-radius: 6px;
-  padding: 10px;
-}
-
-.return-chart-loading,
-.return-chart-error {
-  height: 400px;
+.chat-title-btn {
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+  box-shadow: none;
+  padding: 0;
+}
+
+.chat-title-btn:hover {
+  background: transparent;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.18);
+  border: none;
+}
+
+.chat-title-btn img {
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
+}
+
+/* MarketPipeline 로딩/에러 메시지 중앙 정렬 */
+.market-loading-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  width: 95%;
+  max-width: 900px;
+  margin: 300px 0 auto 0;
+  text-align: center;
+  padding: 40px;
   color: #666;
-  font-size: 1rem;
+  font-size: 1.1rem;
 }
 
-.return-chart-error {
-  color: #d32f2f;
-}
-
-.no-return-data {
-  height: 400px;
+.market-error-message {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #999;
-  font-size: 1rem;
-}
-
-.return-chart-tooltip {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 8px;
-  font-size: 0.875rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.return-chart-tooltip .tooltip-label {
-  font-weight: 600;
-  margin-bottom: 4px;
-  color: #302a24;
-}
-
-.return-chart-tooltip p {
-  margin: 2px 0;
-}
-
-@media (max-width: 768px) {
-  .stock-chart-controls {
-    padding: 0 10px;
-  }
-  
-  .control-buttons {
-    gap: 4px;
-  }
-  
-  .control-btn {
-    padding: 6px 12px;
-    font-size: 0.8rem;
-  }
-  
-  .summary-grid {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-  
-  .summary-item {
-    padding: 6px 10px;
-  }
-  
-  .return-chart-header {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-  }
-  
-  .view-mode-toggle {
-    width: 100%;
-    justify-content: center;
-  }
-  
-  .toggle-btn {
-    flex: 1;
-    text-align: center;
-  }
-  
-  .return-chart-controls .control-buttons {
-    gap: 4px;
-  }
-  
-  .return-chart-controls .control-btn {
-    padding: 6px 12px;
-    font-size: 0.8rem;
-  }
-}
-
-@media (max-width: 1100px) {
-  .main-panel { min-width: 400px; padding: 24px 8px 0 8px; }
-  .chat-panel { padding: 24px 8px 0 8px; }
-  .sidebar { padding: 16px 0 0 0; }
+  min-height: 120px;
+  width: 100%;
+  max-width: 900px;
+  margin: 120px auto 20px auto;
+  text-align: center;
+  padding: 40px;
+  color: #d32f2f;
+  background-color: #ffebee;
+  border-radius: 8px;
+  border: 1px solid #ffcdd2;
+  font-size: 1.1rem;
+  box-sizing: border-box;
 }

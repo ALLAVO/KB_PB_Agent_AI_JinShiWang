@@ -1,4 +1,5 @@
 # 환경설정 및 환경변수 관리
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -12,9 +13,15 @@ class Settings(BaseSettings):
     DB_PASSWORD: str
 
     # API KEY 설정
-    ALPHAVANTAGE_API_KEY: str
     FRED_API_KEY: str
-    OPENAI_API_KEY: str
+    OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY")
+    FMP_API_KEY: str = Field(..., env="FMP_API_KEY")
+
+    # Cache Settings
+    cache_dir: str = "/app/cache"
+    mcdonald_cache_enabled: bool = True
+    cache_expiry_hours: int = 168
+    alphavantage_api_key: str = ""
 
     @property
     def DATABASE_URL(self) -> str:

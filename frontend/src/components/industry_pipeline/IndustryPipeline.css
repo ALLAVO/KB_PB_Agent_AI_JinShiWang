@@ -1,0 +1,314 @@
+.industry-search-form {
+  margin: 150px 0px 0px 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0px;
+}
+
+.sector-selection-container {
+  margin-bottom: 24px;
+  padding: 24px;
+  background: linear-gradient(135deg, #fffbe6 0%, #fff9db 100%);
+  border-radius: 16px;
+  /* border: 2px solid #ffe066; */
+  box-shadow: 0 4px 12px rgba(255, 224, 102, 0.10);
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes gradientShift {
+  0%, 100% { transform: translateX(-100%); }
+  50% { transform: translateX(100%); }
+}
+
+.sector-selection-title {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #b48a3c;
+  text-align: center;
+  position: relative;
+  padding-bottom: 12px;
+}
+
+.sector-selection-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, #ffe066, #ffd43b);
+  border-radius: 2px;
+}
+
+.sector-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  justify-items: center;
+}
+
+.sector-button {
+  position: relative;
+  padding: 14px 20px;
+  background: linear-gradient(145deg, #ffffff, #f8f9fa);
+  color: #302A24;
+  border: 2px solid #e9cfa5;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.sector-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transition: left 0.5s;
+}
+
+.sector-button:hover {
+  transform: translateY(-2px) scale(1.02);
+  background: linear-gradient(145deg, #fffbe6, #fff9db);
+  border-color: #ffd43b;
+  box-shadow: 0 8px 25px rgba(255, 212, 59, 0.15);
+  color: #302A24;
+}
+
+.sector-button:hover::before {
+  left: 100%;
+}
+
+.sector-button.selected {
+  background: linear-gradient(145deg, #ffe066, #ffd43b);
+  color: #302A24;
+  border-color: #ffd43b;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(255, 212, 59, 0.25);
+  animation: selectedPulse 2s ease-in-out infinite;
+}
+
+@keyframes selectedPulse {
+  0%, 100% { box-shadow: 0 6px 20px rgba(255, 212, 59, 0.25); }
+  50% { box-shadow: 0 8px 30px rgba(255, 212, 59, 0.35); }
+}
+
+.sector-button.selected:hover {
+  background: linear-gradient(145deg, #ffd43b, #ffe066);
+  transform: translateY(-2px) scale(1.02);
+}
+
+.sector-button:active {
+  transform: translateY(0) scale(0.98);
+  transition: all 0.1s;
+}
+
+.industry-symbol-input {
+  width: 250px !important;
+  min-width: 250px !important;
+  max-width: 250px !important;
+  box-sizing: border-box;
+  height: 54px;
+  font-size: 1.0rem;
+  padding: 0 10px;
+  border: none;
+  border-radius: 16px;
+  background: #fffbe6;
+  color: #302A24;
+  outline: none;
+  margin-left: 0;
+  transition: border 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px rgba(255, 224, 102, 0.1);
+  display: block;
+}
+
+.industry-symbol-input.center-text {
+  text-align: center;
+}
+
+.industry-symbol-input:focus {
+  border: 1.5px solid #ffd43b;
+  box-shadow: 0 2px 12px rgba(255, 212, 59, 0.18);
+  background: #fffde7;
+}
+
+.center-text {
+  text-align: center;
+}
+
+.industry-search-btn {
+  width: 250px !important;
+  min-width: 250px !important;
+  max-width: 250px !important;
+  box-sizing: border-box;
+  height: 54px;
+  margin: 10px 0;
+  padding: 0;
+  font-size: 1.5rem;
+  background: linear-gradient(90deg, #ffe066 0%, #ffd43b 100%);
+  color: #302A24;
+  border: none;
+  border-radius: 16px;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  letter-spacing: 0.02em;
+  display: block;
+  text-align: center;
+  line-height: 54px;
+}
+
+.industry-search-btn:hover {
+  background: linear-gradient(90deg, #fff3bf 0%, #ffe066 100%);
+  transform: translateY(-2px) scale(1.03);
+}
+
+/* Pipeline related styles from App.css */
+.pipeline-title {
+  display: flex;
+  padding: 20px 0px 0px 0px;
+  color: #302A24;
+  align-items: center;
+  gap: 12px;
+  font-size: 2rem;
+  font-family: 'JejuHallasan', 'Jeju Hallasan', cursive, sans-serif !important;
+  font-weight: normal;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.pipeline-title img {
+  height: 38px;
+  width: auto;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.pipeline-graph {
+  height: 300px;
+  margin-bottom: 24px;
+  background: #fff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.error-message {
+  background: linear-gradient(145deg, #f8d7da, #f5c6cb);
+  color: #721c24;
+  padding: 14px 18px;
+  border: 2px solid #f5c6cb;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.1);
+  animation: errorShake 0.5s ease-in-out;
+}
+
+@keyframes errorShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .sector-buttons-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .sector-button {
+    padding: 12px 16px;
+    font-size: 13px;
+    min-height: 48px;
+  }
+  
+  .industry-search-form {
+    padding: 16px;
+    max-width: 100%;
+  }
+  
+  .sector-selection-container {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sector-buttons-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .sector-button {
+    font-size: 12px;
+    padding: 10px 12px;
+  }
+}
+
+.industry-top3-section {
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+.industry-top3-title {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 16px;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.industry-top3-loading {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.industry-top3-error {
+  text-align: center;
+  padding: 40px;
+  color: #d32f2f;
+}
+
+.industry-top3-nodata {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+/* 산업 데이터 로딩 메시지 스타일 */
+.industry-loading-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  width: 95%;
+  max-width: 900px;
+  margin: 300px 0 auto 0;
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-size: 1.1rem;
+}
+

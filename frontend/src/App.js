@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
+import "./components/industry_pipeline/IndustryPipeline.css";
 import kblogo from "./kblogo";
 import { getWeeksOfMonth } from "./weekUtils";
 import sendIcon from "./assets/send.png";
@@ -7,22 +8,20 @@ import cloud1 from "./assets/cloud1.png";
 import cloud2 from "./assets/cloud2.png";
 import cloud3 from "./assets/cloud3.png";
 import titlecloud from "./assets/titlecloud.png";
-import {fetchTop3Articles } from "./api/sentiment";
-import {fetchWeeklySummaries } from "./api/summarize";
-import {fetchWeeklyKeywords } from "./api/keyword";
-import {fetchPredictionSummary } from "./api/prediction";
-import StockChart from "./components/StockChart";
-import IntroScreen from "./components/IntroScreen";
-
-function StackIconDecoration() {
-  return (
-    <img
-      src={require('./assets/stack.png')}
-      alt="stack"
-      className="stack-icon-decoration"
-    />
-  );
-}
+import {fetchIndustryTop3Articles } from "./api/industry";
+import {fetchIndices6MonthsChart, fetchTreasuryYields6MonthsChart, fetchFx6MonthsChart, fetchIndices1YearChart, fetchTreasuryYields1YearChart, fetchFx1YearChart} from "./api/market";
+import {fetchIntention} from "./api/intention";
+import StockChart from "./components/company_pipeline/StockChart";
+import MarketIndicesChart from "./components/market_pipeline/MarketIndicesChart";
+import CombinedFinancialChart from "./components/market_pipeline/FICCchart";
+import IntroScreen from "./components/etc/IntroScreen";
+import IntentionForm from "./components/etc/IntentionForm";
+import MarketIndices1YearTable from "./components/market_pipeline/MarketIndices1YearTable";
+import FiccTable1Year from "./components/market_pipeline/FiccTable1Year";
+import CompanyPipeline from "./components/company_pipeline/CompanyPipeline";
+import ClientPipeline from "./components/client_pipeline/ClientPipeline";
+import IndustryPipeline from "./components/industry_pipeline/IndustryPipeline";
+import HotArticles from "./components/market_pipeline/HotArticles";
 
 function CloudDecorations() {
   return (
@@ -99,8 +98,10 @@ function Sidebar({ userName, menu, subMenu, onMenuClick, onSubMenuClick, selecte
   );
 }
 
-function ChatPanel() {
+function ChatPanel({ onPersonalIntent, onEnterpriseIntent, onIndustryIntent, onMarketIntent }) {
   const [input, setInput] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
   // textarea 높이 자동 조절
   const textareaRef = React.useRef(null);
   React.useEffect(() => {
@@ -109,15 +110,85 @@ function ChatPanel() {
       textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
     }
   }, [input]);
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+    const userMsg = { role: "user", content: input };
+    setMessages(msgs => [...msgs, userMsg]);
+    setLoading(true);
+    try {
+      const result = await fetchIntention(input);
+      let botMsg = "";
+      if (result && result.intent) {
+        if (result.intent === "market") {
+          botMsg = "진시황이 증시정보에 대해 조사 중입니다...";
+          if (onMarketIntent) onMarketIntent();
+        } else if (result.intent === "industry") {
+          botMsg = `진시황이 ${result.industry_keyword || ''} 산업에 대해 조사 중입니다...`;
+          if (result.category && onIndustryIntent) {
+            onIndustryIntent(result.category);
+          }
+        } else if (result.intent === "enterprise") {
+          botMsg = `진시황이 ${result.company_name || ''}에 대해서 조사 중입니다...`;
+          if (result.symbol && onEnterpriseIntent) {
+            onEnterpriseIntent(result.symbol);
+          }
+        } else if (result.intent === "personal") {
+          botMsg = `진시황이 ${result.customer_name || ''} 고객님에 대해 조사 중입니다...`;
+          if (result.customer_name && onPersonalIntent) {
+            onPersonalIntent(result.customer_name);
+          }
+        } else if (result.intent === "fallback" && result.answer) {
+          botMsg = result.answer;
+        } else {
+          botMsg = JSON.stringify(result, null, 2);
+        }
+      } else {
+        botMsg = JSON.stringify(result, null, 2);
+      }
+      setMessages(msgs => [...msgs, { role: "bot", content: botMsg }]);
+    } catch (e) {
+      setMessages(msgs => [...msgs, { role: "bot", content: "오류가 발생했습니다." }]);
+    } finally {
+      setLoading(false);
+      setInput("");
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   return (
     <div className="chat-panel chat-panel-relative">
-      <StackIconDecoration />
       <div className="chat-title-row">
         <div className="chat-title">진시황과의 상담</div>
+        <div className="chat-title-buttons">
+          <button className="chat-title-btn">
+            <img src={require("./assets/plus.png")} alt="plus" style={{ width: 24, height: 24 }} />
+          </button>
+          <button className="chat-title-btn">
+            <img src={require("./assets/stack.png")} alt="stack" style={{ width: 24, height: 24 }} />
+          </button>
+        </div>
       </div>
       <div className="chat-messages">
         <CloudDecorations />
         {/* 채팅 메시지 영역 */}
+        <div className="chat-message-list">
+          {messages.map((msg, idx) => (
+            <div key={idx} className={`chat-message chat-message-${msg.role}`}>
+              {/* {msg.role === "user" ? "🙋‍♂️ " : "🤖 "} */}
+              <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>
+            </div>
+          ))}
+          {loading && (
+            <div className="chat-message chat-message-bot"> <span>답변 생성 중...</span></div>
+          )}
+        </div>
       </div>
       <div className="chat-input-row">
         <div className="chat-input-bg">
@@ -127,10 +198,12 @@ function ChatPanel() {
             placeholder="진시황에게 질문하세요..."
             value={input}
             onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
             rows={1}
+            disabled={loading}
           />
         </div>
-        <button className="chat-send-btn" disabled>
+        <button className="chat-send-btn" onClick={handleSend} disabled={!input.trim() || loading}>
           <img src={sendIcon} alt="send" className="chat-send-icon" />
         </button>
       </div>
@@ -138,7 +211,7 @@ function ChatPanel() {
   );
 }
 
-function CustomerPipeline({ year, month, weekStr, onSetReportTitle }) {
+function CustomerPipeline({ year, month, weekStr, onSetReportTitle, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone }) {
   const [started, setStarted] = useState(false);
   const [inputSymbol, setInputSymbol] = useState("");
   const [error, setError] = useState("");
@@ -149,15 +222,30 @@ function CustomerPipeline({ year, month, weekStr, onSetReportTitle }) {
   ];
   const textSummary = `${year}년 ${month}월 ${weekStr} 고객 데이터 분석 요약입니다.`;
 
-  const handleSearch = () => {
-    if (!inputSymbol.trim()) {
+  // 자동 입력 및 자동 검색 트리거
+  useEffect(() => {
+    if (autoCustomerTrigger && autoCustomerName) {
+      setInputSymbol(autoCustomerName);
+      setTimeout(() => {
+        handleSearch(autoCustomerName, true);
+      }, 200); // 약간의 딜레이로 렌더링 보장
+    }
+    // eslint-disable-next-line
+  }, [autoCustomerTrigger, autoCustomerName]);
+
+  const handleSearch = (overrideName, isAuto) => {
+    const nameToUse = overrideName !== undefined ? overrideName : inputSymbol;
+    if (!nameToUse.trim()) {
       setError('고객님 성함을 입력해주세요');
       return;
     }
     setError("");
     setStarted(true);
     if (onSetReportTitle) {
-      onSetReportTitle(`${inputSymbol.trim()}님 리포트`);
+      onSetReportTitle(`${nameToUse.trim()}님 리포트`);
+    }
+    if (isAuto && onAutoCustomerDone) {
+      onAutoCustomerDone();
     }
   };
 
@@ -186,7 +274,7 @@ function CustomerPipeline({ year, month, weekStr, onSetReportTitle }) {
               placeholder="고객님 성함을 입력해주세요..."
             />
           </label>
-          <button className="customer-search-btn" onClick={handleSearch}>리포트 출력</button>
+          <button className="customer-search-btn" onClick={() => handleSearch()}>리포트 출력</button>
         </div>
       )}
       {started && (
@@ -212,598 +300,150 @@ function CustomerPipeline({ year, month, weekStr, onSetReportTitle }) {
   );
 }
 
-function MarketPipeline({ year, month, weekStr }) {
+function MarketPipeline({ year, month, weekStr, period, autoStart }) {
   const [started, setStarted] = useState(false);
-  const chartData = '시장 차트 예시';
-  const tableData = [
-    { 지수: 'KOSPI', 값: 2650, 변동: '+1.2%' },
-    { 지수: 'KOSDAQ', 값: 900, 변동: '-0.5%' }
-  ];
-  const textSummary = `${year}년 ${month}월 ${weekStr} 시장 데이터 분석 요약입니다.`;
+  const [loading, setLoading] = useState(false);
+  const [indicesData, setIndicesData] = useState(null);
+  const [treasuryData, setTreasuryData] = useState(null);
+  const [fxData, setFxData] = useState(null);
+  const [indices1YearData, setIndices1YearData] = useState(null);
+  const [treasuryData1Year, setTreasuryData1Year] = useState(null);
+  const [fxData1Year, setFxData1Year] = useState(null);
+  const [error, setError] = useState("");
 
+  useEffect(() => {
+    if (autoStart) {
+      handleStartReport();
+    }
+  }, [autoStart, year, month, period]);
+
+  // 연/월/주차가 변경될 때 기존 데이터 초기화
+  useEffect(() => {
+    if (started && !autoStart) {
+      // 자동 시작이 아닌 경우에만 데이터 초기화
+      setIndicesData(null);
+      setTreasuryData(null);
+      setFxData(null);
+      setIndices1YearData(null);
+      setTreasuryData1Year(null);
+      setFxData1Year(null);
+      setError("");
+    }
+  }, [year, month, period]);
+
+  const handleStartReport = async () => {
+    setStarted(true);
+    setLoading(true);
+    setError("");
+    setIndicesData(null);
+    setTreasuryData(null);
+    setFxData(null);
+    setIndices1YearData(null);
+    setTreasuryData1Year(null);
+    setFxData1Year(null);
+
+    // period에서 종료일 추출하여 endDate로 사용
+    const dateMatch = period.match(/(\d{2})\.(\d{2}) - (\d{2})\.(\d{2})/);
+    let endDate;
+    if (dateMatch) {
+      // 주차의 종료일을 endDate로 사용
+      endDate = `${year}-${dateMatch[3]}-${dateMatch[4]}`;
+    } else {
+      // period 파싱에 실패하면 현재 날짜 사용
+      endDate = new Date().toISOString().split('T')[0];
+    }
+
+    try {
+      // 6개 API를 병렬로 호출 (1년치 FICC 데이터 추가)
+      const [indices, treasury, fx, indices1Year, treasury1Year, fx1Year] = await Promise.all([
+        fetchIndices6MonthsChart(endDate),
+        fetchTreasuryYields6MonthsChart(endDate),
+        fetchFx6MonthsChart(endDate),
+        fetchIndices1YearChart(endDate),
+        fetchTreasuryYields1YearChart(endDate),
+        fetchFx1YearChart(endDate)
+      ]);
+
+      setIndicesData(indices);
+      setTreasuryData(treasury);
+      setFxData(fx);
+      setIndices1YearData(indices1Year);
+      setTreasuryData1Year(treasury1Year);
+      setFxData1Year(fx1Year);
+      
+      console.log('Market data loaded:', { indices, treasury, fx, indices1Year, treasury1Year, fx1Year });
+    } catch (e) {
+      console.error('Market API 호출 오류:', e);
+      setError('시장 데이터를 불러오지 못했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const chartData = '시장 차트 예시';
+  
   return (
     <div>
       {!started && (
         <button
           className="report-start-btn"
-          onClick={() => setStarted(true)}
+          onClick={handleStartReport}
         >
           리포트 출력
         </button>
       )}
       {started && (
         <>
-          <div className="pipeline-title">
-            <img src={titlecloud} alt="cloud" />증시 지표
-          </div>
-          <div className="pipeline-graph">{chartData}</div>
-          <table className="pipeline-table">
-            <thead>
-              <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
-            </thead>
-            <tbody>
-              {tableData.map((row, idx) => (
-                <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="pipeline-text">{textSummary}</div>
-        </>
-      )}
-    </div>
-  );
-}
+          {/* 로딩 또는 에러 표시 */}
+          {loading && (
+            <div className="market-loading-message">
+              시장 데이터를 불러오는 중...
+            </div>
+          )}
 
-function IndustryPipeline({ year, month, weekStr, onSetReportTitle }) {
-  const [started, setStarted] = useState(false);
-  const [inputSymbol, setInputSymbol] = useState("");
-  const [error, setError] = useState("");
-  const chartData = '산업 차트 예시';
-  const tableData = [
-    { 산업: 'IT', 성장률: '5.2%' },
-    { 산업: '바이오', 성장률: '3.1%' }
-  ];
-  const textSummary = `${year}년 ${month}월 ${weekStr} 산업 데이터 분석 요약입니다.`;
-
-  const handleSearch = () => {
-    if (!inputSymbol.trim()) {
-      setError('산업군 이름을 입력해주세요');
-      return;
-    }
-    setError("");
-    setStarted(true);
-    if (onSetReportTitle) {
-      onSetReportTitle(`${inputSymbol.trim()} 산업 리포트`);
-    }
-  };
-
-  useEffect(() => {
-    if (!started && onSetReportTitle) {
-      onSetReportTitle('산업 리포트');
-    }
-    // eslint-disable-next-line
-  }, [started]);
-
-  return (
-    <div>
-      {!started && (
-        <div className="industry-search-form">
           {error && (
-            <div className="error-message">
+            <div className="market-error-message">
               {error}
             </div>
           )}
-          <label style={{marginBottom: 0}}>
-            <input
-              type="text"
-              value={inputSymbol}
-              onChange={e => { setInputSymbol(e.target.value); if (error) setError(""); }}
-              className="industry-symbol-input center-text"
-              placeholder="산업군 이름을 입력해주세요..."
-            />
-          </label>
-          <button className="industry-search-btn" onClick={handleSearch}>리포트 출력</button>
-        </div>
-      )}
-      {started && (
-        <>
-          <div className="pipeline-title">
-            <img src={titlecloud} alt="cloud" />산업 Pipeline
-          </div>
-          <div className="pipeline-graph">
-            <PipelineGraphSample />
-          </div>
-          <table className="pipeline-table">
-            <thead>
-              <tr>{Object.keys(tableData[0]).map((key) => <th key={key}>{key}</th>)}</tr>
-            </thead>
-            <tbody>
-              {tableData.map((row, idx) => (
-                <tr key={idx}>{Object.values(row).map((val, i) => <td key={i}>{val}</td>)}</tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="pipeline-text">{textSummary}</div>
-        </>
-      )}
-    </div>
-  );
-}
 
-function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
-  const [started, setStarted] = useState(false);
-  const [inputSymbol, setInputSymbol] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [top3Articles, setTop3Articles] = useState(null);
-  const [summaries, setSummaries] = useState(null);
-  const [keywords, setKeywords] = useState(null);
-  const [prediction, setPrediction] = useState(null);
-  const [selectedArticle, setSelectedArticle] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-
-  const textSummary = `${year}년 ${month}월 ${weekStr} 기업 데이터 분석 요약입니다.`;
-
-  // period에서 주차 시작일, 종료일 추출 (예: "12.10 - 12.16 (1주차)")
-  const dateMatch = period.match(/(\d{2})\.(\d{2}) - (\d{2})\.(\d{2})/);
-  let startDate = null;
-  let endDate = null;
-  if (dateMatch) {
-    const y = year;
-    startDate = `${y}-${dateMatch[1]}-${dateMatch[2]}`;
-    endDate = `${y}-${dateMatch[3]}-${dateMatch[4]}`;
-  }
-
-  // 다음 주차 정보 계산
-  const getNextWeekInfo = () => {
-    const weekMatch = period.match(/\((\d+)주차\)/);
-    if (weekMatch) {
-      const currentWeek = parseInt(weekMatch[1]);
-      const nextWeek = currentWeek + 1;
-      return `${month}월 ${nextWeek}주차`;
-    }
-    return "다음 주차";
-  };
-
-  const handleArticleClick = (article) => {
-    setSelectedArticle(article);
-    setShowModal(true);
-  };
-
-  const closeModal = () => {
-    setShowModal(false);
-    setSelectedArticle(null);
-  };
-
-  // 특정 기사의 요약을 찾는 함수
-  const findSummaryForArticle = (article) => {
-    if (!summaries) return null;
-    
-    try {
-      // summaries는 주차별로 구성되어 있음: { "2023-12-10": [summary1, summary2, summary3], ... }
-      for (const weekData of Object.values(summaries)) {
-        if (!Array.isArray(weekData)) continue;
-        
-        const summary = weekData.find(s => {
-          if (!s) return false;
-          // 날짜와 기사 제목으로 매칭 (더 안전함)
-          const dateMatch = s.date === article.date;
-          const titleMatch = s.article_title === article.article_title;
-          return dateMatch && titleMatch;
-        });
-        
-        if (summary && summary.summary) {
-          return summary.summary;
-        }
-      }
-    } catch (error) {
-      console.error('요약 찾기 오류:', error);
-    }
-    
-    return null;
-  };
-
-  // 특정 기사의 키워드를 찾는 함수
-  const findKeywordsForArticle = (article) => {
-    if (!keywords) return null;
-    
-    try {
-      // keywords는 주차별로 구성되어 있음: { "2023-12-10": [keyword1, keyword2, keyword3], ... }
-      for (const weekData of Object.values(keywords)) {
-        if (!Array.isArray(weekData)) continue;
-        
-        const keywordData = weekData.find(k => {
-          if (!k) return false;
-          // 날짜와 기사 제목으로 매칭
-          const dateMatch = k.date === article.date;
-          const titleMatch = k.article_title === article.article_title;
-          return dateMatch && titleMatch;
-        });
-        
-        if (keywordData && keywordData.keywords) {
-          return keywordData.keywords;
-        }
-      }
-    } catch (error) {
-      console.error('키워드 찾기 오류:', error);
-    }
-    
-    return null;
-  };
-
-  const handleSearch = async () => {
-    setStarted(true); // 버튼 클릭 시 바로 started 상태로 전환
-    console.log('handleSearch 클릭됨');
-    if (!inputSymbol) {
-      setError('종목코드를 입력해주세요');
-      return;
-    }
-    setLoading(true);
-    setError("");
-    setTop3Articles(null);
-    setSummaries(null);
-    setKeywords(null);
-    setPrediction(null);
-    // 실제 API 호출 파라미터 확인
-    console.log('API 호출', { symbol: inputSymbol, startDate, endDate });
-    try {
-      // 네 API를 병렬로 호출
-      const [articlesData, summariesData, keywordsData, predictionData] = await Promise.all([
-        fetchTop3Articles({ symbol: inputSymbol, startDate, endDate }),
-        fetchWeeklySummaries({ symbol: inputSymbol, startDate, endDate }),
-        fetchWeeklyKeywords({ symbol: inputSymbol, startDate, endDate }),
-        fetchPredictionSummary({ symbol: inputSymbol, startDate, endDate })
-      ]);
-      
-      setTop3Articles(articlesData);
-      setSummaries(summariesData);
-      setKeywords(keywordsData);
-      setPrediction(predictionData);
-      console.log('기사 데이터:', articlesData);
-      console.log('요약 데이터:', summariesData);
-      console.log('키워드 데이터:', keywordsData);
-      console.log('예측 데이터:', predictionData);
-    } catch (e) {
-      console.error('API 호출 오류:', e);
-      setError('데이터를 불러오지 못했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!started && onSetReportTitle) {
-      onSetReportTitle('기업 리포트');
-    }
-    // eslint-disable-next-line
-  }, [started]);
-
-  return (
-    <div>
-      {!started && (
-        <div className="company-search-form">
-          {error && (
-            <div className="error-message">
-              {error}
-            </div>
-          )}
-          <label style={{marginBottom: 0}}>
-            <input
-              type="text"
-              value={inputSymbol}
-              onChange={e => setInputSymbol(e.target.value)}
-              className="company-symbol-input center-text"
-              placeholder="종목코드를 입력해주세요."
-            />
-          </label>
-          <button className="company-search-btn" onClick={handleSearch}>리포트 출력</button>
-        </div>
-      )}
-      {started && (
-        <>
-          <div className="pipeline-title">
-            <img src={titlecloud} alt="cloud" />기업 Pipeline
-          </div>
-          
-          {/* 주가 차트 컴포넌트 추가 */}
-          {inputSymbol && startDate && endDate && (
-            <StockChart 
-              symbol={inputSymbol}
-              startDate={startDate}
-              endDate={endDate}
-            />
-          )}
-
-          <div className="pipeline-text">{textSummary}</div>
-          
-          {/* 주가 전망 카드 */}
-          {started && (
-            <div style={{
-              marginTop: '24px',
-              marginBottom: '16px',
-              padding: '20px',
-              backgroundColor: '#f8f9fa',
-              borderRadius: '12px',
-              border: '2px solid #e3f2fd',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                marginBottom: '12px',
-                gap: '8px'
-              }}>
-                <img 
-                  src={require('./assets/smile_king.png')} 
-                  alt="smile_king" 
-                  style={{
-                    width: '24px',
-                    height: '24px'
-                  }}
-                />
-                <h3 style={{
-                  margin: 0,
-                  fontSize: '18px',
-                  fontWeight: 'bold',
-                  color: '#1976d2'
-                }}>
-                  {inputSymbol || '종목'} {getNextWeekInfo()} 주가 전망 한줄평
-                </h3>
+          {/* 차트들 */}
+          {!loading && !error && (
+            <>
+              <div className="pipeline-title">
+                <img src={titlecloud} alt="cloud" /> 미국 증시 동향
               </div>
-              
-              <div style={{
-                fontSize: '15px',
-                lineHeight: '1.6',
-                color: '#333',
-                backgroundColor: 'white',
-                padding: '16px',
-                borderRadius: '8px',
-                border: '1px solid #e0e0e0',
-                minHeight: '60px',
-                display: 'flex',
-                alignItems: 'center'
-              }}>
-                {loading ? (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    color: '#666',
-                    fontStyle: 'italic'
-                  }}>
-                    <span>🔄</span>
-                    AI가 주가 전망을 분석하고 있습니다...
-                  </div>
-                ) : error && error !== '종목코드를 입력해주세요' ? (
-                  <div style={{
-                    color: '#d32f2f',
-                    fontStyle: 'italic'
-                  }}>
-                    주가 전망 데이터를 불러오지 못했습니다.
-                  </div>
-                ) : prediction && prediction.summary ? (
-                  prediction.summary
-                ) : (
-                  <div style={{
-                    color: '#666',
-                    fontStyle: 'italic'
-                  }}>
-                    주가 전망 데이터가 없습니다.
-                  </div>
-                )}
+              <MarketIndicesChart 
+                data={indicesData} 
+                loading={loading} 
+                error={indicesData?.error} 
+              />
+              <MarketIndices1YearTable indices1YearData={indices1YearData} loading={loading} error={error} />
+              {/* 핫한 기사 섹션을 CombinedFinancialChart 위로 이동 */}
+              <HotArticles 
+                year={year}
+                month={month}
+                weekStr={weekStr}
+                period={period}
+                autoStart={true}
+              />
+              <div className="pipeline-title">
+                <img src={titlecloud} alt="cloud" /> FICC
               </div>
-            </div>
-          )}
-          
-          {/* top3 기사 표시 */}
-          <div className="top3-articles">
-            <b>Top3 기사:</b>
-            {loading ? '로딩 중...'
-              : error && error !== '종목코드를 입력해주세요'
-                ? error
-              : top3Articles && top3Articles.top3_articles && top3Articles.top3_articles.length > 0 ? (
-                <ol style={{marginTop: '8px'}}>
-                  {top3Articles.top3_articles.map((art, idx) => (
-                    <li key={idx} style={{marginBottom: '12px'}}>
-                      <div style={{fontWeight:'bold', fontSize:'16px'}}>
-                        {art.article_title}
-                        <span style={{marginLeft:'10px', color:'#0077cc', fontWeight:'normal', fontSize:'15px'}}>
-                          {art.score > 0 ? '+' : ''}{art.score}
-                        </span>
-                      </div>
-                      {/* 기사 작성 날짜 - 작은 회색 글씨로 표시 */}
-                      <div style={{fontSize:'12px', color:'#888', marginBottom:'2px'}}>{art.date}</div>
-                      
-                      {/* 기사 키워드 - 해시태그 형태로 표시 */}
-                      {(() => {
-                        const articleKeywords = findKeywordsForArticle(art);
-                        return articleKeywords && articleKeywords.length > 0 ? (
-                          <div style={{
-                            margin: '6px 0',
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: '4px'
-                          }}>
-                            {articleKeywords.slice(0, 5).map((keyword, idx) => (
-                              <span
-                                key={idx}
-                                style={{
-                                  backgroundColor: '#e3f2fd',
-                                  color: '#1976d2',
-                                  fontSize: '11px',
-                                  padding: '2px 6px',
-                                  borderRadius: '12px',
-                                  border: '1px solid #bbdefb',
-                                  display: 'inline-block',
-                                  fontWeight: '500'
-                                }}
-                              >
-                                #{keyword}
-                              </span>
-                            ))}
-                          </div>
-                        ) : loading ? (
-                          <div style={{
-                            fontSize: '11px',
-                            color: '#9e9e9e',
-                            fontStyle: 'italic',
-                            margin: '6px 0'
-                          }}>
-                            키워드 생성 중...
-                          </div>
-                        ) : null;
-                      })()}
-                      
-                      {/* 기사 요약 내용 */}
-                      {(() => {
-                        const summary = findSummaryForArticle(art);
-                        return summary ? (
-                          <div style={{
-                            fontSize: '13px',
-                            color: '#555',
-                            backgroundColor: '#f8f9fa',
-                            padding: '8px 12px',
-                            borderRadius: '6px',
-                            border: '1px solid #e9ecef',
-                            margin: '6px 0',
-                            lineHeight: '1.4'
-                          }}>
-                            <div style={{fontWeight: 'bold', fontSize: '12px', color: '#6c757d', marginBottom: '4px'}}>
-                              📄 기사 요약
-                            </div>
-                            {summary}
-                          </div>
-                        ) : loading ? (
-                          <div style={{
-                            fontSize: '12px',
-                            color: '#6c757d',
-                            fontStyle: 'italic',
-                            margin: '6px 0'
-                          }}>
-                            요약 생성 중...
-                          </div>
-                        ) : null;
-                      })()}
-                      
-                      {/* 기사 본문 확인 버튼 */}
-                      <button 
-                        onClick={() => handleArticleClick(art)}
-                        style={{
-                          backgroundColor: '#0077cc',
-                          color: 'white',
-                          border: 'none',
-                          padding: '6px 12px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                          marginTop: '4px'
-                        }}
-                      >
-                        기사 본문 자세히 확인하기
-                      </button>
-                    </li>
-                  ))}
-                </ol>
-              ) : '데이터 없음'}
-          </div>
-          
-          {/* 기사 상세 모달 */}
-          {showModal && selectedArticle && (
-            <div style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              zIndex: 1000
-            }}>
-              <div style={{
-                backgroundColor: 'white',
-                padding: '24px',
-                borderRadius: '8px',
-                maxWidth: '80%',
-                maxHeight: '80%',
-                overflow: 'auto',
-                position: 'relative',
-                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-              }}>
-                {/* 닫기 버튼 */}
-                <button 
-                  onClick={closeModal}
-                  style={{
-                    position: 'absolute',
-                    top: '12px',
-                    right: '12px',
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    fontSize: '20px',
-                    cursor: 'pointer',
-                    color: '#666'
-                  }}
-                >
-                  ×
-                </button>
-                
-                {/* 모달 내용 */}
-                <div style={{marginRight: '30px'}}>
-                  <h2 style={{
-                    fontSize: '20px',
-                    fontWeight: 'bold',
-                    marginBottom: '12px',
-                    color: '#333',
-                    lineHeight: '1.4'
-                  }}>
-                    {selectedArticle.article_title}
-                  </h2>
-                  
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    marginBottom: '16px',
-                    gap: '16px'
-                  }}>
-                    <span style={{
-                      fontSize: '14px',
-                      color: '#666',
-                      backgroundColor: '#f5f5f5',
-                      padding: '4px 8px',
-                      borderRadius: '4px'
-                    }}>
-                      {selectedArticle.date}
-                    </span>
-                    <span style={{
-                      fontSize: '16px',
-                      fontWeight: 'bold',
-                      color: selectedArticle.score > 0 ? '#22c55e' : selectedArticle.score < 0 ? '#ef4444' : '#666',
-                      backgroundColor: '#f9f9f9',
-                      padding: '4px 8px',
-                      borderRadius: '4px'
-                    }}>
-                      감성점수: {selectedArticle.score > 0 ? '+' : ''}{selectedArticle.score}
-                    </span>
-                  </div>
-                  
-                  <div style={{
-                    fontSize: '15px',
-                    lineHeight: '1.6',
-                    color: '#444',
-                    textAlign: 'justify',
-                    maxHeight: '400px',
-                    overflowY: 'auto',
-                    padding: '16px',
-                    backgroundColor: '#fafafa',
-                    borderRadius: '6px',
-                    border: '1px solid #e0e0e0'
-                  }}>
-                    {selectedArticle.article}
-                  </div>
-                </div>
-              </div>
-            </div>
+              <CombinedFinancialChart 
+                treasuryData={treasuryData} 
+                fxData={fxData}
+                loading={loading} 
+                error={treasuryData?.error || fxData?.error} 
+              />
+              <FiccTable1Year 
+                treasuryData1Year={treasuryData1Year}
+                fxData1Year={fxData1Year}
+                loading={loading}
+                error={treasuryData1Year?.error || fxData1Year?.error}
+              />
+              <div style={{height: '50px'}}></div>
+            </>
           )}
         </>
       )}
@@ -811,15 +451,7 @@ function CompanyPipeline({ year, month, weekStr, period, onSetReportTitle }) {
   );
 }
 
-function PipelinePanel({ name, year, month, weekStr, period, onSetReportTitle }) {
-  if (name === 'customer') return <CustomerPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} />;
-  if (name === 'market') return <MarketPipeline year={year} month={month} weekStr={weekStr} />;
-  if (name === 'industry') return <IndustryPipeline year={year} month={month} weekStr={weekStr} onSetReportTitle={onSetReportTitle} />;
-  if (name === 'company') return <CompanyPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} />;
-  return null;
-}
-
-function MainPanel({ year, month, period, selectedMenu, selectedSubMenu }) {
+function MainPanel({ year, month, period, selectedMenu, selectedSubMenu, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone, setSelectedMenu, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, setSelectedSubMenu, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone, autoMarketTrigger, onStockClick, onIndustryClick, onMarketClick }) {
   // 주차 정보 추출 (예: "(1주차)")
   const weekMatch = period.match(/\((\d+주차)\)/);
   const weekStr = weekMatch ? weekMatch[1] : "";
@@ -837,13 +469,15 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu }) {
   // 메뉴/서브메뉴에 따라 보여줄 pipeline 결정
   let pipelineName = null;
   let defaultReportTitle = '';
+  let autoStartMarket = false;
   if (selectedMenu === "고객 관리") {
     pipelineName = "customer";
     defaultReportTitle = "고객 리포트";
   } else if (selectedMenu === "진시황의 혜안") {
-    if (selectedSubMenu === "시황") {
+    if (selectedSubMenu === "증시") {
       pipelineName = "market";
-      defaultReportTitle = "시황 리포트";
+      defaultReportTitle = "증시 리포트";
+      if (autoMarketTrigger) autoStartMarket = true;
     } else if (selectedSubMenu === "산업") {
       pipelineName = "industry";
       defaultReportTitle = "산업 리포트";
@@ -859,28 +493,120 @@ function MainPanel({ year, month, period, selectedMenu, selectedSubMenu }) {
     // eslint-disable-next-line
   }, [selectedMenu, selectedSubMenu, year, month, period]);
 
+  // 자동 고객 리포트 트리거 감지
+  useEffect(() => {
+    if (autoCustomerTrigger && autoCustomerName && selectedMenu !== "고객 관리") {
+      setSelectedMenu("고객 관리");
+    }
+  }, [autoCustomerTrigger, autoCustomerName, selectedMenu, setSelectedMenu]);
+  useEffect(() => {
+    if (autoCompanyTrigger && autoCompanySymbol && (selectedMenu !== "진시황의 혜안" || selectedSubMenu !== "기업")) {
+      setSelectedMenu("진시황의 혜안");
+      setSelectedSubMenu("기업");
+    }
+  }, [autoCompanyTrigger, autoCompanySymbol, selectedMenu, selectedSubMenu, setSelectedMenu, setSelectedSubMenu]);
+  useEffect(() => {
+    if (autoIndustryTrigger && autoIndustryCategory && (selectedMenu !== "진시황의 혜안" || selectedSubMenu !== "산업")) {
+      setSelectedMenu("진시황의 혜안");
+      setSelectedSubMenu("산업");
+    }
+  }, [autoIndustryTrigger, autoIndustryCategory, selectedMenu, selectedSubMenu, setSelectedMenu, setSelectedSubMenu]);
+
   return (
     <div className="main-panel">
       <div className="main-title">[{year}년 {month}월 {(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()}] {reportTitle}</div>
       <div className="main-placeholder" style={{marginTop: '32px'}}>
         {pipelineName && (
-          <PipelinePanel name={pipelineName} year={year} month={month} weekStr={(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()} period={period} onSetReportTitle={['industry','company','customer'].includes(pipelineName) ? setReportTitle : undefined} />
+          <PipelinePanel
+            name={pipelineName}
+            year={year}
+            month={month}
+            weekStr={(() => {const weekMatch = period.match(/\((\d+주차)\)/); return weekMatch ? weekMatch[1] : "";})()}
+            period={period}
+            onSetReportTitle={['industry','company','customer'].includes(pipelineName) ? setReportTitle : undefined}
+            autoCustomerName={pipelineName === 'customer' ? autoCustomerName : undefined}
+            autoCustomerTrigger={pipelineName === 'customer' ? autoCustomerTrigger : undefined}
+            onAutoCustomerDone={pipelineName === 'customer' ? onAutoCustomerDone : undefined}
+            autoCompanySymbol={pipelineName === 'company' ? autoCompanySymbol : undefined}
+            autoCompanyTrigger={pipelineName === 'company' ? autoCompanyTrigger : undefined}
+            onAutoCompanyDone={pipelineName === 'company' ? onAutoCompanyDone : undefined}
+            autoIndustryCategory={pipelineName === 'industry' ? autoIndustryCategory : undefined}
+            autoIndustryTrigger={pipelineName === 'industry' ? autoIndustryTrigger : undefined}
+            onAutoIndustryDone={pipelineName === 'industry' ? onAutoIndustryDone : undefined}
+            autoStartMarket={pipelineName === 'market' ? autoStartMarket : undefined}
+            onStockClick={onStockClick}
+            onIndustryClick={onIndustryClick}
+            onMarketClick={onMarketClick}
+          />
         )}
       </div>
     </div>
   );
 }
 
+function PipelinePanel({ name, year, month, weekStr, period, onSetReportTitle, autoCustomerName, autoCustomerTrigger, onAutoCustomerDone, autoCompanySymbol, autoCompanyTrigger, onAutoCompanyDone, autoIndustryCategory, autoIndustryTrigger, onAutoIndustryDone, autoStartMarket, onStockClick, onIndustryClick, onMarketClick }) {
+  if (name === 'customer') return <ClientPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} autoCustomerName={autoCustomerName} autoCustomerTrigger={autoCustomerTrigger} onAutoCustomerDone={onAutoCustomerDone} onStockClick={onStockClick} onIndustryClick={onIndustryClick} onMarketClick={onMarketClick} />;
+  if (name === 'market') return <MarketPipeline year={year} month={month} weekStr={weekStr} period={period} autoStart={autoStartMarket} />;
+  if (name === 'industry') return <IndustryPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} autoIndustryCategory={autoIndustryCategory} autoIndustryTrigger={autoIndustryTrigger} onAutoIndustryDone={onAutoIndustryDone} onStockClick={onStockClick} />;
+  if (name === 'company') return <CompanyPipeline year={year} month={month} weekStr={weekStr} period={period} onSetReportTitle={onSetReportTitle} autoCompanySymbol={autoCompanySymbol} autoCompanyTrigger={autoCompanyTrigger} onAutoCompanyDone={onAutoCompanyDone} onIndustryClick={onIndustryClick} onMarketClick={onMarketClick} />;
+  return null;
+}
+
 function App() {
-  const [selectedMenu, setSelectedMenu] = useState("진시황의 혜안");
-  const [selectedSubMenu, setSelectedSubMenu] = useState("시황");
-  const [year, setYear] = useState(2025);
-  const [month, setMonth] = useState(6);
-  const [period, setPeriod] = useState("06.01 - 06.07 (1주차)");
+  const [selectedMenu, setSelectedMenu] = useState("고객 관리");
+  const [selectedSubMenu, setSelectedSubMenu] = useState(""); // 고객 관리에는 서브메뉴 없음
+  const [year, setYear] = useState(2023);
+  const [month, setMonth] = useState(5);
+  const [period, setPeriod] = useState("05.14 - 05.20 (3주차)");
   const [showIntro, setShowIntro] = useState(true);
+  // 자동 고객/기업/산업 리포트 트리거 상태 추가
+  const [autoCustomerName, setAutoCustomerName] = useState("");
+  const [autoCustomerTrigger, setAutoCustomerTrigger] = useState(false);
+  const [autoCompanySymbol, setAutoCompanySymbol] = useState("");
+  const [autoCompanyTrigger, setAutoCompanyTrigger] = useState(false);
+  const [autoIndustryCategory, setAutoIndustryCategory] = useState("");
+  const [autoIndustryTrigger, setAutoIndustryTrigger] = useState(false);
+  const [autoMarketTrigger, setAutoMarketTrigger] = useState(false);
 
   const handleStart = () => {
     setShowIntro(false);
+  };
+
+  // 자동 트리거 후 상태 초기화
+  const handleAutoCustomerDone = () => {
+    setAutoCustomerName("");
+    setAutoCustomerTrigger(false);
+  };
+  const handleAutoCompanyDone = () => {
+    setAutoCompanySymbol("");
+    setAutoCompanyTrigger(false);
+  };
+  const handleAutoIndustryDone = () => {
+    setAutoIndustryCategory("");
+    setAutoIndustryTrigger(false);
+  };
+
+  // 종목 클릭 핸들러 (기업 파이프라인으로 이동)
+  const handleStockClick = (stockSymbol) => {
+    setSelectedMenu("진시황의 혜안");
+    setSelectedSubMenu("기업");
+    setAutoCompanySymbol(stockSymbol);
+    setAutoCompanyTrigger(true);
+  };
+
+  // 산업 클릭 핸들러 (산업 파이프라인으로 이동)
+  const handleIndustryClick = (industryCategory) => {
+    setSelectedMenu("진시황의 혜안");
+    setSelectedSubMenu("산업");
+    setAutoIndustryCategory(industryCategory);
+    setAutoIndustryTrigger(true);
+  };
+
+  // 증시 클릭 핸들러 (증시 파이프라인으로 이동)
+  const handleMarketClick = () => {
+    setSelectedMenu("진시황의 혜안");
+    setSelectedSubMenu("증시");
+    setAutoMarketTrigger(true);
   };
 
   if (showIntro) {
@@ -892,7 +618,7 @@ function App() {
       <Sidebar
         userName="김PB"
         menu={["진시황의 혜안", "고객 관리"]}
-        subMenu={["시황", "산업", "기업"]}
+        subMenu={["증시", "산업", "기업"]}
         selectedMenu={selectedMenu}
         selectedSubMenu={selectedSubMenu}
         onMenuClick={setSelectedMenu}
@@ -904,126 +630,53 @@ function App() {
         period={period}
         onPeriodChange={setPeriod}
       />
-      <MainPanel year={year} month={month} period={period} selectedMenu={selectedMenu} selectedSubMenu={selectedSubMenu} />
-      <ChatPanel />
-    </div>
-  );
-}
-
-function PipelineGraphSample() {
-  // 6개월치 Apple 주가 임의 데이터 (월별 종가)
-  const data = [
-    { month: '1월', price: 185 },
-    { month: '2월', price: 192 },
-    { month: '3월', price: 188 },
-    { month: '4월', price: 200 },
-    { month: '5월', price: 210 },
-    { month: '6월', price: 205 }
-  ];
-  const maxValue = Math.max(...data.map(d => d.price));
-  const minValue = Math.min(...data.map(d => d.price));
-  const avgValue = data.reduce((sum, d) => sum + d.price, 0) / data.length;
-  const width = 320;
-  const height = 120;
-  const padding = 32;
-  const yAxisWidth = 32;
-  const pointRadius = 4;
-  const xStep = (width - 2 * padding - yAxisWidth) / (data.length - 1);
-  const yScale = price => padding + ((maxValue - price) / (maxValue - minValue || 1)) * (height - 2 * padding);
-
-  // 평균선 y좌표
-  const avgY = yScale(avgValue);
-
-  // 구간별로 평균보다 높은 구간(빨간색), 낮은 구간(파란색)으로 선분 분리
-  const segments = [];
-  for (let i = 0; i < data.length - 1; i++) {
-    const x1 = padding + yAxisWidth + i * xStep;
-    const y1 = yScale(data[i].price);
-    const x2 = padding + yAxisWidth + (i + 1) * xStep;
-    const y2 = yScale(data[i + 1].price);
-    const above1 = data[i].price >= avgValue;
-    const above2 = data[i + 1].price >= avgValue;
-    if (above1 === above2) {
-      segments.push({ x1, y1, x2, y2, color: above1 ? '#ef4444' : '#3b82f6' });
-    } else {
-      // 평균선과의 교점 계산
-      const t = (avgValue - data[i].price) / (data[i + 1].price - data[i].price);
-      const crossX = x1 + t * (x2 - x1);
-      const crossY = avgY;
-      segments.push({ x1, y1, x2: crossX, y2: crossY, color: above1 ? '#ef4444' : '#3b82f6' });
-      segments.push({ x1: crossX, y1: crossY, x2, y2, color: above2 ? '#ef4444' : '#3b82f6' });
-    }
-  }
-
-  // Y축 눈금 (5 단위)
-  const yTicks = [];
-  const tickStep = 5;
-  for (let v = Math.ceil(minValue / tickStep) * tickStep; v <= maxValue; v += tickStep) {
-    yTicks.push(v);
-  }
-
-  return (
-    <div className="pipeline-graph-sample">
-      <svg width={width} height={height} className="line-graph-svg">
-        {/* Y축 */}
-        <line x1={padding + yAxisWidth} y1={padding} x2={padding + yAxisWidth} y2={height - padding} stroke="#bbb" strokeWidth="1" />
-        {/* X축 */}
-        <line x1={padding + yAxisWidth} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#bbb" strokeWidth="1" />
-        {/* Y축 눈금 및 라벨, 얇은 실선 */}
-        {yTicks.map((v, i) => {
-          const y = yScale(v);
-          return (
-            <g key={v}>
-              <line
-                x1={padding + yAxisWidth}
-                y1={y}
-                x2={width - padding}
-                y2={y}
-                stroke="#ddd"
-                strokeWidth="1"
-                strokeDasharray="2 2"
-              />
-              <text
-                x={padding + yAxisWidth - 6}
-                y={y + 4}
-                textAnchor="end"
-                fontSize="11"
-                fill="#888"
-              >
-                {v}
-              </text>
-            </g>
-          );
-        })}
-        {/* 평균선 */}
-        <line x1={padding + yAxisWidth} y1={avgY} x2={width - padding} y2={avgY} stroke="#888" strokeDasharray="4 2" strokeWidth="1.5" />
-        <text x={width - padding + 4} y={avgY + 4} fontSize="12" fill="#888">평균 {avgValue.toFixed(1)}</text>
-        {/* 데이터 라인 (구간별 색상) */}
-        {segments.map((seg, i) => (
-          <line
-            key={i}
-            x1={seg.x1}
-            y1={seg.y1}
-            x2={seg.x2}
-            y2={seg.y2}
-            stroke={seg.color}
-            strokeWidth="2.5"
-          />
-        ))}
-        {/* 월 라벨 */}
-        {data.map((d, i) => (
-          <text
-            key={d.month}
-            x={padding + yAxisWidth + i * xStep}
-            y={height - padding + 18}
-            textAnchor="middle"
-            fontSize="12"
-            fill="#555"
-          >
-            {d.month}
-          </text>
-        ))}
-      </svg>
+      <MainPanel
+        year={year}
+        month={month}
+        period={period}
+        selectedMenu={selectedMenu}
+        selectedSubMenu={selectedSubMenu}
+        autoCustomerName={autoCustomerName}
+        autoCustomerTrigger={autoCustomerTrigger}
+        onAutoCustomerDone={handleAutoCustomerDone}
+        setSelectedMenu={setSelectedMenu}
+        autoCompanySymbol={autoCompanySymbol}
+        autoCompanyTrigger={autoCompanyTrigger}
+        onAutoCompanyDone={handleAutoCompanyDone}
+        setSelectedSubMenu={setSelectedSubMenu}
+        autoIndustryCategory={autoIndustryCategory}
+        autoIndustryTrigger={autoIndustryTrigger}
+        onAutoIndustryDone={handleAutoIndustryDone}
+        autoMarketTrigger={autoMarketTrigger}
+        onStockClick={handleStockClick}
+        onIndustryClick={handleIndustryClick}
+        onMarketClick={handleMarketClick}
+      />
+      <ChatPanel
+        onPersonalIntent={(customerName) => {
+          setSelectedMenu("고객 관리");
+          setAutoCustomerName(customerName);
+          setAutoCustomerTrigger(true);
+        }}
+        onEnterpriseIntent={(symbol) => {
+          setSelectedMenu("진시황의 혜안");
+          setSelectedSubMenu("기업");
+          setAutoCompanySymbol(symbol);
+          setAutoCompanyTrigger(true);
+        }}
+        onIndustryIntent={(category) => {
+          setSelectedMenu("진시황의 혜안");
+          setSelectedSubMenu("산업");
+          setAutoIndustryCategory(category);
+          setAutoIndustryTrigger(true);
+        }}
+        onMarketIntent={() => {
+          setSelectedMenu("진시황의 혜안");
+          setSelectedSubMenu("증시");
+          setAutoMarketTrigger(true);
+          setTimeout(() => setAutoMarketTrigger(false), 1000);
+        }}
+      />
     </div>
   );
 }

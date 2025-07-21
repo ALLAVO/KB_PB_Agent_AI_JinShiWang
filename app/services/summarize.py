@@ -7,7 +7,13 @@ from app.services.sentiment import get_weekly_sentiment_scores_by_stock_symbol
 import openai
 from dotenv import load_dotenv
 import os
-
+from summa.summarizer import summarize as extractive_summarize
+# 함수 안이든 전역이든 한 번만 선언 ##추가 코드
+ratio_map = {
+    "medium": 0.7,
+    "long":   0.6,
+    "very_long": 0.5
+}
 # .env에서 OPENAI_API_KEY 불러오기
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -50,9 +56,21 @@ def summarize_article(stock_symbol: str, start_date: str, end_date: str):
         if conn is None:
             print("DB 연결 실패")
             return []
-        query = """
+        
+        # stock_symbol에 따른 테이블 선택
+        first_char = stock_symbol[0].upper()
+        if 'A' <= first_char <= 'D':
+            table = 'fnspid_stock_price_a'
+        elif 'E' <= first_char <= 'M':
+            table = 'fnspid_stock_price_b'
+        elif 'N' <= first_char <= 'Z':
+            table = 'fnspid_stock_price_c'
+        else:
+            raise Exception("유효하지 않은 stock_symbol입니다.")
+        
+        query = f"""
             SELECT date, article
-            FROM kb_enterprise_dataset
+            FROM {table}
             WHERE stock_symbol = %s AND date >= %s AND date <= %s
             ORDER BY date
         """
@@ -213,42 +231,52 @@ def summarize_top3_articles(top3_articles):
             return "very_long"
     def summarize_by_length(text):
         tokens = count_tokens(text)
-        cls = classify_length(tokens)
+        cls    = classify_length(tokens)
+
+        # 1) 너무 짧으면 그대로 반환
         if cls == "short":
             eng_summary = text
-        elif cls in ("medium", "long"):
-            max_len = max(50, int(tokens * 0.2)) if cls == "medium" else max(75, int(tokens * 0.15))
-            eng_summary = summarizers[cls](
-                text,
-                max_length=max_len,
-                min_length=50,
-                truncation=True
-            )[0]["summary_text"]
         else:
-            token_ids = tokenizer.encode(text, truncation=False)
-            chunk_size = 1000
-            chunks = [
-                tokenizer.decode(token_ids[i:i + chunk_size])
-                for i in range(0, len(token_ids), chunk_size)
-            ]
-            interim_summaries = [
-                summarizers["very_long"](
-                    chunk,
+            # 2) 추출적 요약 (TextRank)
+            ratio = ratio_map[cls]
+            extract_text = extractive_summarize(text, ratio=ratio)
+
+            # 3) 생성적 요약 (BART)
+            if cls in ("medium", "long"):
+                # medium: 약 3~4문장, long: 약 4~5문장
+                max_len = max(50, int(tokens * 0.2)) if cls == "medium" else max(75, int(tokens * 0.15))
+                eng_summary = summarizers[cls](
+                    extract_text,
+                    max_length=max_len,
+                    min_length=50,
+                    truncation=True
+                )[0]["summary_text"]
+            else:  # very_long
+                # 긴 글은 chunk → interim → combine → final
+                token_ids = tokenizer.encode(extract_text, truncation=False)
+                chunk_size = 1000
+                chunks = [
+                    tokenizer.decode(token_ids[i:i+chunk_size])
+                    for i in range(0, len(token_ids), chunk_size)
+                ]
+                interim = [
+                    summarizers["very_long"](
+                        chunk,
+                        max_length=200,
+                        min_length=75,
+                        truncation=True
+                    )[0]["summary_text"]
+                    for chunk in chunks
+                ]
+                combined = " ".join(interim)
+                eng_summary = summarizers["very_long"](
+                    combined,
                     max_length=200,
                     min_length=75,
                     truncation=True
                 )[0]["summary_text"]
-                for chunk in chunks
-            ]
-            combined = " ".join(interim_summaries)
-            eng_summary = summarizers["very_long"](
-                combined,
-                max_length=200,
-                min_length=75,
-                truncation=True
-            )[0]["summary_text"]
-        kor_result = kor_summary(eng_summary)
-        return kor_result
+        # 4) 한국어 번역 & 다듬기
+        return kor_summary(eng_summary)
 
     results = []
     for item in top3_articles:

@@ -68,3 +68,32 @@ export const fetchStockChartSummary = async (symbol, startDate, endDate) => {
     throw error;
   }
 };
+
+// 상세 주식 정보 가져오기
+export const fetchEnhancedStockInfo = async (symbol) => {
+  try {
+    const url = new URL(`${API_BASE_URL}/companies/${symbol}/enhanced-info`);
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (data.success) {
+      return data.data;
+    } else {
+      throw new Error(data.error || 'Failed to fetch enhanced stock info');
+    }
+  } catch (error) {
+    console.error('Error fetching enhanced stock info:', error);
+    throw error;
+  }
+};

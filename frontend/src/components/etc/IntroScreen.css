@@ -24,44 +24,68 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.3; /* 더 투명하게 설정 */
+  opacity: 0.7; /* 더 투명하게 설정 */
 }
 
 .intro-content {
   text-align: center;
   z-index: 1;
-  max-width: 800px;
+  max-width: 1500px;
   padding: 0 20px;
+  position: absolute;
+  top: 10%;
+  left: 47.5%;
+  transform: translate(-50%, 0);
+  width: 150%;
 }
 
 .intro-text {
   margin-bottom: 60px;
+  max-width: 1500px;
+  width: 150%;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .intro-title {
-  font-size: 4rem;
+  font-size: 6rem;
   font-weight: bold;
   margin-bottom: 20px;
-  color: #2c3e50;
+  color: #F7B715;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
   line-height: 1.2;
 }
 
 .intro-title .highlight {
-  color: #f39c12;
-  text-shadow: 2px 2px 4px rgba(243, 156, 18, 0.3);
+  font-size: 7rem;
+  color: #F79515;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.intro-title,
+.intro-title .highlight,
+.intro-subtitle {
+  font-family: 'JejuHallasan', 'Jeju Hallasan', cursive, sans-serif !important;
 }
 
 .intro-subtitle {
-  font-size: 2.5rem;
+  font-size: 5rem;
   font-weight: 500;
-  color: #34495e;
+  color: #F7B715;
   margin: 0;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
 }
 
+.intro-button-wrapper {
+  position: absolute;
+  left: 47.5%;
+  bottom: 25%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
 .start-button {
-  background: linear-gradient(135deg, #3498db, #2980b9);
+  background: linear-gradient(135deg, #988A7C);
   color: white;
   border: none;
   padding: 20px 50px;
@@ -70,20 +94,20 @@
   border-radius: 50px;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
+  box-shadow: 0 8px 25px #988A7C;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
 .start-button:hover {
-  background: linear-gradient(135deg, #2980b9, #1f4e79);
+  background: linear-gradient(135deg, #E5DFD1, #988A7C);
   transform: translateY(-3px);
-  box-shadow: 0 12px 35px rgba(52, 152, 219, 0.4);
+  box-shadow: 0 12px 35px #E5DFD1;
 }
 
 .start-button:active {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
+  box-shadow: 0 6px 20px #E5DFD1;
 }
 
 /* 반응형 디자인 */

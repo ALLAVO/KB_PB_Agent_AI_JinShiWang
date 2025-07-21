@@ -1,0 +1,113 @@
+import React, { useState, useEffect } from "react";
+import titlecloud from "../../assets/titlecloud.png";
+import { fetchMarketHotArticles } from "../../api/market";
+import IndustryArticleList from "../industry_pipeline/IndustryArticleList";
+import ArticleDetailModal from "../industry_pipeline/ArticleDetailModal";
+
+function HotArticles({ year, month, weekStr, period, autoStart }) {
+  const [started, setStarted] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [hotArticlesData, setHotArticlesData] = useState(null);
+  const [selectedArticle, setSelectedArticle] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  
+  // period에서 주차 종료일 추출
+  const dateMatch = period.match(/(\d{2})\.(\d{2}) - (\d{2})\.(\d{2})/);
+  let endDate = null;
+  if (dateMatch) {
+    const y = year;
+    endDate = `${y}-${dateMatch[3]}-${dateMatch[4]}`;
+  }
+
+  const handleArticleClick = (article) => {
+    setSelectedArticle(article);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedArticle(null);
+  };
+
+  // 자동 시작 트리거
+  useEffect(() => {
+    if (autoStart) {
+      handleLoadHotArticles();
+    }
+  }, [autoStart, year, month, period]);
+
+  const handleLoadHotArticles = async () => {
+    setError("");
+    setStarted(true);
+    setLoading(true);
+    setHotArticlesData(null);
+    
+    try {
+      console.log('시장 핫 기사 API 호출', { endDate });
+      const data = await fetchMarketHotArticles(endDate);
+      setHotArticlesData(data);
+      console.log('시장 핫 기사 데이터:', data);
+    } catch (e) {
+      console.error('시장 핫 기사 API 호출 오류:', e);
+      setError('데이터를 불러오지 못했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStartReport = () => {
+    handleLoadHotArticles();
+  };
+
+  return (
+    <div>
+      {!started && (
+        <button
+          className="report-start-btn"
+          onClick={handleStartReport}
+        >
+          이 주 핫한 기사 TOP 3 보기
+        </button>
+      )}
+      {started && (
+        <>
+          <div className="pipeline-title">
+            {/* 동적으로 월/주차 추출하여 제목 생성 */}
+            {(() => {
+              // period 예시: '05.13 - 05.19 (3주차)'
+              const monthMatch = period.match(/(\d{2})\./);
+              const weekMatch = period.match(/\((\d+주차)\)/);
+              const month = monthMatch ? parseInt(monthMatch[1], 10) : month;
+              const week = weekMatch ? weekMatch[1] : '';
+              return <><img src={titlecloud} alt="cloud" />{month}월 {week} 핵심 뉴스</>;
+            })()}
+          </div>
+          {/* 전 주에 핫한 기사 Top 3 섹션 */}
+          <div className="industry-top3-section">
+            {loading ? (
+              <div className="industry-top3-loading">
+                AI가 시장 트렌드를 분석하고 있습니다...
+              </div>
+            ) : error ? (
+              <div className="industry-top3-error">
+                {error}
+              </div>
+            ) : hotArticlesData && hotArticlesData.top3_articles && hotArticlesData.top3_articles.length > 0 ? (
+              <IndustryArticleList articles={hotArticlesData.top3_articles} onArticleClick={handleArticleClick} />
+            ) : (
+              <div className="industry-top3-nodata">
+                해당 기간의 데이터가 없습니다.
+              </div>
+            )}
+          </div>
+          
+          {/* 기사 상세 모달 */}
+          <ArticleDetailModal article={showModal && selectedArticle} onClose={closeModal} />
+        </>
+      )}
+    </div>
+  );
+}
+
+export default HotArticles;

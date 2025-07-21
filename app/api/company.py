@@ -1,18 +1,31 @@
 # 기업 정보 관련 API
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Query
 from typing import Optional
 
 
 from app.services.sentiment import get_weekly_sentiment_scores_by_stock_symbol
 from app.services.crawler import (
-    get_company_profile_from_alphavantage,
+    get_company_profile_from_fmp,
     get_financial_statements_from_sec,
     get_weekly_stock_indicators_from_stooq,
-    get_moving_averages_from_stooq
+    get_enhanced_stock_info
 )
 from app.core.config import settings
 
 router = APIRouter()
+
+# 기업 기본 정보만 반환하는 API
+@router.get("/companies/{stock_symbol}/info")
+def get_company_basic_info(stock_symbol: str):
+    profile = get_company_profile_from_fmp(stock_symbol)
+    return {
+        "company_name": profile.get("company_name") or stock_symbol,
+        "stock_symbol": stock_symbol,
+        "industry": profile.get("industry"),
+        "sector": profile.get("sector"),
+        "business_summary": profile.get("description"),
+        "address": profile.get("address")
+    }
 
 # 기업 정보 조회 API
 @router.get("/companies/{stock_symbol}")
@@ -22,8 +35,8 @@ def get_company_info(
     end_date: Optional[str] = Query(None, description="조회 종료일 (YYYY-MM-DD)"),
     granularity: Optional[str] = Query("year", description="조회 단위: day/month/year")
 ):
-    # Alpha Vantage 기업 개요
-    profile = get_company_profile_from_alphavantage(stock_symbol, settings.ALPHAVANTAGE_API_KEY)
+    # FMP 기업 개요
+    profile = get_company_profile_from_fmp(stock_symbol)
     # SEC 재무제표
     financials = get_financial_statements_from_sec(stock_symbol, start_date=start_date, end_date=end_date)
     # Stooq 주가/기술지표 (이동평균 제외)
@@ -36,19 +49,38 @@ def get_company_info(
         end = datetime.datetime.today().strftime("%Y-%m-%d")
         start = (datetime.datetime.today() - datetime.timedelta(days=6)).strftime("%Y-%m-%d")
     indicators = get_weekly_stock_indicators_from_stooq(stock_symbol, start, end)
-    # Stooq 이동평균
-    ma = get_moving_averages_from_stooq(stock_symbol, end)
     return {
-        "company_name": profile.get("company_name") or stock_symbol,
-        "stock_symbol": stock_symbol,
-        "industry": profile.get("industry"),
-        "sector": profile.get("sector"),
-        "business_summary": profile.get("description"),
-        "address": profile.get("address"),
+        "company_info": {
+            "company_name": profile.get("company_name") or stock_symbol,
+            "stock_symbol": stock_symbol,
+            "industry": profile.get("industry"),
+            "sector": profile.get("sector"),
+            "business_summary": profile.get("description"),
+            "address": profile.get("address")
+        },
         "income_statements": financials,
-        "weekly_indicators": indicators,
-        "moving_averages": ma
+        "weekly_indicators": indicators
     }
+
+# 상세 주식 정보 API
+@router.get("/companies/{stock_symbol}/enhanced-info")
+def get_company_enhanced_info(
+    stock_symbol: str,
+    end_date: Optional[str] = Query(None, description="조회 종료일 (YYYY-MM-DD)")
+):
+    """
+    상세한 주식 정보를 반환합니다.
+    현재가, 52주 최고가/최저가, 시가총액, 유동주식수, 변동성 등
+    """
+    try:
+        result = get_enhanced_stock_info(stock_symbol, end_date)
+        
+        if "error" in result:
+            return {"success": False, "error": result["error"]}
+        
+        return {"success": True, "data": result}
+    except Exception as e:
+        return {"success": False, "error": f"Internal server error: {str(e)}"}
 
 def safe_float(val):
     try:

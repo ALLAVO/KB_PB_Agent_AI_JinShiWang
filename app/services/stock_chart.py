@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Dict, List
-from app.services.crawler import get_stock_price_chart_data, get_stock_price_chart_with_ma, get_index_chart_data
+from app.services.crawler import get_stock_price_chart_data, get_stock_price_chart_with_ma, get_index_chart_data, get_enhanced_stock_info
 
 class StockChartService:
     """주가 차트 관련 서비스"""
@@ -47,12 +47,26 @@ class StockChartService:
                 }
             
             if "moving_average" in chart_types:
+                print(f"🔍 Requesting MA data for {ticker} with periods {ma_periods}")
                 ma_data = get_stock_price_chart_with_ma(ticker, start_date, end_date, ma_periods)
+                print(f"📊 MA API response: {list(ma_data.keys()) if isinstance(ma_data, dict) else 'Error'}")
+                
                 if "error" not in ma_data:
                     result["data"]["moving_average"] = {}
+                    print(f"📈 Available MA data keys: {[k for k in ma_data.keys() if k.startswith('ma')]}")
+                    
                     for period in ma_periods:
-                        if f'ma{period}' in ma_data:
-                            result["data"]["moving_average"][f"ma{period}"] = ma_data[f'ma{period}']
+                        ma_key = f'ma{period}'
+                        if ma_key in ma_data and ma_data[ma_key]:
+                            # NaN 값 제거
+                            ma_values = [v if v == v else None for v in ma_data[ma_key]]  # NaN은 자기 자신과 같지 않음
+                            result["data"]["moving_average"][ma_key] = ma_values
+                            print(f"✅ Added {ma_key}: {len(ma_values)} points, first few: {ma_values[:3]}")
+                        else:
+                            print(f"❌ Missing {ma_key} in MA data")
+                            result["data"]["moving_average"][ma_key] = [None] * len(data["dates"])
+                else:
+                    print(f"❌ MA data error: {ma_data.get('error')}")
             
             # 나스닥 대비 상대지수 계산
             if "relative_nasdaq" in chart_types:
@@ -96,9 +110,13 @@ class StockChartService:
             Dict: 차트 요약 정보
         """
         try:
+            # 기본 차트 데이터 가져오기
             data = get_stock_price_chart_data(ticker, start_date, end_date)
             if "error" in data:
                 return data
+            
+            # 상세 주식 정보 가져오기
+            enhanced_info = get_enhanced_stock_info(ticker)
             
             closes = data["closes"]
             volumes = data["volumes"]
@@ -111,7 +129,8 @@ class StockChartService:
             change = end_price - start_price
             change_pct = (change / start_price) * 100 if start_price != 0 else 0
             
-            return {
+            # 기본 정보
+            result = {
                 "ticker": ticker,
                 "period": f"{start_date} ~ {end_date}",
                 "start_price": round(start_price, 2),
@@ -123,6 +142,22 @@ class StockChartService:
                 "avg_volume": round(sum(volumes) / len(volumes), 0) if volumes else 0,
                 "data_points": len(closes)
             }
+            
+            # 상세 정보 추가 (에러가 없는 경우만)
+            if "error" not in enhanced_info:
+                result.update({
+                    "current_price": enhanced_info.get("current_price"),
+                    "week_52_high": enhanced_info.get("week_52_high"),
+                    "week_52_low": enhanced_info.get("week_52_low"),
+                    "avg_volume_60d": enhanced_info.get("avg_volume_60d"),
+                    "volatility_1m": enhanced_info.get("volatility_1m"),
+                    "volatility_1y": enhanced_info.get("volatility_1y"),
+                    "market_cap": enhanced_info.get("market_cap"),
+                    "shares_outstanding": enhanced_info.get("shares_outstanding"),
+                    "float_shares": enhanced_info.get("float_shares")
+                })
+            
+            return result
             
         except Exception as e:
             return {"error": f"Error generating chart summary: {e}"}
