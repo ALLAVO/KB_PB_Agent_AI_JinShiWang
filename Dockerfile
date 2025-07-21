@@ -33,8 +33,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 백엔드 코드 복사
 COPY app/ ./app/
 
-# tokenizer_cache 폴더를 Docker 이미지에 복사 (로컬 구조와 동일하게)
-COPY tokenizer_cache/ ./tokenizer_cache/
+# tokenizer_cache 폴더를 /app/tokenizer_cache로 복사 (WORKDIR /app 기준)
+COPY tokenizer_cache/ tokenizer_cache/
 
 # 빌드된 프론트엔드 정적 파일 복사
 COPY --from=frontend-builder /app/frontend/build ./static
