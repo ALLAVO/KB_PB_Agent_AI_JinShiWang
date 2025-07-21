@@ -7,7 +7,7 @@ import hdbscan
 import collections
 from sklearn.metrics.pairwise import euclidean_distances
 
-
+# 주어진 날짜의 이전 주 일요일(weekstart)을 YYYY-MM-DD 문자열로 반환하는 함수
 def prev_sunday(input_date_str: str) -> str:
     """
     주어진 날짜(input_date_str)의 이전 주 일요일(weekstart)을 YYYY-MM-DD 문자열로 반환합니다.
@@ -18,7 +18,7 @@ def prev_sunday(input_date_str: str) -> str:
     prev_sun = curr_sunday - timedelta(days=7)
     return prev_sun.strftime("%Y-%m-%d")
 
-
+# 메인 함수
 def main():
     input_date = input("날짜 입력 (예: 2025-06-07): ")
     prev_sun = prev_sunday(input_date)
