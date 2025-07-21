@@ -1,0 +1,41 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
+
+      - name: Configure Docker for Google Cloud
+        run: gcloud auth configure-docker
+
+      - name: Docker build
+        run: |
+          docker build -t asia-northeast3-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/jinshiwang-docker-repo/jinshiwang-pb-agent-ai:$GITHUB_SHA .
+
+      - name: Docker push
+        run: |
+          docker push asia-northeast3-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/jinshiwang-docker-repo/jinshiwang-pb-agent-ai:$GITHUB_SHA
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy jinshiwang-pb-agent-ai \
+            --image asia-northeast3-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/jinshiwang-docker-repo/jinshiwang-pb-agent-ai:$GITHUB_SHA \
+            --region asia-northeast3 \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars "DB_HOST=${{ secrets.DB_HOST }},DB_PORT=${{ secrets.DB_PORT }},DB_NAME=${{ secrets.DB_NAME }},DB_USER=${{ secrets.DB_USER }},DB_PASSWORD=${{ secrets.DB_PASSWORD }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }},FRED_API_KEY=${{ secrets.FRED_API_KEY }},FMP_API_KEY=${{ secrets.FMP_API_KEY }},CACHE_DIR=${{ secrets.CACHE_DIR }},MCDONALD_CACHE_ENABLED=${{ secrets.MCDONALD_CACHE_ENABLED }},CACHE_EXPIRY_HOURS=${{ secrets.CACHE_EXPIRY_HOURS }},ALPHAVANTAGE_API_KEY=${{ secrets.ALPHAVANTAGE_API_KEY }}"
