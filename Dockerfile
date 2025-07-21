@@ -57,7 +57,7 @@ except Exception as e: \
 "
 
 # main.py 복사 (루트 레벨에)
-COPY main.py .
+COPY app/main.py .
 
 # 백엔드 코드 복사
 COPY app/ ./app/
