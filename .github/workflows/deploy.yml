@@ -30,18 +30,19 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build and push Docker image
-        run: |
-          docker buildx build \
-            --platform linux/amd64 \
-            --push \
-            --tag asia-northeast3-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/jinshiwang-docker-repo/jinshiwang-pb-agent-ai:$GITHUB_SHA \
-            --tag asia-northeast3-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/jinshiwang-docker-repo/jinshiwang-pb-agent-ai:latest \
-            .
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            asia-northeast3-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/jinshiwang-docker-repo/jinshiwang-pb-agent-ai:${{ github.sha }}
+            asia-northeast3-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/jinshiwang-docker-repo/jinshiwang-pb-agent-ai:latest
 
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy jinshiwang-pb-agent-ai \
-            --image asia-northeast3-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/jinshiwang-docker-repo/jinshiwang-pb-agent-ai:$GITHUB_SHA \
+            --image asia-northeast3-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/jinshiwang-docker-repo/jinshiwang-pb-agent-ai:${{ github.sha }} \
             --region asia-northeast3 \
             --platform managed \
             --allow-unauthenticated \
