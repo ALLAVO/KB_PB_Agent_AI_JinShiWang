@@ -13,6 +13,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: List workspace files
+        run: ls -al
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
