@@ -1,4 +1,6 @@
 # FastAPI 앱 실행 엔트리포인트
+import os
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import customer, company, prediction, report, sentiment, market, summarize, keyword_extractor, stock_chart, return_analysis, industry, clients, portfolio_charts, financial_metrics, valuation, company_sector
@@ -16,7 +18,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "http://localhost:3001" 
+        "http://localhost:3001",
+        "*"  # Cloud Run 배포시를 위해 추가
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -43,7 +46,17 @@ app.include_router(company_sector.router, prefix="/api/v1", tags=["company-secto
 
 @app.get("/")
 def read_root():
-    return {"Hello": "World"}
+    return {"Hello": "World", "status": "healthy"}
+
+@app.get("/health")
+def health_check():
+    """Cloud Run 헬스체크용 엔드포인트"""
+    return {"status": "healthy", "message": "Service is running"}
+
+@app.get("/readiness")
+def readiness_check():
+    """준비 상태 확인용 엔드포인트"""
+    return {"status": "ready", "message": "Service is ready to serve requests"}
 
 @app.on_event("startup")
 async def startup_event():
@@ -52,7 +65,24 @@ async def startup_event():
     """
     print("🚀 FastAPI 애플리케이션이 시작됩니다.")
     
-    # McDonald 사전을 메모리에 로드
-    load_mcdonald_dictionary()
+    try:
+        # McDonald 사전을 메모리에 로드
+        load_mcdonald_dictionary()
+        print("✅ McDonald 사전 로드 완료")
+    except Exception as e:
+        print(f"⚠️ McDonald 사전 로드 중 오류: {e}")
+        # 이 오류로 인해 서버가 시작되지 않는 것을 방지
     
     print("✅ 애플리케이션 초기화 완료")
+
+# Cloud Run 환경에서 직접 실행될 경우를 위한 설정
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8080))
+    print(f"🌟 서버를 포트 {port}에서 시작합니다...")
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0", 
+        port=port,
+        reload=False,
+        access_log=True
+    )
