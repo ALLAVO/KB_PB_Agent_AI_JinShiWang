@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Python 의존성 설치 
+# Python 의존성 설치
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
@@ -55,16 +55,18 @@ COPY app/ ./app/
 # 빌드된 프론트엔드 정적 파일 복사
 COPY --from=frontend-builder /app/frontend/build ./static
 
-# Cloud Run 포트 설정
-ENV PORT=8080
+# 환경변수 설정 (PORT는 Cloud Run이 자동으로 설정하므로 제거)
 ENV PYTHONPATH=/app
 
-# 포트 노출
-EXPOSE 8080
+# Cloud Run은 동적으로 포트를 할당하므로 기본값만 설정
+ENV PORT=8080
 
-# 헬스체크 추가
+# 포트 노출 (동적으로 변경 가능)
+EXPOSE $PORT
+
+# 헬스체크 추가 (PORT 환경변수 사용)
 HEALTHCHECK --interval=30s --timeout=30s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+    CMD curl -f http://localhost:$PORT/health || exit 1
 
-# FastAPI 서버 실행 (app 폴더 안의 main.py 실행)
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1"]
+# FastAPI 서버 실행 (PORT 환경변수를 동적으로 사용)
+CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
