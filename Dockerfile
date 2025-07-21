@@ -55,18 +55,17 @@ COPY app/ ./app/
 # 빌드된 프론트엔드 정적 파일 복사
 COPY --from=frontend-builder /app/frontend/build ./static
 
-# 환경변수 설정 (PORT는 Cloud Run이 자동으로 설정하므로 제거)
+# 환경변수 설정
 ENV PYTHONPATH=/app
-
-# Cloud Run은 동적으로 포트를 할당하므로 기본값만 설정
 ENV PORT=8080
 
-# 포트 노출 (동적으로 변경 가능)
+# 포트 노출
 EXPOSE $PORT
 
-# 헬스체크 추가 (PORT 환경변수 사용)
-HEALTHCHECK --interval=30s --timeout=30s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:$PORT/health || exit 1
+# 애플리케이션 유저 생성 (보안 강화)
+RUN useradd --create-home --shell /bin/bash app
+RUN chown -R app:app /app
+USER app
 
-# FastAPI 서버 실행 (PORT 환경변수를 동적으로 사용)
-CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
+# FastAPI 서버 실행
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1", "--log-level", "info"]
