@@ -40,21 +40,9 @@ ENV TRANSFORMERS_CACHE=/app/tokenizer_cache
 RUN mkdir -p /app/tokenizer_cache
 
 # 모델 다운로드를 별도로 처리하여 오류 시에도 계속 진행
-RUN python -c "try: \
-    from transformers import AutoTokenizer; \
-    AutoTokenizer.from_pretrained('facebook/bart-large-cnn'); \
-    print('BART tokenizer downloaded successfully') \
-except Exception as e: \
-    print(f'BART tokenizer download failed: {e}') \
-"
+RUN python -c "try:\n    from transformers import AutoTokenizer\n    AutoTokenizer.from_pretrained('facebook/bart-large-cnn')\n    print('BART tokenizer downloaded successfully')\nexcept Exception as e:\n    print(f'BART tokenizer download failed: {e}')"
 
-RUN python -c "try: \
-    from sentence_transformers import SentenceTransformer; \
-    SentenceTransformer('paraphrase-mpnet-base-v2'); \
-    print('SentenceTransformer downloaded successfully') \
-except Exception as e: \
-    print(f'SentenceTransformer download failed: {e}') \
-"
+RUN python -c "try:\n    from sentence_transformers import SentenceTransformer\n    SentenceTransformer('paraphrase-mpnet-base-v2')\n    print('SentenceTransformer downloaded successfully')\nexcept Exception as e:\n    print(f'SentenceTransformer download failed: {e}')"
 
 # main.py 복사 (루트 레벨에)
 COPY app/main.py .
