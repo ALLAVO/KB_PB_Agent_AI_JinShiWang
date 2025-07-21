@@ -36,16 +36,18 @@ RUN pip install --no-cache-dir -r requirements.txt
 ENV HF_HOME=/app/tokenizer_cache
 ENV TRANSFORMERS_CACHE=/app/tokenizer_cache
 
-# 캐시 디렉토리 생성 및 모델 다운로드
+# 캐시 디렉토리 생성
 RUN mkdir -p /app/tokenizer_cache
 
-# 모델 다운로드를 별도로 처리하여 오류 시에도 계속 진행
-RUN python -c "try:\n    from transformers import AutoTokenizer\n    AutoTokenizer.from_pretrained('facebook/bart-large-cnn')\n    print('BART tokenizer downloaded successfully')\nexcept Exception as e:\n    print(f'BART tokenizer download failed: {e}')"
+# 모델 다운로드 스크립트 생성 및 실행
+RUN echo "from transformers import AutoTokenizer; print('Downloading BART...'); AutoTokenizer.from_pretrained('facebook/bart-large-cnn'); print('BART downloaded')" > /tmp/download_bart.py || true
+RUN python /tmp/download_bart.py || echo "BART download failed, continuing..."
 
-RUN python -c "try:\n    from sentence_transformers import SentenceTransformer\n    SentenceTransformer('paraphrase-mpnet-base-v2')\n    print('SentenceTransformer downloaded successfully')\nexcept Exception as e:\n    print(f'SentenceTransformer download failed: {e}')"
+RUN echo "from sentence_transformers import SentenceTransformer; print('Downloading SentenceTransformer...'); SentenceTransformer('paraphrase-mpnet-base-v2'); print('SentenceTransformer downloaded')" > /tmp/download_st.py || true
+RUN python /tmp/download_st.py || echo "SentenceTransformer download failed, continuing..."
 
-# main.py 복사 (루트 레벨에)
-COPY app/main.py .
+# 임시 파일 정리
+RUN rm -f /tmp/download_bart.py /tmp/download_st.py
 
 # 백엔드 코드 복사
 COPY app/ ./app/
@@ -64,5 +66,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=30s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
-# FastAPI 서버 실행
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1"]
+# FastAPI 서버 실행 (app 폴더 안의 main.py 실행)
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1"]
