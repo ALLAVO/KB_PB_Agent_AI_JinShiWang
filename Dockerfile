@@ -65,5 +65,5 @@ RUN useradd --create-home --shell /bin/bash app
 RUN chown -R app:app /app
 USER app
 
-# FastAPI 서버 실행
+# FastAPI 서버 실행 (임시로 bash로 진입)
 CMD ["sh", "-c", "python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080} --workers 1 --log-level info"]
