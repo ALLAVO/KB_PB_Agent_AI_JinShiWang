@@ -15,11 +15,11 @@ build/
 *.pot
 *.mo
 *.env
-.env
 .venv
 venv/
 ENV/
 .env.*
+!frontend/.env
 
 # Jupyter Notebook
 .ipynb_checkpoints
