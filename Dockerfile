@@ -66,4 +66,5 @@ RUN chown -R app:app /app
 USER app
 
 # FastAPI 서버 실행 (Cloud Run PORT 환경변수 사용)
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${PORT:-8080}", "--workers", "1", "--log-level", "info"]
+# CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${PORT:-8080}", "--workers", "1", "--log-level", "info"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1", "--log-level", "info"]
