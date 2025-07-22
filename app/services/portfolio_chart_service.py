@@ -159,22 +159,42 @@ def get_risk_profile_info(risk_profile: str) -> Dict:
         'korean_name': risk_profile
     })
 
-def generate_portfolio_comparison_prompt(client_name, risk_profile, client_portfolio, recommended_portfolio):
+
+def generate_portfolio_comparison_prompt(client_name, risk_profile, client_portfolio, peer_portfolio):
     """
-    고객의 실제 포트폴리오와 추천 포트폴리오를 비교하여 AI 요약 프롬프트를 생성합니다.
+    고객의 실제 포트폴리오와 유사 성향 투자자의 평균 포트폴리오를 비교해,
+    자연스러운 one-shot 요약문을 생성하도록 프롬프트를 구성합니다.
     """
+    example = """
+    예시:
+    김재훈 고객님의 포트폴리오는 기술과 헬스케어 섹터에 높은 비중을 두고 있으며, 생활 필수품과 금융 섹터에도 일정 수준 분산되어 있어 안정성과 성장성 간의 균형이 잘 잡혀 있습니다. 
+    유사한 투자 성향의 다른 고객들은 기술과 금융 외에도 소비재 및 에너지 섹터의 비중이 더 높은 편인데, 김재훈 고객님의 구성은 상대적으로 경기 민감도는 낮지만 방어적 성격이 강한 점이 특징입니다. 
+    최근처럼 시장 변동성이 큰 시기에는 이러한 포트폴리오가 리스크 관리에 유리할 수 있으며, 현 시점에서는 구성을 유지하되 향후 경기 회복 흐름에 따라 소비재나 에너지 섹터의 점진적 편입을 고려해볼 수 있습니다.
+    """
+
     prompt = f"""
-당신은 금융 전문가입니다. 아래는 {client_name} 고객님의 실제 포트폴리오와 {risk_profile} 투자성향에 따른 추천 포트폴리오입니다.
+    당신은 15년차 PB(Private Banker)이며, 포트폴리오 분석에 능력이 출중합니다.
+    아래 고객님의 실제 포트폴리오와, 유사한 위험 성향을 가진 투자자들의 평균 포트폴리오를 비교해 주세요.
 
-[고객 실제 포트폴리오]
-{', '.join([f"{item['sector']} {item['percentage']}%" for item in client_portfolio])}
+    목표는 고객의 현재 구성을 이해하기 쉽게 설명하고,
+    유사 투자자와의 차이를 기반으로 전략적 조언을 제시하는 것입니다.
+    문장은 자연스럽고 간결하게 연결된 한 편의 요약 형식으로 작성하세요.
 
-[추천 포트폴리오]
-{', '.join([f"{item['sector']} {item['percentage']}%" for item in recommended_portfolio])}
+    [고객 이름]: {client_name}
+    [고객 투자 성향]: {risk_profile}
 
-두 포트폴리오의 차이점, 유사점, 그리고 고객에게 도움이 될 만한 투자 조언을 3~5문장으로 요약해 주세요.
+    [고객 포트폴리오 섹터 구성]
+    {', '.join([f"{item['sector']} {item['percentage']}%" for item in client_portfolio])}
+
+    [유사 투자자 평균 포트폴리오]
+    {', '.join([f"{item['sector']} {item['percentage']}%" for item in peer_portfolio])}
+
+    {example}
+
+    이제 위 정보를 바탕으로 고객 맞춤 요약문을 작성해 주세요.
     """.strip()
     return prompt
+
 
 def get_portfolio_chart_ai_summary(client_id: str) -> str:
     """
