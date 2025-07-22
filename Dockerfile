@@ -49,7 +49,7 @@ RUN python /tmp/download_st.py || echo "SentenceTransformer download failed, con
 RUN rm -f /tmp/download_bart.py /tmp/download_st.py
 
 # 백엔드 코드 복사
-COPY app/ ./app/
+COPY app/ .
 
 # 빌드된 프론트엔드 정적 파일 복사
 COPY --from=frontend-builder /app/frontend/build ./static
@@ -66,4 +66,4 @@ RUN chown -R app:app /app
 USER app
 
 # FastAPI 서버 실행 (Cloud Run PORT 환경변수 사용)
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "${PORT:-8080}", "--workers", "1", "--log-level", "info"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${PORT:-8080}", "--workers", "1", "--log-level", "info"]
