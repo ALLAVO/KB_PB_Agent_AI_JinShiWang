@@ -60,7 +60,7 @@ jobs:
             --cpu-throttling \
             --execution-environment gen2 \
             --cpu-boost \
-            --add-cloudsql-instances=marine-cycle-462407-q9:asia-northeast3:jinshiwang-db \
+            --add-cloudsql-instances=marine-cycle-462407-q9:asia-northeast3:kb-pb-agent-ai-jinshiwang \
             --set-env-vars "PYTHONPATH=/app,\
             DB_HOST=${{ secrets.DB_HOST }},\
             DB_PORT=${{ secrets.DB_PORT }},\
