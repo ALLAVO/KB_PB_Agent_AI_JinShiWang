@@ -4,9 +4,9 @@ import logging
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import customer, company, prediction, report, sentiment, market, summarize, keyword_extractor, stock_chart, return_analysis, industry, clients, portfolio_charts, financial_metrics, valuation, company_sector
-from app.api.intention import router as intention
-from app.services.cache_manager import load_mcdonald_dictionary
+from api import customer, company, prediction, report, sentiment, market, summarize, keyword_extractor, stock_chart, return_analysis, industry, clients, portfolio_charts, financial_metrics, valuation, company_sector
+from api.intention import router as intention
+from services.cache_manager import load_mcdonald_dictionary
 
 # 로깅 설정
 logging.basicConfig(
