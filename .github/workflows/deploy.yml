@@ -60,7 +60,7 @@ jobs:
             --cpu-throttling \
             --execution-environment gen2 \
             --cpu-boost \
-            --add-cloudsql-instances=${{ secrets.CLOUDSQL_CONNECTION_NAME }} \
+            --add-cloudsql-instances=marine-cycle-462407-q9:asia-northeast3:jinshiwang-db \
             --set-env-vars "PYTHONPATH=/app,\
             DB_HOST=${{ secrets.DB_HOST }},\
             DB_PORT=${{ secrets.DB_PORT }},\
