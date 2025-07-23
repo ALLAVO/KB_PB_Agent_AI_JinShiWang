@@ -107,3 +107,6 @@ email-validator==2.1.0
 
 # For caching (if needed)
 redis==5.0.1
+
+# requirements.txt 맨 아래에 추가
+summa
