@@ -31,6 +31,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
+# spaCy 영어 모델 설치
+RUN python -m spacy download en_core_web_sm
+
 # === 캐시 디렉토리 설정 및 모델 미리 다운로드 ===
 # 캐시 디렉토리 환경변수 설정
 ENV HF_HOME=/app/tokenizer_cache
