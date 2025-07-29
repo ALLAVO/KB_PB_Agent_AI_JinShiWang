@@ -149,14 +149,12 @@ JinShiWang은 PB(Private Banker) 업무의 효율성과 고객 만족도를 높�
    npm install
    npm start
    ```
-   - 브라우저에서 [http://localhost:3000](http://localhost:3000) 접속
 
 3. **백엔드 실행**
    ```bash
    pip install -r requirements.txt
    uvicorn app.main:app --reload
    ```
-   - 기본 포트(예: 8000)에서 API 서버 실행
 
 4. **전체 서비스 연동**
    - 프론트엔드에서 API 주소를 백엔드 서버로 맞춰 연동
