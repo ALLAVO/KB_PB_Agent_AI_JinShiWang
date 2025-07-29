@@ -1,0 +1,61 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      BUCKET_NAME: ${{ secrets.GCS_BUCKET_NAME }}
+
+    steps:
+      # 1. 저장소 체크아웃
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2. Node.js 설치
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      # 3. npm ci 및 빌드
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run build
+
+      # 4. Google Cloud 인증
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      # 5. gcloud 설치
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      # 6. GCS 버킷에 빌드 결과 업로드 (MIME 타입 자동, 퍼블릭 읽기 권한)
+      - name: Sync build folder to GCS bucket
+        run: |
+          gsutil -m rsync -r -c -d -x '\.DS_Store$' -a public-read frontend/build gs://${BUCKET_NAME}
+          gsutil -m setmeta -h "Cache-Control:public, max-age=0, no-transform" $(gsutil ls gs://${BUCKET_NAME}/**)
+          gsutil acl ch -r -u AllUsers:R gs://${BUCKET_NAME}
+
+      # 7. Cloud CDN 캐시 무효화
+      - name: Invalidate Cloud CDN cache
+        run: |
+          gcloud compute url-maps invalidate-cdn-cache ${{ secrets.CDN_URL_MAP_NAME }} \
+            --path "/*" \
+            --project $PROJECT_ID \
+            --quiet
+
