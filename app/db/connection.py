@@ -4,6 +4,7 @@ from app.core.config import settings
 
 def check_db_connection():
     try:
+        print("DB_HOST:", settings.DB_HOST)  # 환경 변수 값 확인용
         if settings.DB_HOST.startswith("/cloudsql/"):
             # Unix socket connection (Cloud SQL)
             conn = psycopg2.connect(
