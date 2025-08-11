@@ -68,21 +68,24 @@ jobs:
           echo "Build size:"
           du -sh frontend/build/
 
-      # 7. GCS 버킷에 빌드 결과 업로드 (MIME 타입 자동, 퍼블릭 읽기 권한)
+      # 7. GCS 버킷에 빌드 결과 업로드 (Uniform bucket-level access 호환)
       - name: Sync build folder to GCS bucket
         run: |
           # 기존 파일 확인
           echo "Current bucket contents:"
           gsutil ls -la gs://${BUCKET_NAME}/ || echo "Bucket is empty or doesn't exist"
           
-          # 빌드 결과 업로드
-          gsutil -m rsync -r -c -d -x '\.DS_Store$' -a public-read frontend/build gs://${BUCKET_NAME}
+          # 빌드 결과 업로드 (ACL 플래그 제거)
+          gsutil -m rsync -r -c -d -x '\.DS_Store$' frontend/build gs://${BUCKET_NAME}
           
           # 메타데이터 설정
           gsutil -m setmeta -h "Cache-Control:public, max-age=0, no-transform" gs://${BUCKET_NAME}/**
           
-          # 퍼블릭 읽기 권한 설정
-          gsutil acl ch -r -u AllUsers:R gs://${BUCKET_NAME}
+          # 버킷 레벨에서 public access 설정 (uniform bucket-level access 방식)
+          gsutil iam ch allUsers:objectViewer gs://${BUCKET_NAME}
+          
+          # 웹사이트 설정
+          gsutil web set -m index.html -e 404.html gs://${BUCKET_NAME}
           
           echo "Upload completed. Bucket contents:"
           gsutil ls -la gs://${BUCKET_NAME}/
