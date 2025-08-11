@@ -4,7 +4,7 @@ import logging
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import customer, company, prediction, report, sentiment, market, summarize, keyword_extractor, stock_chart, return_analysis, industry, clients, portfolio_charts, financial_metrics, valuation, company_sector
+from app.api import company, prediction, sentiment, market, summarize, keyword_extractor, stock_chart, return_analysis, industry, clients, portfolio_charts, financial_metrics, valuation, company_sector
 from app.api.intention import router as intention
 from app.services.cache_manager import load_mcdonald_dictionary
 
@@ -34,10 +34,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(customer.router, prefix="/api/v1")
 app.include_router(company.router, prefix="/api/v1")
 app.include_router(prediction.router, prefix="/api/v1")
-app.include_router(report.router, prefix="/api/v1")
 app.include_router(sentiment.router, prefix="/api/v1")  # sentiment 라우터 prefix 추가
 app.include_router(market.router, prefix="/api/v1")  # market 라우터 prefix 추가
 app.include_router(summarize.router, prefix="/api/v1")  # summarize 라우터 prefix 추가
