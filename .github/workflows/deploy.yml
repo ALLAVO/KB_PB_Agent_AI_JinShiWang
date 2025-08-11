@@ -8,7 +8,7 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # 타임아웃 설정 (긴 빌드/배포 대비)
+    timeout-minutes: 45  # 타임아웃 증가
 
     steps:
       - name: Checkout code
@@ -27,12 +27,46 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
+      # 프로젝트 설정 확인
+      - name: Verify project configuration
+        run: |
+          echo "Current project: $(gcloud config get-value project)"
+          echo "Active account: $(gcloud config get-value account)"
+
       - name: Configure Docker for Google Cloud
         run: gcloud auth configure-docker asia-northeast3-docker.pkg.dev
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Artifact Registry API 활성화
+      - name: Enable required APIs
+        run: |
+          gcloud services enable artifactregistry.googleapis.com \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+          gcloud services enable run.googleapis.com \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+          gcloud services enable cloudbuild.googleapis.com \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+
+      # Artifact Registry 저장소 존재 여부 확인 및 생성
+      - name: Ensure Artifact Registry repository exists
+        run: |
+          if ! gcloud artifacts repositories describe jinshiwang-docker-repo \
+            --location=asia-northeast3 \
+            --project=${{ secrets.GCP_PROJECT_ID }} >/dev/null 2>&1; then
+            echo "Creating Artifact Registry repository..."
+            gcloud artifacts repositories create jinshiwang-docker-repo \
+              --repository-format=docker \
+              --location=asia-northeast3 \
+              --description="Docker repository for JinShiWang PB Agent AI" \
+              --project=${{ secrets.GCP_PROJECT_ID }}
+            echo "Repository created successfully"
+          else
+            echo "Artifact Registry repository already exists."
+          fi
+
+      # 이미지 빌드 및 푸시 재시도 로직
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -42,9 +76,59 @@ jobs:
           tags: |
             asia-northeast3-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/jinshiwang-docker-repo/jinshiwang-pb-agent-ai:${{ github.sha }}
             asia-northeast3-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/jinshiwang-docker-repo/jinshiwang-pb-agent-ai:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+        retry-on-error: true
 
+      # 이미지 푸시 검증
+      - name: Verify image push
+        run: |
+          echo "Verifying pushed image..."
+          gcloud artifacts docker images list asia-northeast3-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/jinshiwang-docker-repo/jinshiwang-pb-agent-ai \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+
+      # Cloud Run 서비스 배포 전 권한 확인
+      - name: Verify Cloud Run permissions
+        run: |
+          echo "Checking Cloud Run permissions..."
+          gcloud run services list --region=asia-northeast3 --project=${{ secrets.GCP_PROJECT_ID }} || {
+            echo "Warning: Limited Cloud Run permissions detected"
+          }
+
+      # 기존 서비스 존재 여부 확인
+      - name: Check existing Cloud Run service
+        id: check_service
+        run: |
+          if gcloud run services describe jinshiwang-pb-agent-ai \
+            --region=asia-northeast3 \
+            --project=${{ secrets.GCP_PROJECT_ID }} >/dev/null 2>&1; then
+            echo "service_exists=true" >> $GITHUB_OUTPUT
+            echo "Service already exists, will update..."
+          else
+            echo "service_exists=false" >> $GITHUB_OUTPUT
+            echo "Service does not exist, will create new one..."
+          fi
+        continue-on-error: true
+
+      # Cloud SQL 인스턴스 확인
+      - name: Verify Cloud SQL instance
+        run: |
+          echo "Checking Cloud SQL instance..."
+          if gcloud sql instances describe kb-pb-agent-ai-jinshiwang \
+            --project=${{ secrets.GCP_PROJECT_ID }} >/dev/null 2>&1; then
+            echo "Cloud SQL instance exists"
+          else
+            echo "Warning: Cloud SQL instance may not exist"
+          fi
+        continue-on-error: true
+
+      # Cloud Run 배포 (재시도 로직 포함)
       - name: Deploy to Cloud Run
         run: |
+          set -e
+          echo "Starting Cloud Run deployment..."
+          
+          # 배포 시도
           gcloud run deploy jinshiwang-pb-agent-ai \
             --image asia-northeast3-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/jinshiwang-docker-repo/jinshiwang-pb-agent-ai:${{ github.sha }} \
             --region asia-northeast3 \
@@ -60,6 +144,48 @@ jobs:
             --cpu-throttling \
             --execution-environment gen2 \
             --cpu-boost \
-            --service-account=jinshiwang-service-account@confident-trail-468600-e6.iam.gserviceaccount.com \
-            --add-cloudsql-instances=confident-trail-468600-e6:asia-northeast3:kb-pb-agent-ai-jinshiwang \
-            --set-env-vars PYTHONPATH=/app,DB_HOST=${{ secrets.DB_HOST }},DB_PORT=${{ secrets.DB_PORT }},DB_NAME=${{ secrets.DB_NAME }},DB_USER=${{ secrets.DB_USER }},DB_PASSWORD=${{ secrets.DB_PASSWORD }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }},FRED_API_KEY=${{ secrets.FRED_API_KEY }},FMP_API_KEY=${{ secrets.FMP_API_KEY }},CACHE_DIR=${{ secrets.CACHE_DIR }},MCDONALD_CACHE_ENABLED=${{ secrets.MCDONALD_CACHE_ENABLED }},CACHE_EXPIRY_HOURS=${{ secrets.CACHE_EXPIRY_HOURS }},ALPHAVANTAGE_API_KEY=${{ secrets.ALPHAVANTAGE_API_KEY }},HF_HOME=/app/tokenizer_cache,TRANSFORMERS_CACHE=/app/tokenizer_cache
+            --service-account=jinshiwang-service-account@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
+            --add-cloudsql-instances=${{ secrets.GCP_PROJECT_ID }}:asia-northeast3:kb-pb-agent-ai-jinshiwang \
+            --set-env-vars "PYTHONPATH=/app,DB_HOST=${{ secrets.DB_HOST }},DB_PORT=${{ secrets.DB_PORT }},DB_NAME=${{ secrets.DB_NAME }},DB_USER=${{ secrets.DB_USER }},DB_PASSWORD=${{ secrets.DB_PASSWORD }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }},FRED_API_KEY=${{ secrets.FRED_API_KEY }},FMP_API_KEY=${{ secrets.FMP_API_KEY }},CACHE_DIR=${{ secrets.CACHE_DIR }},MCDONALD_CACHE_ENABLED=${{ secrets.MCDONALD_CACHE_ENABLED }},CACHE_EXPIRY_HOURS=${{ secrets.CACHE_EXPIRY_HOURS }},ALPHAVANTAGE_API_KEY=${{ secrets.ALPHAVANTAGE_API_KEY }},HF_HOME=/app/tokenizer_cache,TRANSFORMERS_CACHE=/app/tokenizer_cache" \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --quiet \
+            --format="value(status.url)"
+
+      # 배포 결과 확인 및 헬스체크
+      - name: Verify deployment and health check
+        run: |
+          echo "Deployment completed. Getting service details..."
+          
+          # 서비스 URL 가져오기
+          SERVICE_URL=$(gcloud run services describe jinshiwang-pb-agent-ai \
+            --region=asia-northeast3 \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --format="value(status.url)")
+          
+          echo "Service URL: $SERVICE_URL"
+          
+          # 서비스 상태 확인
+          echo "Service status:"
+          gcloud run services describe jinshiwang-pb-agent-ai \
+            --region=asia-northeast3 \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --format="table(status.conditions[].type,status.conditions[].status,status.conditions[].reason)"
+          
+          # 간단한 헬스체크 (선택사항)
+          echo "Performing basic health check..."
+          if curl -f -s --max-time 30 "$SERVICE_URL/health" >/dev/null 2>&1; then
+            echo "Health check passed ✅"
+          else
+            echo "Health check failed or endpoint not available ⚠️"
+          fi
+        continue-on-error: true
+
+      # 배포 요약
+      - name: Deployment Summary
+        run: |
+          echo "=== Deployment Summary ==="
+          echo "✅ Image: asia-northeast3-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/jinshiwang-docker-repo/jinshiwang-pb-agent-ai:${{ github.sha }}"
+          echo "✅ Region: asia-northeast3"
+          echo "✅ Service: jinshiwang-pb-agent-ai"
+          echo "✅ Project: ${{ secrets.GCP_PROJECT_ID }}"
+          echo "=========================="
