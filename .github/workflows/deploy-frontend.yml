@@ -68,20 +68,28 @@ jobs:
           echo "Build size:"
           du -sh frontend/build/
 
-      # 7. GCS 버킷에 빌드 결과 업로드 (Uniform bucket-level access 호환)
+      # 7. GCS 버킷에 빌드 결과 업로드 및 공개 설정
       - name: Sync build folder to GCS bucket
         run: |
           # 기존 파일 확인
           echo "Current bucket contents:"
           gsutil ls -la gs://${BUCKET_NAME}/ || echo "Bucket is empty or doesn't exist"
           
-          # 빌드 결과 업로드 (ACL 플래그 제거)
+          # Public Access Prevention 상태 확인
+          echo "Checking Public Access Prevention status:"
+          gsutil pap get gs://${BUCKET_NAME}
+          
+          # Public Access Prevention 비활성화 (필요한 경우)
+          echo "Disabling Public Access Prevention for public website hosting..."
+          gsutil pap set off gs://${BUCKET_NAME} || echo "PAP already disabled or error occurred"
+          
+          # 빌드 결과 업로드
           gsutil -m rsync -r -c -d -x '\.DS_Store$' frontend/build gs://${BUCKET_NAME}
           
           # 메타데이터 설정
           gsutil -m setmeta -h "Cache-Control:public, max-age=0, no-transform" gs://${BUCKET_NAME}/**
           
-          # 버킷 레벨에서 public access 설정 (uniform bucket-level access 방식)
+          # 버킷과 모든 객체를 공개적으로 읽기 가능하게 설정
           gsutil iam ch allUsers:objectViewer gs://${BUCKET_NAME}
           
           # 웹사이트 설정
