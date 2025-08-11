@@ -60,7 +60,7 @@ jobs:
           grep -r "jinshiwang-pb-agent-ai" build/ || echo "API URL not found in build files"
         env:
           # Multiple environment variables to suppress ESLint issues
-          REACT_APP_API_BASE_URL: https://jinshiwang-pb-agent-ai-670021677799.asia-northeast3.run.app
+          REACT_APP_API_BASE_URL: https://jinshiwang-pb-agent-ai-qor3u3ceka-du.a.run.app
           ESLINT_NO_DEV_ERRORS: true
           DISABLE_ESLINT_PLUGIN: true
           GENERATE_SOURCEMAP: false
