@@ -123,8 +123,7 @@ def explain_shap_week(clf, X_week, y_week, next_start_date, next_end_date, top_n
         true = y_week.iloc[i]
         class_idx = class_to_index.get(pred, 0)
 
-        shap_row = shap_values[class_idx][i]  # shape: (n_features, n_classes)
-        shap_row = shap_row[:, class_idx]     # ➤ 예측 클래스에 해당하는 SHAP 값만 추출
+        shap_row = shap_values[class_idx][i]
 
         sorted_idx = np.argsort(np.abs(shap_row))[::-1][:top_n]
 
