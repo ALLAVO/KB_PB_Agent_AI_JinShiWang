@@ -9,12 +9,14 @@ from openai import OpenAI
 logger = logging.getLogger(__name__)
 
 def get_database_connection():
-    """데이터베이스 연결"""
+    """데이터베이스 연결 - Cloud SQL 지원"""
     try:
         if hasattr(settings, 'USE_SUPABASE') and settings.USE_SUPABASE:
             database_url = settings.SUPABASE_DATABASE_URL
         else:
-            database_url = f"postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
+            # settings.DATABASE_URL 속성 사용 (Cloud SQL 지원)
+            database_url = settings.DATABASE_URL
+            print(f"Using DATABASE_URL: {database_url}")  # 디버깅용
         
         engine = create_engine(database_url, pool_pre_ping=True)
         return engine
