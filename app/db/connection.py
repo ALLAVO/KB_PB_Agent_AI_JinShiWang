@@ -29,14 +29,17 @@ def check_db_connection():
 
 def get_sqlalchemy_engine():
     if settings.DB_HOST.startswith("/cloudsql/"):
-        # SQLAlchemy expects the socket path as a query param, not as host
+        # Cloud SQL Unix socket - 올바른 형식으로 수정
         db_url = (
             f"postgresql+psycopg2://{settings.DB_USER}:{settings.DB_PASSWORD}"
-            f"@/{settings.DB_NAME}?host={settings.DB_HOST}"
+            f"@/{settings.DB_NAME}?"
+            f"unix_sock={settings.DB_HOST}/.s.PGSQL.5432"
         )
+        print("Cloud SQL URL:", db_url)  # 디버깅용
     else:
         db_url = (
             f"postgresql+psycopg2://{settings.DB_USER}:{settings.DB_PASSWORD}"
             f"@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
         )
+        print("TCP URL:", db_url)  # 디버깅용
     return create_engine(db_url)
