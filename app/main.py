@@ -27,7 +27,9 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:3001",
-        "*"  # Cloud Run 배포시를 위해 추가
+        "https://jinshiwang-agent-ai.com",
+        "https://www.jinshiwang-agent-ai.com",
+        "*"  # 임시로 모든 도메인 허용
     ],
     allow_credentials=True,
     allow_methods=["*"],
