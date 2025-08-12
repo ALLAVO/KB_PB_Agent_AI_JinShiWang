@@ -1,6 +1,7 @@
 # 환경설정 및 환경변수 관리
 from pydantic import Field
 from pydantic_settings import BaseSettings
+import os
 
 class Settings(BaseSettings):
     APP_NAME: str = "KB Jinshiwang API"
@@ -25,7 +26,22 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
-        return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        # 환경변수 DATABASE_URL이 있으면 우선 사용 (Cloud SQL용)
+        env_database_url = os.getenv("DATABASE_URL")
+        if env_database_url:
+            print(f"Using environment DATABASE_URL: {env_database_url}")
+            return env_database_url
+            
+        # Cloud SQL Unix socket 연결 (Cloud Run 환경)
+        if self.DB_HOST.startswith("/cloudsql/"):
+            db_url = f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@/{self.DB_NAME}?host={self.DB_HOST}"
+            print(f"Using Cloud SQL Unix socket: {db_url}")
+            return db_url
+        
+        # 일반 TCP 연결 (로컬 개발환경)
+        db_url = f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        print(f"Using TCP connection: {db_url}")
+        return db_url
 
     class Config:
         env_file = ".env"
