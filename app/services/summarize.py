@@ -3,9 +3,9 @@ from transformers import pipeline, AutoTokenizer
 import torch
 from app.db.connection import get_sqlalchemy_engine # 수정
 from pathlib import Path
-from app.services.sentiment import get_weekly_sentiment_scores_by_stock_symbol
-import openai
+from app.services.sentiment import get_weekly_sentiment_scores_by_stock_symbol, get_weekly_top3_articles_by_stock_symbol
 from dotenv import load_dotenv
+import openai
 import os
 from summa.summarizer import summarize as extractive_summarize
 # 함수 안이든 전역이든 한 번만 선언 ##추가 코드
@@ -303,16 +303,16 @@ def summarize_top3_articles(top3_articles):
 
 def get_weekly_top3_summaries(stock_symbol: str, start_date: str, end_date: str):
     """
-    주어진 종목, 시작일, 종료일에 대해 주차별 top3 기사 요약 리스트를 반환합니다.
-    반환값 예시: { week1: [ {...}, {...}, {...} ], week2: [ {...}, ... ] }
+    주어진 기간 동안의 주차별 상위 3개 기사와 요약을 반환합니다.
     """
-    sentiment_result = get_weekly_sentiment_scores_by_stock_symbol(stock_symbol, start_date, end_date)
-    weekly_top3 = sentiment_result.get("weekly_top3_articles", {})
-    weekly_summaries = {}
-    for week, top3_articles in weekly_top3.items():
-        summaries = summarize_top3_articles(top3_articles)
-        weekly_summaries[week] = summaries
-    return weekly_summaries
+    weekly_top3_articles = get_weekly_top3_articles_by_stock_symbol(stock_symbol, start_date, end_date)
+    
+    summarized_weekly_articles = {}
+    for week, articles in weekly_top3_articles.items():
+        summarized_articles = summarize_top3_articles(articles)
+        summarized_weekly_articles[week] = summarized_articles
+        
+    return summarized_weekly_articles
 
 
 

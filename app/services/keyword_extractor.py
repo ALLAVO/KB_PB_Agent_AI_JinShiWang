@@ -2,13 +2,14 @@ import os
 os.environ["HF_HUB_DOWNLOAD_TIMEOUT"] = "120"
 
 import string
-from app.db.connection import check_db_connection
+from app.db.connection import get_sqlalchemy_engine 
 from app.services.sentiment import get_weekly_sentiment_scores_by_stock_symbol
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
 import spacy
 from keybert import KeyBERT
 from transformers import AutoTokenizer
+
 
 '''
 [유의사항]
@@ -168,27 +169,24 @@ def chunk_text(tokens, max_len=400, overlap=50):
     return chunks
 
 def fetch_articles_from_db(stock_symbol, start_date, end_date):
-    conn = check_db_connection()
-    if conn is None:
-        print("[오류] DB 연결 실패")
-        return []
+    """
+    DB에서 기사를 가져옵니다. (SQLAlchemy 엔진 사용)
+    """
+    engine = get_sqlalchemy_engine()
     try:
-        cur = conn.cursor()
-        query = """
-            SELECT article, date, weekstart_sunday
-            FROM kb_enterprise_dataset
-            WHERE stock_symbol = %s AND date >= %s AND date <= %s
-            ORDER BY weekstart_sunday, date DESC;
-        """
-        cur.execute(query, (stock_symbol, start_date, end_date))
-        rows = cur.fetchall()
-        cur.close()
-        conn.close()
-        return rows
+        with engine.connect() as conn:
+            query = """
+                SELECT article, date, weekstart_sunday
+                FROM kb_enterprise_dataset
+                WHERE stock_symbol = %(stock_symbol)s AND date >= %(start_date)s AND date <= %(end_date)s
+                ORDER BY weekstart_sunday, date DESC;
+            """
+            params = {"stock_symbol": stock_symbol, "start_date": start_date, "end_date": end_date}
+            result = conn.execute(query, params)
+            rows = result.fetchall()
+            return rows
     except Exception as e:
         print("[오류] DB에서 기사 불러오기 실패:", e)
-        if conn:
-            conn.close()
         return []
 
 def keyword_extract_from_articles(stock_symbol, start_date, end_date):
