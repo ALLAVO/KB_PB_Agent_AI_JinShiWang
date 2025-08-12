@@ -2,7 +2,6 @@ from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 from typing import Optional
 from app.services.sentiment import (
-    get_weekly_sentiment_scores_by_stock_symbol,
     get_articles_by_stock_symbol,
     get_sentiment_score_for_article,
     get_top3_articles_closest_to_weekly_score_from_list,
@@ -13,7 +12,7 @@ from app.schemas.sentiment import (
     WeeklySentimentResponse,
     WeeklySentimentWithSummaryResponse,
     )
-from app.services.sentiment import preprocess_text, check_db_connection
+from app.services.sentiment import preprocess_text
 
 
 router = APIRouter()
@@ -32,12 +31,11 @@ def get_top3_articles_api(
     # 주어진 기간에 해당하는 기사를 가져옴
     rows = get_articles_by_stock_symbol(stock_symbol, start_date, end_date)
     articles = []
-    # 데이터베이스 연결
-    conn = check_db_connection()
+    
     for row in rows:
         article, date, weekstart, article_title = row
         # 기사의 감성 점수 계산
-        score = get_sentiment_score_for_article(article, conn)
+        score = get_sentiment_score_for_article(article)
         # 기사를 전처리하여 단어 목록 생성
         words = preprocess_text(article)
         pos_cnt, neg_cnt = 0, 0
@@ -57,8 +55,7 @@ def get_top3_articles_api(
             'neg_cnt': neg_cnt,
             'article_title': article_title
         })
-    if conn:
-        conn.close()
+
     if not articles:
         return JSONResponse(
             content={"top3_articles": []},
