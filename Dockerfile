@@ -54,6 +54,9 @@ RUN rm -f /tmp/download_bart.py /tmp/download_st.py
 # 백엔드 코드 복사 (패키지 루트로 app 디렉토리 복사)
 COPY app/ ./app
 
+# McDonald 사전 등이 담긴 캐시 디렉토리를 명시적으로 복사
+COPY app/cache/ ./app/cache/
+
 # 빌드된 프론트엔드 정적 파일 복사
 COPY --from=frontend-builder /app/frontend/build ./static
 
