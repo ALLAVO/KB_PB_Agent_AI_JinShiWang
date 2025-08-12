@@ -55,11 +55,21 @@ jobs:
             --memory 4Gi \
             --cpu 2 \
             --max-instances 10 \
-            --min-instances 0 \
+            --min-instances 1 \
             --concurrency 80 \
             --cpu-throttling \
             --execution-environment gen2 \
             --cpu-boost \
             --service-account=jinshiwang-service-account@confident-trail-468600-e6.iam.gserviceaccount.com \
             --add-cloudsql-instances=confident-trail-468600-e6:asia-northeast3:kb-pb-agent-ai-jinshiwang \
-            --set-env-vars PYTHONPATH=/app,DB_HOST=/cloudsql/confident-trail-468600-e6:asia-northeast3:kb-pb-agent-ai-jinshiwang,DB_PORT=5432,DB_NAME=kb_pb_agent_ai_jinshiwang,DB_USER=${{ secrets.DB_USER }},DB_PASSWORD=${{ secrets.DB_PASSWORD }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }},FRED_API_KEY=${{ secrets.FRED_API_KEY }},FMP_API_KEY=${{ secrets.FMP_API_KEY }},CACHE_DIR=/app/cache,MCDONALD_CACHE_ENABLED=true,CACHE_EXPIRY_HOURS=24,ALPHAVANTAGE_API_KEY=${{ secrets.ALPHAVANTAGE_API_KEY }},HF_HOME=/app/tokenizer_cache,TRANSFORMERS_CACHE=/app/tokenizer_cache
+            --set-env-vars PYTHONPATH=/app,DB_HOST=/cloudsql/confident-trail-468600-e6:asia-northeast3:kb-pb-agent-ai-jinshiwang,DB_PORT=5432,DB_NAME=kb_pb_agent_ai_jinshiwang,DB_USER=${{ secrets.DB_USER }},DB_PASSWORD=${{ secrets.DB_PASSWORD }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }},FRED_API_KEY=${{ secrets.FRED_API_KEY }},FMP_API_KEY=${{ secrets.FMP_API_KEY }},CACHE_DIR=/app/cache,MCDONALD_CACHE_ENABLED=true,CACHE_EXPIRY_HOURS=24,ALPHAVANTAGE_API_KEY=${{ secrets.ALPHAVANTAGE_API_KEY }},HF_HOME=/app/tokenizer_cache,TRANSFORMERS_CACHE=/app/tokenizer_cache,PORT=8080
+
+      - name: Check deployment status
+        run: |
+          echo "Checking service status..."
+          gcloud run services describe jinshiwang-pb-agent-ai --region asia-northeast3
+          echo "Getting service URL..."
+          SERVICE_URL=$(gcloud run services describe jinshiwang-pb-agent-ai --region asia-northeast3 --format="value(status.url)")
+          echo "Service URL: $SERVICE_URL"
+          echo "Testing health endpoint..."
+          curl -f "$SERVICE_URL/health" || echo "Health check failed"
