@@ -2,7 +2,7 @@ import json
 import os
 import gzip
 from datetime import datetime, timedelta
-from app.db.connection import check_db_connection
+from app.db.connection import get_sqlalchemy_engine
 from app.core.config import settings
 
 # 캐시 설정
@@ -28,28 +28,23 @@ def export_mcdonald_dict_to_json():
     """
     print("[INFO] McDonald 사전을 Cloud SQL에서 JSON으로 내보내는 중...")
     
-    conn = check_db_connection()
-    if conn is None:
-        print("[ERROR] DB 연결 실패")
-        return False
-    
     try:
         ensure_cache_dir()
         
-        cur = conn.cursor()
-        cur.execute("SELECT word, positive, negative, uncertainty, litigious, constraining FROM mcdonald_masterdictionary")
-        rows = cur.fetchall()
+        with get_sqlalchemy_engine().connect() as conn:
+            result = conn.execute("SELECT word, positive, negative, uncertainty, litigious, constraining FROM mcdonald_masterdictionary")
+            rows = result.fetchall()
         
-        mcdonald_dict = {}
-        for row in rows:
-            word, positive, negative, uncertainty, litigious, constraining = row
-            mcdonald_dict[word] = {
-                'positive': positive,
-                'negative': negative,
-                'uncertainty': uncertainty,
-                'litigious': litigious,
-                'constraining': constraining
-            }
+            mcdonald_dict = {}
+            for row in rows:
+                word, positive, negative, uncertainty, litigious, constraining = row
+                mcdonald_dict[word] = {
+                    'positive': positive,
+                    'negative': negative,
+                    'uncertainty': uncertainty,
+                    'litigious': litigious,
+                    'constraining': constraining
+                }
         
         # 압축된 JSON 파일로 저장
         with gzip.open(MCDONALD_CACHE_FILE, 'wt', encoding='utf-8') as f:
@@ -65,17 +60,12 @@ def export_mcdonald_dict_to_json():
         with open(CACHE_METADATA_FILE, 'w', encoding='utf-8') as f:
             json.dump(metadata, f, indent=2)
         
-        cur.close()
-        conn.close()
-        
         print(f"[INFO] McDonald 사전 JSON 내보내기 완료: {len(mcdonald_dict)}개 단어")
         print(f"[INFO] 파일 저장 위치: {MCDONALD_CACHE_FILE}")
         return True
         
     except Exception as e:
         print(f"[ERROR] McDonald 사전 JSON 내보내기 실패: {e}")
-        if conn:
-            conn.close()
         return False
 
 def is_cache_valid():
@@ -164,5 +154,6 @@ def get_cache_info():
             return metadata
         else:
             return {"error": "캐시 메타데이터 파일이 존재하지 않습니다."}
+
     except Exception as e:
         return {"error": f"캐시 정보 조회 실패: {e}"}

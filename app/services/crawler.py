@@ -8,7 +8,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from typing import Dict, List
 from openai import OpenAI
-from app.db.connection import check_db_connection
+from app.db.connection import get_sqlalchemy_engine
 
 # 요청 간 최소 대기시간 (초 단위)
 RATE_LIMIT_SLEEP = 10
@@ -232,11 +232,6 @@ def get_weekly_stock_indicators_from_stooq(ticker: str, start_date: str, end_dat
     }
     """
     try:
-        # 데이터베이스 연결
-        conn = check_db_connection()
-        if conn is None:
-            return {'error': 'Database connection failed'}
-        
         # 티커 첫 글자에 따라 테이블 결정
         first_letter = ticker[0].lower()
         if 'a' <= first_letter <= 'd':
@@ -254,20 +249,16 @@ def get_weekly_stock_indicators_from_stooq(ticker: str, start_date: str, end_dat
         if start_date > '2023-12-31':
             return {"error": "No data available for the requested period (data only until 2023)"}
         
-        cur = conn.cursor()
-        
-        # 주간 데이터 조회
-        query = f"""
-            SELECT date, open, high, low, close, volume, adj_close
-            FROM {table_name}
-            WHERE stock_symbol = %s AND date BETWEEN %s AND %s
-            ORDER BY date ASC
-        """
-        cur.execute(query, (ticker, start_date, end_date))
-        rows = cur.fetchall()
-        
-        cur.close()
-        conn.close()
+        with get_sqlalchemy_engine().connect() as conn:
+            # 주간 데이터 조회
+            query = f"""
+                SELECT date, open, high, low, close, volume, adj_close
+                FROM {table_name}
+                WHERE stock_symbol = %s AND date BETWEEN %s AND %s
+                ORDER BY date ASC
+            """
+            result = conn.execute(query, (ticker, start_date, end_date))
+            rows = result.fetchall()
         
         if not rows:
             return {"error": "No price data in given period."}
@@ -333,11 +324,6 @@ def get_stock_price_chart_data(ticker: str, start_date: str, end_date: str) -> D
     주식 가격 차트 데이터를 데이터베이스에서 가져옵니다.
     """
     try:
-        # 데이터베이스 연결
-        conn = check_db_connection()
-        if conn is None:
-            return {'error': 'Database connection failed'}
-        
         # 티커 첫 글자에 따라 테이블 결정
         first_letter = ticker[0].lower()
         if 'a' <= first_letter <= 'd':
@@ -355,20 +341,16 @@ def get_stock_price_chart_data(ticker: str, start_date: str, end_date: str) -> D
         if start_date > '2023-12-31':
             return {"error": "No data available for the requested period (data only until 2023)"}
         
-        cur = conn.cursor()
-        
-        # 차트 데이터 조회
-        query = f"""
-            SELECT date, open, high, low, close, volume, adj_close
-            FROM {table_name}
-            WHERE stock_symbol = %s AND date BETWEEN %s AND %s
-            ORDER BY date ASC
-        """
-        cur.execute(query, (ticker, start_date, end_date))
-        rows = cur.fetchall()
-        
-        cur.close()
-        conn.close()
+        with get_sqlalchemy_engine().connect() as conn:
+            # 차트 데이터 조회
+            query = f"""
+                SELECT date, open, high, low, close, volume, adj_close
+                FROM {table_name}
+                WHERE stock_symbol = %s AND date BETWEEN %s AND %s
+                ORDER BY date ASC
+            """
+            result = conn.execute(query, (ticker, start_date, end_date))
+            rows = result.fetchall()
         
         if not rows:
             return {"error": f"No data found for symbol {ticker}"}
@@ -438,11 +420,6 @@ def get_index_chart_data(symbol: str, start_date: str, end_date: str) -> Dict:
     지수 데이터를 데이터베이스에서 가져옵니다 (나스닥, S&P 500, DOW 등)
     """
     try:
-        # 데이터베이스 연결
-        conn = check_db_connection()
-        if conn is None:
-            return {'error': 'Database connection failed'}
-        
         # 2023년까지의 데이터만 있으므로 end_date가 2023년을 넘으면 조정
         if end_date > '2023-12-31':
             end_date = '2023-12-31'
@@ -461,20 +438,16 @@ def get_index_chart_data(symbol: str, start_date: str, end_date: str) -> Dict:
         if not column_name:
             return {"error": f"Unsupported index symbol: {symbol}"}
         
-        cur = conn.cursor()
-        
-        # 지수 데이터 조회
-        query = f"""
-            SELECT date, {column_name}
-            FROM index_closing_price
-            WHERE date BETWEEN %s AND %s AND {column_name} IS NOT NULL
-            ORDER BY date ASC
-        """
-        cur.execute(query, (start_date, end_date))
-        rows = cur.fetchall()
-        
-        cur.close()
-        conn.close()
+        with get_sqlalchemy_engine().connect() as conn:
+            # 지수 데이터 조회
+            query = f"""
+                SELECT date, {column_name}
+                FROM index_closing_price
+                WHERE date BETWEEN %s AND %s AND {column_name} IS NOT NULL
+                ORDER BY date ASC
+            """
+            result = conn.execute(query, (start_date, end_date))
+            rows = result.fetchall()
         
         if not rows:
             return {"error": f"No data found for symbol {symbol}"}
@@ -735,27 +708,21 @@ def get_us_indices_6months_chart(end_date: str) -> dict:
         'nasdaq': {'dates': [...], 'closes': [...]}
     }
     """
-    conn = check_db_connection()
-    if conn is None:
-        return {'error': 'Database connection failed'}
-    
     try:
         end_dt = datetime.strptime(end_date, '%Y-%m-%d')
         start_dt = end_dt - timedelta(days=182)  # 약 6개월(182일)
         start_str = start_dt.strftime('%Y-%m-%d')
         end_str = end_dt.strftime('%Y-%m-%d')
 
-        cur = conn.cursor()
-        query = """
-            SELECT date, dow, sp500, nasdaq 
-            FROM index_closing_price 
-            WHERE date BETWEEN %s AND %s
-            ORDER BY date ASC;
-        """
-        cur.execute(query, (start_str, end_str))
-        rows = cur.fetchall()
-        cur.close()
-        conn.close()
+        with get_sqlalchemy_engine().connect() as conn:
+            query = """
+                SELECT date, dow, sp500, nasdaq 
+                FROM index_closing_price 
+                WHERE date BETWEEN %s AND %s
+                ORDER BY date ASC;
+            """
+            result = conn.execute(query, (start_str, end_str))
+            rows = result.fetchall()
         
         # 데이터 구조화
         dates = []
@@ -782,8 +749,6 @@ def get_us_indices_6months_chart(end_date: str) -> dict:
         return result
         
     except Exception as e:
-        if conn:
-            conn.close()
         return {'error': f'Error fetching 6-month US indices data from database: {e}'}
 
 def get_us_indices_1year_chart(end_date: str) -> dict:
@@ -796,27 +761,21 @@ def get_us_indices_1year_chart(end_date: str) -> dict:
         'nasdaq': {'dates': [...], 'closes': [...]}
     }
     """
-    conn = check_db_connection()
-    if conn is None:
-        return {'error': 'Database connection failed'}
-    
     try:
         end_dt = datetime.strptime(end_date, '%Y-%m-%d')
         start_dt = end_dt - timedelta(days=365)  # 1년(365일)
         start_str = start_dt.strftime('%Y-%m-%d')
         end_str = end_dt.strftime('%Y-%m-%d')
 
-        cur = conn.cursor()
-        query = """
-            SELECT date, dow, sp500, nasdaq 
-            FROM index_closing_price 
-            WHERE date BETWEEN %s AND %s
-            ORDER BY date ASC;
-        """
-        cur.execute(query, (start_str, end_str))
-        rows = cur.fetchall()
-        cur.close()
-        conn.close()
+        with get_sqlalchemy_engine().connect() as conn:
+            query = """
+                SELECT date, dow, sp500, nasdaq 
+                FROM index_closing_price 
+                WHERE date BETWEEN %s AND %s
+                ORDER BY date ASC;
+            """
+            result = conn.execute(query, (start_str, end_str))
+            rows = result.fetchall()
         
         # 데이터 구조화
         dates = []
@@ -843,8 +802,6 @@ def get_us_indices_1year_chart(end_date: str) -> dict:
         return result
         
     except Exception as e:
-        if conn:
-            conn.close()
         return {'error': f'Error fetching 1-year US indices data from database: {e}'}
 
 ## 04-2. 미국 국채 금리
@@ -1021,11 +978,6 @@ def get_enhanced_stock_info(ticker: str, end_date: str = None) -> Dict:
     """
     import numpy as np
     try:
-        # 데이터베이스 연결
-        conn = check_db_connection()
-        if conn is None:
-            return {'error': 'Database connection failed'}
-        
         # 티커 첫 글자에 따라 테이블 결정
         first_letter = ticker[0].lower()
         if 'a' <= first_letter <= 'd':
@@ -1053,40 +1005,36 @@ def get_enhanced_stock_info(ticker: str, end_date: str = None) -> Dict:
         start_1m = (datetime.strptime(final_end_date, '%Y-%m-%d') - timedelta(days=31)).strftime('%Y-%m-%d')
         start_60d = (datetime.strptime(final_end_date, '%Y-%m-%d') - timedelta(days=60)).strftime('%Y-%m-%d')
         
-        cur = conn.cursor()
-        
-        # 1년치 데이터 조회
-        query_1y = f"""
-            SELECT date, open, high, low, close, volume, adj_close
-            FROM {table_name}
-            WHERE stock_symbol = %s AND date BETWEEN %s AND %s
-            ORDER BY date ASC
-        """
-        cur.execute(query_1y, (ticker, start_1y, final_end_date))
-        rows_1y = cur.fetchall()
-        
-        # 1개월치 데이터 조회
-        query_1m = f"""
-            SELECT date, open, high, low, close, volume, adj_close
-            FROM {table_name}
-            WHERE stock_symbol = %s AND date BETWEEN %s AND %s
-            ORDER BY date ASC
-        """
-        cur.execute(query_1m, (ticker, start_1m, final_end_date))
-        rows_1m = cur.fetchall()
-        
-        # 60일치 데이터 조회
-        query_60d = f"""
-            SELECT date, open, high, low, close, volume, adj_close
-            FROM {table_name}
-            WHERE stock_symbol = %s AND date BETWEEN %s AND %s
-            ORDER BY date ASC
-        """
-        cur.execute(query_60d, (ticker, start_60d, final_end_date))
-        rows_60d = cur.fetchall()
-        
-        cur.close()
-        conn.close()
+        with get_sqlalchemy_engine().connect() as conn:
+            # 1년치 데이터 조회
+            query_1y = f"""
+                SELECT date, open, high, low, close, volume, adj_close
+                FROM {table_name}
+                WHERE stock_symbol = %s AND date BETWEEN %s AND %s
+                ORDER BY date ASC
+            """
+            result_1y = conn.execute(query_1y, (ticker, start_1y, final_end_date))
+            rows_1y = result_1y.fetchall()
+            
+            # 1개월치 데이터 조회
+            query_1m = f"""
+                SELECT date, open, high, low, close, volume, adj_close
+                FROM {table_name}
+                WHERE stock_symbol = %s AND date BETWEEN %s AND %s
+                ORDER BY date ASC
+            """
+            result_1m = conn.execute(query_1m, (ticker, start_1m, final_end_date))
+            rows_1m = result_1m.fetchall()
+            
+            # 60일치 데이터 조회
+            query_60d = f"""
+                SELECT date, open, high, low, close, volume, adj_close
+                FROM {table_name}
+                WHERE stock_symbol = %s AND date BETWEEN %s AND %s
+                ORDER BY date ASC
+            """
+            result_60d = conn.execute(query_60d, (ticker, start_60d, final_end_date))
+            rows_60d = result_60d.fetchall()
         
         # 데이터 확인
         if not rows_1y or not rows_1m or not rows_60d:

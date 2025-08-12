@@ -3,34 +3,30 @@ import time
 from datetime import datetime, timedelta
 from typing import Dict, List
 from app.core.config import settings
-from app.db.connection import check_db_connection
+from app.db.connection import get_sqlalchemy_engine
 import pandas_datareader.data as web
 
 def get_sector_companies_from_db(sector: str) -> List[str]:
     """
     DB에서 특정 섹터에 해당하는 모든 기업의 stock_symbol을 가져옵니다.
     """
-    conn = check_db_connection()
-    if conn is None:
+    engine = get_sqlalchemy_engine()
+    if engine is None:
         return []
     
     try:
-        cur = conn.cursor()
-        query = """
-            SELECT DISTINCT stock_symbol 
-            FROM kb_enterprise_dataset 
-            WHERE sector = %s
-            ORDER BY stock_symbol;
-        """
-        cur.execute(query, (sector,))
-        rows = cur.fetchall()
-        cur.close()
-        conn.close()
-        return [row[0] for row in rows if row[0]]
+        with engine.connect() as conn:
+            query = """
+                SELECT DISTINCT stock_symbol
+                FROM kb_enterprise_dataset
+                WHERE sector = %s
+                ORDER BY stock_symbol;
+            """
+            result = conn.execute(query, (sector,))
+            rows = result.fetchall()
+            return [row[0] for row in rows if row[0]]
     except Exception as e:
         print(f"Error fetching companies for sector {sector}: {e}")
-        if conn:
-            conn.close()
         return []
 
 def get_stock_table_name(ticker: str) -> str:
@@ -45,57 +41,49 @@ def get_stock_table_name(ticker: str) -> str:
     else:  # n-z
         return 'fnspid_stock_price_c'
 
+
 def get_stock_data_from_db(ticker: str, end_date: str, days_back: int = 400) -> Dict:
     """
     DB에서 특정 ticker의 주가 데이터를 가져옵니다.
     """
-    conn = check_db_connection()
-    if conn is None:
-        return {"error": "Database connection failed"}
-    
+    engine = get_sqlalchemy_engine()
     try:
-        table_name = get_stock_table_name(ticker)
-        
-        # end_date에서 days_back일 전부터 end_date까지의 데이터 조회
-        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
-        start_dt = end_dt - timedelta(days=days_back)
-        
-        cur = conn.cursor()
-        query = f"""
-            SELECT date, open, high, low, close, adj_close, volume
-            FROM {table_name}
-            WHERE stock_symbol = %s 
-            AND date BETWEEN %s AND %s
-            ORDER BY date ASC;
-        """
-        
-        cur.execute(query, (ticker, start_dt.strftime('%Y-%m-%d'), end_date))
-        rows = cur.fetchall()
-        cur.close()
-        conn.close()
-        
-        if not rows:
-            return {"error": f"No data found for {ticker}"}
-        
-        # DataFrame 형태로 변환
-        data = []
-        for row in rows:
-            data.append({
-                'date': row[0],
-                'open': float(row[1]) if row[1] else None,
-                'high': float(row[2]) if row[2] else None,
-                'low': float(row[3]) if row[3] else None,
-                'close': float(row[4]) if row[4] else None,
-                'adj close': float(row[5]) if row[5] else None,
-                'volume': int(row[6]) if row[6] else None
-            })
-        
-        return {"data": data}
-        
+        with engine.connect() as conn: # 수정
+            table_name = get_stock_table_name(ticker)
+            
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+            start_dt = end_dt - timedelta(days=days_back)
+            
+            query = f"""
+                SELECT date, open, high, low, close, adj_close, volume
+                FROM {table_name}
+                WHERE stock_symbol = %s 
+                AND date BETWEEN %s AND %s
+                ORDER BY date ASC;
+            """
+            
+            result = conn.execute(query, (ticker, start_dt.strftime('%Y-%m-%d'), end_date))
+            rows = result.fetchall()
+            
+            if not rows:
+                return {"error": f"No data found for {ticker}"}
+            
+            data = []
+            for row in rows:
+                data.append({
+                    'date': row[0],
+                    'open': float(row[1]) if row[1] else None,
+                    'high': float(row[2]) if row[2] else None,
+                    'low': float(row[3]) if row[3] else None,
+                    'close': float(row[4]) if row[4] else None,
+                    'adj close': float(row[5]) if row[5] else None,
+                    'volume': int(row[6]) if row[6] else None
+                })
+            
+            return {"data": data}
+            
     except Exception as e:
         print(f"Error fetching stock data for {ticker}: {e}")
-        if conn:
-            conn.close()
         return {"error": str(e)}
 
 def get_stock_returns(ticker: str, end_date: str) -> Dict:
