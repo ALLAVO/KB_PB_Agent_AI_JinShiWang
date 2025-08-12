@@ -1,44 +1,42 @@
-from app.db.connection import check_db_connection
+from app.db.connection import get_sqlalchemy_engine 
 from app.services.cache_manager import get_mcdonald_word_info
 import re
 
 def get_articles_by_stock_symbol(stock_symbol: str, start_date: str = None, end_date: str = None):
-    conn = check_db_connection()
-    if conn is None:
-        return []
+    engine = get_sqlalchemy_engine() 
     try:
-        cur = conn.cursor()
-        stock_symbol_param = str(stock_symbol).strip()
-        # 날짜 조건 동적 생성
-        date_conditions = []
-        params = [stock_symbol_param]
-        if start_date:
-            date_conditions.append("date >= %s")
-            params.append(start_date)
-        if end_date:
-            date_conditions.append("date <= %s")
-            params.append(end_date)
-        date_query = " AND ".join(date_conditions)
-        if date_query:
-            date_query = " AND " + date_query
-        stock_symbol_query = (
-            "SELECT article, date, weekstart_sunday, article_title "
-            "FROM kb_enterprise_dataset "
-            "WHERE stock_symbol = %s" + date_query + " "
-            "ORDER BY weekstart_sunday, date DESC;"
-        )
-        print("실행 쿼리:", stock_symbol_query)
-        print("파라미터:", params)
-        cur.execute(stock_symbol_query, tuple(params))
-        rows = cur.fetchall()
-        print(f"조회된 row 수: {len(rows)}")
-        cur.close()
-        conn.close()
-        return rows
+        with engine.connect() as conn: 
+            stock_symbol_param = str(stock_symbol).strip()
+            # 날짜 조건 동적 생성
+            date_conditions = []
+            params = {"stock_symbol": stock_symbol_param}
+            if start_date:
+                date_conditions.append("date >= %(start_date)s")
+                params["start_date"] = start_date
+            if end_date:
+                date_conditions.append("date <= %(end_date)s")
+                params["end_date"] = end_date
+            
+            date_query = " AND ".join(date_conditions)
+            if date_query:
+                date_query = " AND " + date_query
+            
+            stock_symbol_query = (
+                "SELECT article, date, weekstart_sunday, article_title "
+                "FROM kb_enterprise_dataset "
+                "WHERE stock_symbol = %(stock_symbol)s" + date_query + " "
+                "ORDER BY weekstart_sunday, date DESC;"
+            )
+            print("실행 쿼리:", stock_symbol_query)
+            print("파라미터:", params)
+            
+            result = conn.execute(stock_symbol_query, params)
+            rows = result.fetchall()
+            
+            print(f"조회된 row 수: {len(rows)}")
+            return rows
     except Exception as e:
         print("Error fetching articles for ticker:", stock_symbol, e)
-        if conn:
-            conn.close()
         return []
 
 def preprocess_text(text: str) -> list:
@@ -51,7 +49,7 @@ def preprocess_text(text: str) -> list:
     return words
 
 # 주어진 기사에 대한 감성 점수 계산 함수
-def get_sentiment_score_for_article(article: str, conn=None) -> float:
+def get_sentiment_score_for_article(article: str) -> float:
     words = preprocess_text(article)
     positive_count = 0
     negative_count = 0
@@ -143,16 +141,13 @@ def get_weekly_sentiment_scores_by_stock_symbol(stock_symbol: str, start_date: s
     orig_end_date = end_date
     print(f"[DEBUG] 전달받은 값 - stock_symbol: {stock_symbol}, start_date: {start_date}, end_date: {end_date} (원본: {orig_start_date}, {orig_end_date})")
     try:
-        conn = check_db_connection()
-        if conn is None:
-            return {}
         articles = get_articles_by_stock_symbol(stock_symbol, start_date, end_date)
         weekly_scores = {}
         weekly_counts = {}
         weekly_articles = {}  # week별 기사 및 점수 정보 저장
         for article, date, week_start, article_title in articles:
             # score = 각 기사 별 감성 점수
-            score = get_sentiment_score_for_article(article, conn)
+            score = get_sentiment_score_for_article(article)
             words = preprocess_text(article)
             pos_cnt, neg_cnt, pos_sum, neg_sum = 0, 0, 0.0, 0.0
             
@@ -196,7 +191,6 @@ def get_weekly_sentiment_scores_by_stock_symbol(stock_symbol: str, start_date: s
             weekly_top3_articles[week] = top3
         print(f"[DEBUG] {stock_symbol}의 주차별 감성점수: {weekly_scores}")
         print(f"[DEBUG] {stock_symbol}의 주차별 top3 기사: {weekly_top3_articles}")
-        conn.close()
         return {"weekly_scores": weekly_scores, "weekly_top3_articles": weekly_top3_articles}
     except Exception as e:
         print("Error calculating weekly sentiment scores:", e)
