@@ -1,7 +1,7 @@
 import pandas as pd
 from transformers import pipeline, AutoTokenizer
 import torch
-from app.db.connection import check_db_connection
+from app.db.connection import get_sqlalchemy_engine # 수정
 from pathlib import Path
 from app.services.sentiment import get_weekly_sentiment_scores_by_stock_symbol
 import openai
@@ -17,6 +17,7 @@ ratio_map = {
 # .env에서 OPENAI_API_KEY 불러오기
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
+
 
 def kor_summary(text: str) -> str:
     """
@@ -52,10 +53,8 @@ def kor_summary(text: str) -> str:
 def summarize_article(stock_symbol: str, start_date: str, end_date: str):
     # 데이터 로딩 (DB에서 불러오기)
     try:
-        conn = check_db_connection()
-        if conn is None:
-            print("DB 연결 실패")
-            return []
+        engine = get_sqlalchemy_engine() # 수정
+
         
         # stock_symbol에 따른 테이블 선택
         first_char = stock_symbol[0].upper()
@@ -74,7 +73,7 @@ def summarize_article(stock_symbol: str, start_date: str, end_date: str):
             WHERE stock_symbol = %s AND date >= %s AND date <= %s
             ORDER BY date
         """
-        kb_ent_sam = pd.read_sql(query, conn, params=[stock_symbol, start_date, end_date])
+        kb_ent_sam = pd.read_sql(query, engine, params=[stock_symbol, start_date, end_date])
         conn.close()
     except Exception as e:
         print("DB에서 데이터 불러오기 실패:", e)
