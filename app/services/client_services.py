@@ -9,21 +9,14 @@ import pandas as pd
 from app.services.ai_analysis_service import generate_performance_summary
 import numpy as np
 from pandas_datareader import data as pdr
+from app.db.connection import get_sqlalchemy_engine
 
 logger = logging.getLogger(__name__)
 
 def get_database_connection():
-    """데이터베이스 연결"""
+    """데이터베이스 연결 - Cloud SQL 지원"""
     try:
-        if hasattr(settings, 'USE_SUPABASE') and settings.USE_SUPABASE:
-            # Supabase 연결
-            database_url = settings.SUPABASE_DATABASE_URL
-        else:
-            # 로컬 PostgreSQL 연결
-            database_url = f"postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
-        
-        engine = create_engine(database_url, pool_pre_ping=True)
-        return engine
+        return get_sqlalchemy_engine()
     except Exception as e:
         logger.error(f"Database connection error: {e}")
         raise
