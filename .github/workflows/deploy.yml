@@ -52,11 +52,11 @@ jobs:
             --allow-unauthenticated \
             --port 8080 \
             --timeout 1200s \
-            --memory 4Gi \
+            --memory 8Gi \
             --cpu 2 \
             --max-instances 10 \
             --min-instances 0 \
-            --concurrency 80 \
+            --concurrency 10 \
             --cpu-throttling \
             --execution-environment gen2 \
             --cpu-boost \
