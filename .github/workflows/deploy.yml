@@ -70,7 +70,7 @@ jobs:
             --concurrency 10 \
             --cpu-throttling \
             --execution-environment gen2 \
-            --no-cpu-boost \ # cpu-boost는 요청 처리 중에만 적용되므로, 시작 부스트를 위해 비활성화 후 아래 옵션 사용
+            --no-cpu-boost \
             --startup-cpu-boost \ 
             --startup-timeout=3600s \
             --service-account=jinshiwang-service-account@confident-trail-468600-e6.iam.gserviceaccount.com \
