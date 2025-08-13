@@ -5,7 +5,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 def get_sqlalchemy_engine():
     """SQLAlchemy 엔진을 생성합니다."""
     try:
