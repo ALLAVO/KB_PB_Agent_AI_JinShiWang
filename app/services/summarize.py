@@ -1,8 +1,7 @@
 import pandas as pd
 from transformers import pipeline, AutoTokenizer
 import torch
-from app.db.connection import get_sqlalchemy_engine # 수정
-from pathlib import Path
+from app.db.connection import get_sqlalchemy_engine
 from app.services.sentiment import get_weekly_sentiment_scores_by_stock_symbol, get_weekly_top3_articles_by_stock_symbol
 from dotenv import load_dotenv
 import openai
@@ -10,16 +9,38 @@ import os
 from summa.summarizer import summarize as extractive_summarize
 from sqlalchemy import text 
 
-# 함수 안이든 전역이든 한 번만 선언 ##추가 코드
+CACHE_DIR = os.getenv("HF_HOME")
+
+# .env에서 OPENAI_API_KEY 불러오기
+load_dotenv()
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+try:
+    model_name = "facebook/bart-large-cnn"
+    
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_name,
+        cache_dir=CACHE_DIR
+    )
+    
+    device = 0 if torch.cuda.is_available() else -1
+    summarizer = pipeline(
+        "summarization",
+        model=model_name,
+        tokenizer=tokenizer, 
+        device=device
+    )
+except Exception as e:
+    print(f"Summarization 모델 또는 토크나이저 로딩 중 오류 발생: {e}")
+    tokenizer = None
+    summarizer = None
+    raise
+
 ratio_map = {
     "medium": 0.7,
     "long":   0.6,
     "very_long": 0.5
 }
-# .env에서 OPENAI_API_KEY 불러오기
-load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
 
 def kor_summary(text: str) -> str:
     """
@@ -52,136 +73,6 @@ def kor_summary(text: str) -> str:
     kor_final_summary = response.choices[0].message.content.strip()
     return kor_final_summary
 
-def summarize_article(stock_symbol: str, start_date: str, end_date: str):
-    # 데이터 로딩 (DB에서 불러오기)
-    try:
-        engine = get_sqlalchemy_engine() # 수정
-
-        
-        # stock_symbol에 따른 테이블 선택
-        first_char = stock_symbol[0].upper()
-        if 'A' <= first_char <= 'D':
-            table = 'fnspid_stock_price_a'
-        elif 'E' <= first_char <= 'M':
-            table = 'fnspid_stock_price_b'
-        elif 'N' <= first_char <= 'Z':
-            table = 'fnspid_stock_price_c'
-        else:
-            raise Exception("유효하지 않은 stock_symbol입니다.")
-        
-        query = text(f"""
-            SELECT date, article
-            FROM {table}
-            WHERE stock_symbol = :stock_symbol AND date >= :start_date AND date <= :end_date
-            ORDER BY date
-        """)
-        
-        params = {
-            "stock_symbol": stock_symbol,
-            "start_date": start_date,
-            "end_date": end_date
-        }
-        
-        kb_ent_sam = pd.read_sql(query, engine, params=params)
-        
-    except Exception as e:
-        print("DB에서 데이터 불러오기 실패:", e)
-        return []
-
-    tokenizer_dir = Path("./tokenizer_cache/bart-large-cnn")
-    if not tokenizer_dir.exists():
-        tokenizer_dir.mkdir(parents=True, exist_ok=True)
-        tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large-cnn")
-        tokenizer.save_pretrained(str(tokenizer_dir))
-    else:
-        tokenizer = AutoTokenizer.from_pretrained(str(tokenizer_dir))
-
-    device = 0 if torch.cuda.is_available() else -1
-
-    def count_tokens(text):
-        if pd.isnull(text) or not isinstance(text, str):
-            return 0
-        return len(tokenizer.encode(text, truncation=False))
-
-    def classify_length(token_count):
-        if token_count <= 200:
-            return "short"
-        elif token_count <= 700:
-            return "medium"
-        elif token_count <= 1000:
-            return "long"
-        else:
-            return "very_long"
-
-    summarizers = {
-        "medium": pipeline(
-            "summarization",
-            model="facebook/bart-large-cnn",
-            device=device
-        ),
-        "long": pipeline(
-            "summarization",
-            model="facebook/bart-large-cnn",  # Pegasus 대신 BART 사용
-            device=device
-        ),
-        "very_long": pipeline(
-            "summarization",
-            model="facebook/bart-large-cnn",  # LED 대신 BART 사용 (호환성 문제 해결)
-            device=device
-        )
-    }
-
-    def summarize_by_length(text):
-        tokens = count_tokens(text)
-        cls = classify_length(tokens)
-        if cls == "short":
-            eng_summary = text
-        elif cls in ("medium", "long"):
-            max_len = max(50, int(tokens * 0.2)) if cls == "medium" else max(75, int(tokens * 0.15))
-            eng_summary = summarizers[cls](
-                text,
-                max_length=max_len,
-                min_length=50,
-                truncation=True
-            )[0]["summary_text"]
-        else:
-            token_ids = tokenizer.encode(text, truncation=False)
-            chunk_size = 1000
-            chunks = [
-                tokenizer.decode(token_ids[i:i + chunk_size])
-                for i in range(0, len(token_ids), chunk_size)
-            ]
-            interim_summaries = [
-                summarizers["very_long"](
-                    chunk,
-                    max_length=200,
-                    min_length=75,
-                    truncation=True
-                )[0]["summary_text"]
-                for chunk in chunks
-            ]
-            combined = " ".join(interim_summaries)
-            eng_summary = summarizers["very_long"](
-                combined,
-                max_length=200,
-                min_length=75,
-                truncation=True
-            )[0]["summary_text"]
-        kor_result = kor_summary(eng_summary)
-        return kor_result
-
-    results = []
-    for idx, row in kb_ent_sam.iterrows():
-        article = row["article"]
-        summary = summarize_by_length(article)
-        results.append({
-            "date": row["date"],
-            "summary": summary
-        })
-
-    print("return results", results)
-
-    return results
 
 def summarize_top3_articles(top3_articles):
     """
@@ -199,35 +90,12 @@ def summarize_top3_articles(top3_articles):
         }, ...
     ]
     """
-    tokenizer_dir = Path("./tokenizer_cache/bart-large-cnn")
-    if not tokenizer_dir.exists():
-        tokenizer_dir.mkdir(parents=True, exist_ok=True)
-        tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large-cnn")
-        tokenizer.save_pretrained(str(tokenizer_dir))
-    else:
-        tokenizer = AutoTokenizer.from_pretrained(str(tokenizer_dir))
-    device = 0 if torch.cuda.is_available() else -1
-    summarizers = {
-        "medium": pipeline(
-            "summarization",
-            model="facebook/bart-large-cnn",
-            device=device
-        ),
-        "long": pipeline(
-            "summarization",
-            model="facebook/bart-large-cnn",  # Pegasus 대신 BART 사용
-            device=device
-        ),
-        "very_long": pipeline(
-            "summarization",
-            model="facebook/bart-large-cnn",  # LED 대신 BART 사용 (호환성 문제 해결)
-            device=device
-        )
-    }
+    
     def count_tokens(text):
-        if pd.isnull(text) or not isinstance(text, str):
+        if pd.isnull(text) or not isinstance(text, str) or not tokenizer:
             return 0
         return len(tokenizer.encode(text, truncation=False))
+
     def classify_length(token_count):
         if token_count <= 200:
             return "short"
@@ -237,30 +105,29 @@ def summarize_top3_articles(top3_articles):
             return "long"
         else:
             return "very_long"
+
     def summarize_by_length(text):
+        if not summarizer:
+            return "요약 모델을 로드할 수 없어 요약을 생성할 수 없습니다."
+
         tokens = count_tokens(text)
         cls    = classify_length(tokens)
 
-        # 1) 너무 짧으면 그대로 반환
         if cls == "short":
             eng_summary = text
         else:
-            # 2) 추출적 요약 (TextRank)
             ratio = ratio_map[cls]
             extract_text = extractive_summarize(text, ratio=ratio)
 
-            # 3) 생성적 요약 (BART)
             if cls in ("medium", "long"):
-                # medium: 약 3~4문장, long: 약 4~5문장
                 max_len = max(50, int(tokens * 0.2)) if cls == "medium" else max(75, int(tokens * 0.15))
-                eng_summary = summarizers[cls](
+                eng_summary = summarizer(
                     extract_text,
                     max_length=max_len,
                     min_length=50,
                     truncation=True
                 )[0]["summary_text"]
             else:  # very_long
-                # 긴 글은 chunk → interim → combine → final
                 token_ids = tokenizer.encode(extract_text, truncation=False)
                 chunk_size = 1000
                 chunks = [
@@ -268,7 +135,7 @@ def summarize_top3_articles(top3_articles):
                     for i in range(0, len(token_ids), chunk_size)
                 ]
                 interim = [
-                    summarizers["very_long"](
+                    summarizer(
                         chunk,
                         max_length=200,
                         min_length=75,
@@ -277,37 +144,25 @@ def summarize_top3_articles(top3_articles):
                     for chunk in chunks
                 ]
                 combined = " ".join(interim)
-                eng_summary = summarizers["very_long"](
+                eng_summary = summarizer(
                     combined,
                     max_length=200,
                     min_length=75,
                     truncation=True
                 )[0]["summary_text"]
-        # 4) 한국어 번역 & 다듬기
+        
         return kor_summary(eng_summary)
 
     results = []
     for item in top3_articles:
-        # item은 dict 형태: {'article': ..., 'date': ..., 'weekstart': ..., 'score': ..., 'pos_cnt': ..., 'neg_cnt': ..., 'article_title': ...}
         article = item['article']
-        date = item['date']
-        weekstart = item['weekstart']
-        score = item['score']
-        pos_cnt = item['pos_cnt']
-        neg_cnt = item['neg_cnt']
-        article_title = item.get('article_title', None)
         
         summary = summarize_by_length(article)
-        results.append({
-            'article': article,
-            'date': date,
-            'weekstart': weekstart,
-            'score': score,
-            'pos_cnt': pos_cnt,
-            'neg_cnt': neg_cnt,
-            'article_title': article_title,
-            'summary': summary
-        })
+        
+        new_item = item.copy()
+        new_item['summary'] = summary
+        results.append(new_item)
+        
     return results
 
 def get_weekly_top3_summaries(stock_symbol: str, start_date: str, end_date: str):

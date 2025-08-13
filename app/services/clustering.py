@@ -9,8 +9,10 @@ from app.db.connection import get_sqlalchemy_engine
 from app.services.sentiment import get_sentiment_score_for_article
 from app.services.keyword_extractor import extract_keywords, extract_named_entities, restore_named_entities, kw_model
 from app.services.summarize import summarize_top3_articles
-from sqlalchemy import text 
+from sqlalchemy import text
+import os
 
+CACHE_DIR = os.getenv("HF_HOME")
 
 def week_start_sunday(input_date_str: str) -> str:
     """
@@ -39,7 +41,7 @@ def get_articles_by_sector(sector: str, weekstart_sunday: str):
             # 3. 파라미터를 딕셔너리로 전달합니다.
             params = {"sector": sector, "weekstart_sunday": weekstart_sunday}
             result = conn.execute(query, params)
-            rows = result.fetchall()
+            rows = result.mappings().all()
         return rows
     except Exception as e:
         print(f"Error fetching articles for sector {sector}: {e}")
@@ -62,23 +64,25 @@ def get_industry_top3_articles(sector: str, end_date: str):
     valid_articles = []
     titles = []
     
-    for article, date, weekstart, article_title, stock_symbol in articles_data:
+    for row in articles_data:
+        article_title = row['article_title']
         if article_title and article_title.strip():
             valid_articles.append({
-                'article': article,
-                'date': date,
-                'weekstart': weekstart,
+                'article': row['article'],
+                'date': row['date'],
+                'weekstart': row['weekstart_sunday'],
                 'article_title': article_title,
-                'stock_symbol': stock_symbol
+                'stock_symbol': row['stock_symbol']
             })
             titles.append(article_title.strip())
+    
     
     if len(titles) < 3:
         print(f"❗ {sector} 섹터의 기사가 충분하지 않습니다. (필요: 3개, 현재: {len(titles)}개)")
         return {"top3_articles": [], "week": week_sunday}
     
     # 1) 임베딩
-    model = SentenceTransformer('all-mpnet-base-v2')
+    model = SentenceTransformer('paraphrase-mpnet-base-v2', cache_folder=CACHE_DIR)
     embeddings = model.encode(titles, show_progress_bar=True)
     
     # 2) 클러스터링
@@ -225,7 +229,7 @@ def get_hot_articles_by_date(start_date: str):
             # 6. 파라미터를 딕셔너리로 전달합니다.
             params = {"start_date": start_date}
             result = conn.execute(query, params)
-            rows = result.fetchall()
+            rows = result.mappings().all()
         return rows
     except Exception as e:
         print(f"Error fetching hot articles for date {start_date}: {e}")
@@ -248,15 +252,16 @@ def get_market_hot_articles(end_date: str):
     valid_articles = []
     titles = []
     
-    for article, date, weekstart, article_title, stock_symbol, sector in articles_data:
+    for row in articles_data:
+        article_title = row['article_title']
         if article_title and article_title.strip():
             valid_articles.append({
-                'article': article,
-                'date': date,
-                'weekstart': weekstart,
+                'article': row['article'],
+                'date': row['date'],
+                'weekstart': row['weekstart_sunday'],
                 'article_title': article_title,
-                'stock_symbol': stock_symbol,
-                'sector': sector
+                'stock_symbol': row['stock_symbol'],
+                'sector': row['sector']
             })
             titles.append(article_title.strip())
     
@@ -265,7 +270,7 @@ def get_market_hot_articles(end_date: str):
         return {"top3_articles": [], "week": week_sunday}
     
     # 1) 임베딩
-    model = SentenceTransformer('all-mpnet-base-v2')
+    model = SentenceTransformer('paraphrase-mpnet-base-v2', cache_folder=CACHE_DIR)
     embeddings = model.encode(titles, show_progress_bar=True)
     
     # 2) 클러스터링
@@ -372,28 +377,6 @@ def get_market_hot_articles(end_date: str):
             'neg_cnt': 0,  # 임시값
             'article_title': article['article_title']
         })
-    
-    summarized_articles = summarize_top3_articles(summary_input)
-    
-    # 최종 결과 구성
-    final_articles = []
-    for i, article in enumerate(enriched_articles):
-        final_article = article.copy()
-        if i < len(summarized_articles):
-            final_article['summary'] = summarized_articles[i]['summary']
-        else:
-            final_article['summary'] = "요약을 생성할 수 없습니다."
-        final_articles.append(final_article)
-    
-    print(f"=== {week_sunday} 주차 시장 핫한 기사 TOP 3 ===")
-    for i, article in enumerate(final_articles, 1):
-        print(f"[기사 {i}] 섹터: {article['sector']}, 종목: {article['stock_symbol']}, 제목: {article['article_title']}")
-        print(f"감성점수: {article['score']}, 키워드: {article['keywords'][:3]}")
-    
-    return {
-        "top3_articles": final_articles,
-        "week": week_sunday
-    }
     
     summarized_articles = summarize_top3_articles(summary_input)
     
