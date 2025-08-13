@@ -1,6 +1,7 @@
 from app.db.connection import get_sqlalchemy_engine 
 from app.services.cache_manager import get_mcdonald_word_info
 import re
+from sqlalchemy import text
 
 def get_articles_by_stock_symbol(stock_symbol: str, start_date: str = None, end_date: str = None):
     engine = get_sqlalchemy_engine() 
