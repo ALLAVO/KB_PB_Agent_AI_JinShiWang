@@ -1,16 +1,14 @@
 import os
-os.environ["HF_HUB_DOWNLOAD_TIMEOUT"] = "120"
-
 import string
-from app.db.connection import get_sqlalchemy_engine 
+from app.db.connection import get_sqlalchemy_engine
 from app.services.sentiment import get_weekly_sentiment_scores_by_stock_symbol
-from pathlib import Path
 from sentence_transformers import SentenceTransformer
 import spacy
 from keybert import KeyBERT
 from transformers import AutoTokenizer
-from sqlalchemy import text 
+from sqlalchemy import text
 
+CACHE_DIR = os.getenv("HF_HOME")
 
 '''
 [유의사항]
@@ -18,61 +16,46 @@ from sqlalchemy import text
 `python -m spacy download en_core_web_sm`
 '''
 
-# 모델 및 토크나이저 캐시 경로 지정
-embedding_model_name = "CatSchroedinger/nomic-v1.5-financial-matryoshka"
-financial_model_dir = Path("./tokenizer_cache/nomic-v1.5-financial-matryoshka")
-financial_model_dir.mkdir(parents=True, exist_ok=True)
-
-if not financial_model_dir.exists() or not any(financial_model_dir.glob("**/pytorch_model.bin")):
+try:
+    # 1. 키워드 추출용 임베딩 모델 로드
+    embedding_model_name = "nomic-ai/nomic-bert-2048"
     sentence_model = SentenceTransformer(
         embedding_model_name,
-        cache_folder=str(financial_model_dir),
+        cache_folder=CACHE_DIR,
         trust_remote_code=True
     )
-else:
-    sentence_model = SentenceTransformer(
-        str(financial_model_dir),
-        trust_remote_code=True
+    kw_model = KeyBERT(sentence_model)
+
+    # 2. BART 토크나이저 로드 (요약 모델용)
+    # force_download=True 옵션을 제거하여 캐시를 사용하도록 합니다.
+    bart_tokenizer_name = "facebook/bart-large-cnn"
+    bart_tokenizer = AutoTokenizer.from_pretrained(
+        bart_tokenizer_name,
+        cache_dir=CACHE_DIR
     )
 
-kw_model = KeyBERT(sentence_model)
+    # 3. spaCy 모델 로드
+    nlp = spacy.load("en_core_web_sm")
 
-# # bart-large-cnn 토크나이저 캐시 경로 지정 및 불러오기
-# bart_tokenizer_dir = Path("./tokenizer_cache/bart-large-cnn")
-# if not bart_tokenizer_dir.exists():
-#     bart_tokenizer_dir.mkdir(parents=True, exist_ok=True)
-#     bart_tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large-cnn")
-#     bart_tokenizer.save_pretrained(str(bart_tokenizer_dir))
-# else:
-#     bart_tokenizer = AutoTokenizer.from_pretrained(str(bart_tokenizer_dir))
-
-# 다운로드 후 저장할 경로
-bart_tokenizer_dir = Path("./tokenizer_cache/bart-large-cnn")
-bart_tokenizer_dir.parent.mkdir(parents=True, exist_ok=True)  # 상위 폴더 생성
-
-# 디렉토리 초기화 (기존 캐시 삭제 가능 옵션 포함 시 아래 주석 해제)
-# import shutil
-# if bart_tokenizer_dir.exists():
-#     shutil.rmtree(bart_tokenizer_dir)
-
-# Hugging Face에서 항상 새로 다운로드 → 저장
-bart_tokenizer = AutoTokenizer.from_pretrained(
-    "facebook/bart-large-cnn",
-    force_download=True  # 캐시 무시하고 강제 다운로드
-)
-bart_tokenizer.save_pretrained(str(bart_tokenizer_dir))
-
-# 키워드 추출을 위한 함수 및 spacy 리소스 로딩
-nlp = spacy.load("en_core_web_sm")
+except Exception as e:
+    print(f"모델 로딩 중 오류 발생: {e}")
+    # 모델 로딩 실패 시, 이후 코드 실행을 막기 위해 예외를 다시 발생시키거나
+    # 적절한 기본값으로 초기화해야 합니다.
+    kw_model = None
+    bart_tokenizer = None
+    nlp = None
+    raise e
 
 MAX_TOKENS = 500
 CHUNK_OVERLAP = 50
 
 def remove_last_sentences(text, n=3):
+    if not nlp: return text
     sentences = [sent.text for sent in nlp(text).sents]
     return ' '.join(sentences[:-n]) if len(sentences) > n else text
 
 def extract_named_entities(text):
+    if not nlp: return set(), set()
     doc = nlp(text)
     original, lowered = set(), set()
     for ent in doc.ents:
@@ -83,6 +66,7 @@ def extract_named_entities(text):
     return original, lowered
 
 def preprocess(text, original_ents):
+    if not nlp: return ""
     keep = {'$', '%', "'", '(', ')', '-'}
     remove = ''.join([p for p in string.punctuation if p not in keep])
     text = text.lower().translate(str.maketrans('', '', remove))
@@ -109,6 +93,7 @@ def restore_named_entities(keywords, original_ents, lowered_ents):
     return restored
 
 def extract_keywords(text, model, top_n=10, threshold=0.4):
+    if not model: return []
     cleaned = remove_last_sentences(text)
     original_ents, lowered_ents = extract_named_entities(cleaned)
     processed = preprocess(cleaned, original_ents)
@@ -142,7 +127,6 @@ def extract_keywords(text, model, top_n=10, threshold=0.4):
             kws = restore_named_entities(kws, original_ents, lowered_ents)
             keywords_all.extend(kws)
         
-        # 점수 평균 or 최대값을 기준으로 병합
         keywords_dict = {}
         for kw, score in keywords_all:
             if kw in keywords_dict:
@@ -150,7 +134,6 @@ def extract_keywords(text, model, top_n=10, threshold=0.4):
             else:
                 keywords_dict[kw] = [score]
         
-        # 평균 점수 기준 정렬
         keywords = sorted(
             [(kw, sum(scores)/len(scores)) for kw, scores in keywords_dict.items()],
             key=lambda x: x[1],
@@ -185,7 +168,7 @@ def fetch_articles_from_db(stock_symbol, start_date, end_date):
             """)
             params = {"stock_symbol": stock_symbol, "start_date": start_date, "end_date": end_date}
             result = conn.execute(query, params)
-            rows = result.fetchall()
+            rows = result.mappings().all()
             return rows
     except Exception as e:
         print("[오류] DB에서 기사 불러오기 실패:", e)
@@ -234,7 +217,6 @@ if __name__ == '__main__':
     stock_symbol = "GS"
     start_date = "2023-12-11"
     end_date = "2023-12-14"
-    # 예시: 특정 주식 심볼과 날짜 범위로 키워드 추출 실행
     keyword_extract_from_articles(stock_symbol, start_date, end_date)
 
 
