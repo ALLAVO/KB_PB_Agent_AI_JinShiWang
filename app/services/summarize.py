@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 import openai
 import os
 from summa.summarizer import summarize as extractive_summarize
+from sqlalchemy import text 
+
 # 함수 안이든 전역이든 한 번만 선언 ##추가 코드
 ratio_map = {
     "medium": 0.7,
@@ -67,14 +69,21 @@ def summarize_article(stock_symbol: str, start_date: str, end_date: str):
         else:
             raise Exception("유효하지 않은 stock_symbol입니다.")
         
-        query = f"""
+        query = text(f"""
             SELECT date, article
             FROM {table}
-            WHERE stock_symbol = %s AND date >= %s AND date <= %s
+            WHERE stock_symbol = :stock_symbol AND date >= :start_date AND date <= :end_date
             ORDER BY date
-        """
-        kb_ent_sam = pd.read_sql(query, engine, params=[stock_symbol, start_date, end_date])
-        conn.close()
+        """)
+        
+        params = {
+            "stock_symbol": stock_symbol,
+            "start_date": start_date,
+            "end_date": end_date
+        }
+        
+        kb_ent_sam = pd.read_sql(query, engine, params=params)
+        
     except Exception as e:
         print("DB에서 데이터 불러오기 실패:", e)
         return []

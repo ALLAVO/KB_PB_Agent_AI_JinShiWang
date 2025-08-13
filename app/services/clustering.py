@@ -9,6 +9,8 @@ from app.db.connection import get_sqlalchemy_engine
 from app.services.sentiment import get_sentiment_score_for_article
 from app.services.keyword_extractor import extract_keywords, extract_named_entities, restore_named_entities, kw_model
 from app.services.summarize import summarize_top3_articles
+from sqlalchemy import text 
+
 
 def week_start_sunday(input_date_str: str) -> str:
     """
@@ -26,13 +28,17 @@ def get_articles_by_sector(sector: str, weekstart_sunday: str):
     """
     try:
         with get_sqlalchemy_engine().connect() as conn:
-            query = """
+            # 2. 쿼리를 text()로 감싸고, 파라미터 스타일을 :name 으로 변경합니다.
+            query = text("""
                 SELECT article, date, weekstart_sunday, article_title, stock_symbol
                 FROM kb_enterprise_dataset 
-                WHERE sector = %s AND weekstart_sunday = %s
+                WHERE sector = :sector AND weekstart_sunday = :weekstart_sunday
+                  AND article IS NOT NULL AND article != ''
                 ORDER BY date DESC;
-            """
-            result = conn.execute(query, (sector, weekstart_sunday))
+            """)
+            # 3. 파라미터를 딕셔너리로 전달합니다.
+            params = {"sector": sector, "weekstart_sunday": weekstart_sunday}
+            result = conn.execute(query, params)
             rows = result.fetchall()
         return rows
     except Exception as e:
@@ -145,27 +151,26 @@ def get_industry_top3_articles(sector: str, end_date: str):
     # 4) 각 기사에 대해 감성점수, 키워드, 요약 추가
     enriched_articles = []
     
-    with get_sqlalchemy_engine().connect() as conn:
-        for article_data in top3_articles:
-            # 감성점수 계산
-            sentiment_score = get_sentiment_score_for_article(article_data['article'], conn)
-            
-            # 키워드 추출
-            original_ents, lowered_ents = extract_named_entities(article_data['article'])
-            keywords = extract_keywords(article_data['article'], kw_model)
-            keywords = restore_named_entities(keywords, original_ents, lowered_ents)
-            keyword_list = [kw for kw, _ in keywords]
-            
-            enriched_article = {
-                'article': article_data['article'],
-                'date': article_data['date'].strftime('%Y-%m-%d') if hasattr(article_data['date'], 'strftime') else str(article_data['date']),
-                'weekstart': article_data['weekstart'].strftime('%Y-%m-%d') if hasattr(article_data['weekstart'], 'strftime') else str(article_data['weekstart']),
-                'article_title': article_data['article_title'],
-                'stock_symbol': article_data['stock_symbol'],
-                'score': sentiment_score,
-                'keywords': keyword_list
-            }
-            enriched_articles.append(enriched_article)
+    for article_data in top3_articles:
+        # 감성점수 계산
+        sentiment_score = get_sentiment_score_for_article(article_data['article'])
+        
+        # 키워드 추출
+        original_ents, lowered_ents = extract_named_entities(article_data['article'])
+        keywords = extract_keywords(article_data['article'], kw_model)
+        keywords = restore_named_entities(keywords, original_ents, lowered_ents)
+        keyword_list = [kw for kw, _ in keywords]
+        
+        enriched_article = {
+            'article': article_data['article'],
+            'date': article_data['date'].strftime('%Y-%m-%d') if hasattr(article_data['date'], 'strftime') else str(article_data['date']),
+            'weekstart': article_data['weekstart'].strftime('%Y-%m-%d') if hasattr(article_data['weekstart'], 'strftime') else str(article_data['weekstart']),
+            'article_title': article_data['article_title'],
+            'stock_symbol': article_data['stock_symbol'],
+            'score': sentiment_score,
+            'keywords': keyword_list
+        }
+        enriched_articles.append(enriched_article)
     
     # 5) 요약 추가 (기존 함수 활용을 위해 형식 맞추기)
     summary_input = []
@@ -209,13 +214,17 @@ def get_hot_articles_by_date(start_date: str):
     """
     try:
         with get_sqlalchemy_engine().connect() as conn:
-            query = """
+            # 5. 쿼리를 text()로 감싸고, 파라미터 스타일을 :name 으로 변경합니다.
+            query = text("""
                 SELECT article, date, weekstart_sunday, article_title, stock_symbol, sector
                 FROM kb_enterprise_dataset 
-                WHERE weekstart_sunday = %s
+                WHERE weekstart_sunday = :start_date
+                  AND article IS NOT NULL AND article != ''
                 ORDER BY date DESC;
-            """
-            result = conn.execute(query, (start_date,))
+            """)
+            # 6. 파라미터를 딕셔너리로 전달합니다.
+            params = {"start_date": start_date}
+            result = conn.execute(query, params)
             rows = result.fetchall()
         return rows
     except Exception as e:
@@ -329,28 +338,27 @@ def get_market_hot_articles(end_date: str):
     # 4) 각 기사에 대해 감성점수, 키워드, 요약 추가
     enriched_articles = []
     
-    with get_sqlalchemy_engine().connect() as conn:
-        for article_data in top3_articles:
-            # 감성점수 계산
-            sentiment_score = get_sentiment_score_for_article(article_data['article'], conn)
-            
-            # 키워드 추출
-            original_ents, lowered_ents = extract_named_entities(article_data['article'])
-            keywords = extract_keywords(article_data['article'], kw_model)
-            keywords = restore_named_entities(keywords, original_ents, lowered_ents)
-            keyword_list = [kw for kw, _ in keywords]
-            
-            enriched_article = {
-                'article': article_data['article'],
-                'date': article_data['date'].strftime('%Y-%m-%d') if hasattr(article_data['date'], 'strftime') else str(article_data['date']),
-                'weekstart': article_data['weekstart'].strftime('%Y-%m-%d') if hasattr(article_data['weekstart'], 'strftime') else str(article_data['weekstart']),
-                'article_title': article_data['article_title'],
-                'stock_symbol': article_data['stock_symbol'],
-                'sector': article_data['sector'],
-                'score': sentiment_score,
-                'keywords': keyword_list
-            }
-            enriched_articles.append(enriched_article)
+    for article_data in top3_articles:
+        # 감성점수 계산
+        sentiment_score = get_sentiment_score_for_article(article_data['article'])
+        
+        # 키워드 추출
+        original_ents, lowered_ents = extract_named_entities(article_data['article'])
+        keywords = extract_keywords(article_data['article'], kw_model)
+        keywords = restore_named_entities(keywords, original_ents, lowered_ents)
+        keyword_list = [kw for kw, _ in keywords]
+        
+        enriched_article = {
+            'article': article_data['article'],
+            'date': article_data['date'].strftime('%Y-%m-%d') if hasattr(article_data['date'], 'strftime') else str(article_data['date']),
+            'weekstart': article_data['weekstart'].strftime('%Y-%m-%d') if hasattr(article_data['weekstart'], 'strftime') else str(article_data['weekstart']),
+            'article_title': article_data['article_title'],
+            'stock_symbol': article_data['stock_symbol'],
+            'sector': article_data['sector'],
+            'score': sentiment_score,
+            'keywords': keyword_list
+        }
+        enriched_articles.append(enriched_article)
     
     # 5) 요약 추가 (기존 함수 활용을 위해 형식 맞추기)
     summary_input = []

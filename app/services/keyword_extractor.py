@@ -9,6 +9,7 @@ from sentence_transformers import SentenceTransformer
 import spacy
 from keybert import KeyBERT
 from transformers import AutoTokenizer
+from sqlalchemy import text 
 
 
 '''
@@ -175,12 +176,13 @@ def fetch_articles_from_db(stock_symbol, start_date, end_date):
     engine = get_sqlalchemy_engine()
     try:
         with engine.connect() as conn:
-            query = """
+            # SQLAlchemy 2.x 호환성을 위해 text()와 이름 기반 파라미터 사용
+            query = text("""
                 SELECT article, date, weekstart_sunday
                 FROM kb_enterprise_dataset
-                WHERE stock_symbol = %(stock_symbol)s AND date >= %(start_date)s AND date <= %(end_date)s
+                WHERE stock_symbol = :stock_symbol AND date >= :start_date AND date <= :end_date
                 ORDER BY weekstart_sunday, date DESC;
-            """
+            """)
             params = {"stock_symbol": stock_symbol, "start_date": start_date, "end_date": end_date}
             result = conn.execute(query, params)
             rows = result.fetchall()

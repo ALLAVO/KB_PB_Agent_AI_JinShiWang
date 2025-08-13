@@ -4,6 +4,8 @@ import gzip
 from datetime import datetime, timedelta
 from app.db.connection import get_sqlalchemy_engine
 from app.core.config import settings
+from sqlalchemy import text 
+
 
 # 캐시 설정
 CACHE_DIR = getattr(settings, 'cache_dir', None)
@@ -32,7 +34,9 @@ def export_mcdonald_dict_to_json():
         ensure_cache_dir()
         
         with get_sqlalchemy_engine().connect() as conn:
-            result = conn.execute("SELECT word, positive, negative, uncertainty, litigious, constraining FROM mcdonald_masterdictionary")
+            # 2. SQL 쿼리를 text()로 감싸줍니다.
+            query = text("SELECT word, positive, negative, uncertainty, litigious, constraining FROM mcdonald_masterdictionary")
+            result = conn.execute(query)
             rows = result.fetchall()
         
             mcdonald_dict = {}
@@ -45,7 +49,7 @@ def export_mcdonald_dict_to_json():
                     'litigious': litigious,
                     'constraining': constraining
                 }
-        
+
         # 압축된 JSON 파일로 저장
         with gzip.open(MCDONALD_CACHE_FILE, 'wt', encoding='utf-8') as f:
             json.dump(mcdonald_dict, f, indent=2)
