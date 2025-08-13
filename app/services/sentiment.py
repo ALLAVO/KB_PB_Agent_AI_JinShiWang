@@ -6,37 +6,41 @@ def get_articles_by_stock_symbol(stock_symbol: str, start_date: str = None, end_
     engine = get_sqlalchemy_engine() 
     try:
         with engine.connect() as conn: 
-            stock_symbol_param = str(stock_symbol).strip()
-            # 날짜 조건 동적 생성
-            date_conditions = []
-            params = {"stock_symbol": stock_symbol_param}
+            params = {"stock_symbol": str(stock_symbol).strip()}
+            
+            # 2. 기본 쿼리 템플릿과 조건 리스트를 사용합니다.
+            query_base = """
+                SELECT article, date, weekstart_sunday, article_title 
+                FROM kb_enterprise_dataset 
+                WHERE stock_symbol = :stock_symbol
+                  AND article IS NOT NULL AND article != '' 
+            """
+            conditions = []
+
             if start_date:
-                date_conditions.append("date >= %(start_date)s")
+                conditions.append("date >= :start_date")
                 params["start_date"] = start_date
             if end_date:
-                date_conditions.append("date <= %(end_date)s")
+                conditions.append("date <= :end_date")
                 params["end_date"] = end_date
             
-            date_query = " AND ".join(date_conditions)
-            if date_query:
-                date_query = " AND " + date_query
+            if conditions:
+                query_base += " AND " + " AND ".join(conditions)
             
-            stock_symbol_query = (
-                "SELECT article, date, weekstart_sunday, article_title "
-                "FROM kb_enterprise_dataset "
-                "WHERE stock_symbol = %(stock_symbol)s" + date_query + " "
-                "ORDER BY weekstart_sunday, date DESC;"
-            )
-            print("실행 쿼리:", stock_symbol_query)
+            query_final = query_base + " ORDER BY weekstart_sunday, date DESC;"
+
+            print("실행 쿼리:", query_final)
             print("파라미터:", params)
             
-            result = conn.execute(stock_symbol_query, params)
+            # 3. 쿼리를 text()로 감싸고 파라미터를 함께 전달합니다.
+            result = conn.execute(text(query_final), params)
             rows = result.fetchall()
             
             print(f"조회된 row 수: {len(rows)}")
             return rows
     except Exception as e:
-        print("Error fetching articles for ticker:", stock_symbol, e)
+        # 에러 메시지를 더 구체적으로 출력합니다.
+        print(f"Error fetching articles for ticker: {stock_symbol}. Error: {e}")
         return []
 
 def preprocess_text(text: str) -> list:
@@ -231,7 +235,8 @@ if __name__ == "__main__":
     for week, articles in result.get("weekly_top3_articles", {}).items():
         print(f"  {week}:")
         for i, art in enumerate(articles, 1):
-            print(f"    {i}. 날짜: {art[1]}, 점수: {art[3]}, pos_cnt: {art[4]}, neg_cnt: {art[5]}")
+            # art가 딕셔너리이므로, 인덱스가 아닌 키로 접근해야 합니다.
+            print(f"    {i}. 날짜: {art['date']}, 점수: {art['score']}, pos_cnt: {art['pos_cnt']}, neg_cnt: {art['neg_cnt']}")
     '''
     [리팩토링 결과 확인]
     주차별 감성점수: {'2022-07-10': -470}
