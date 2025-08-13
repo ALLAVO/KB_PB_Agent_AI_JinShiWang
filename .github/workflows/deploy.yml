@@ -70,7 +70,9 @@ jobs:
             --concurrency 10 \
             --cpu-throttling \
             --execution-environment gen2 \
-            --cpu-boost \
+            --no-cpu-boost \ # cpu-boost는 요청 처리 중에만 적용되므로, 시작 부스트를 위해 비활성화 후 아래 옵션 사용
+            --startup-cpu-boost \ 
+            --startup-timeout=3600s \
             --service-account=jinshiwang-service-account@confident-trail-468600-e6.iam.gserviceaccount.com \
             --add-cloudsql-instances=confident-trail-468600-e6:asia-northeast3:kb-pb-agent-ai-jinshiwang \
             --set-env-vars PYTHONPATH=/app,DB_HOST=/cloudsql/confident-trail-468600-e6:asia-northeast3:kb-pb-agent-ai-jinshiwang,DB_PORT=5432,DB_NAME=kb_pb_agent_ai_db,DB_USER=${{ secrets.DB_USER }},DB_PASSWORD=${{ secrets.DB_PASSWORD }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }},FRED_API_KEY=${{ secrets.FRED_API_KEY }},FMP_API_KEY=${{ secrets.FMP_API_KEY }},CACHE_DIR=/app/cache,MCDONALD_CACHE_ENABLED=true,CACHE_EXPIRY_HOURS=24,ALPHAVANTAGE_API_KEY=${{ secrets.ALPHAVANTAGE_API_KEY }},HF_HOME=/app/tokenizer_cache,TRANSFORMERS_CACHE=/app/tokenizer_cache
