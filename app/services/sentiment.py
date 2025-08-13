@@ -1,9 +1,6 @@
 from app.db.connection import get_sqlalchemy_engine 
 from app.services.cache_manager import get_mcdonald_word_info
 import re
-from sqlalchemy import text 
-import pandas as pd
-
 
 def get_articles_by_stock_symbol(stock_symbol: str, start_date: str = None, end_date: str = None):
     engine = get_sqlalchemy_engine() 
@@ -11,6 +8,7 @@ def get_articles_by_stock_symbol(stock_symbol: str, start_date: str = None, end_
         with engine.connect() as conn: 
             params = {"stock_symbol": str(stock_symbol).strip()}
             
+            # 2. 기본 쿼리 템플릿과 조건 리스트를 사용합니다.
             query_base = """
                 SELECT article, date, weekstart_sunday, article_title 
                 FROM kb_enterprise_dataset 
@@ -20,13 +18,11 @@ def get_articles_by_stock_symbol(stock_symbol: str, start_date: str = None, end_
             conditions = []
 
             if start_date:
-                # [수정] 날짜/시간 객체일 수 있으므로, 'YYYY-MM-DD' 형식으로 변환
                 conditions.append("date >= :start_date")
-                params["start_date"] = pd.to_datetime(start_date).date()
+                params["start_date"] = start_date
             if end_date:
-                # [수정] 날짜/시간 객체일 수 있으므로, 'YYYY-MM-DD' 형식으로 변환
                 conditions.append("date <= :end_date")
-                params["end_date"] = pd.to_datetime(end_date).date()
+                params["end_date"] = end_date
             
             if conditions:
                 query_base += " AND " + " AND ".join(conditions)
@@ -36,12 +32,14 @@ def get_articles_by_stock_symbol(stock_symbol: str, start_date: str = None, end_
             print("실행 쿼리:", query_final)
             print("파라미터:", params)
             
+            # 3. 쿼리를 text()로 감싸고 파라미터를 함께 전달합니다.
             result = conn.execute(text(query_final), params)
             rows = result.fetchall()
             
             print(f"조회된 row 수: {len(rows)}")
             return rows
     except Exception as e:
+        # 에러 메시지를 더 구체적으로 출력합니다.
         print(f"Error fetching articles for ticker: {stock_symbol}. Error: {e}")
         return []
 
