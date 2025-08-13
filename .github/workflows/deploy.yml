@@ -71,7 +71,6 @@ jobs:
             --cpu-throttling \
             --execution-environment gen2 \
             --no-cpu-boost \
-            --startup-cpu-boost \ 
             --startup-timeout=3600s \
             --service-account=jinshiwang-service-account@confident-trail-468600-e6.iam.gserviceaccount.com \
             --add-cloudsql-instances=confident-trail-468600-e6:asia-northeast3:kb-pb-agent-ai-jinshiwang \
