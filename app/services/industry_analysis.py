@@ -5,6 +5,7 @@ from typing import Dict, List
 from app.core.config import settings
 from app.db.connection import get_sqlalchemy_engine
 import pandas_datareader.data as web
+from sqlalchemy import text
 
 def get_sector_companies_from_db(sector: str) -> List[str]:
     """
@@ -16,13 +17,13 @@ def get_sector_companies_from_db(sector: str) -> List[str]:
     
     try:
         with engine.connect() as conn:
-            query = """
+            query = text("""
                 SELECT DISTINCT stock_symbol
                 FROM kb_enterprise_dataset
-                WHERE sector = %s
+                WHERE sector = :sector
                 ORDER BY stock_symbol;
-            """
-            result = conn.execute(query, (sector,))
+            """)
+            result = conn.execute(query, {"sector": sector})
             rows = result.fetchall()
             return [row[0] for row in rows if row[0]]
     except Exception as e:
@@ -41,28 +42,35 @@ def get_stock_table_name(ticker: str) -> str:
     else:  # n-z
         return 'fnspid_stock_price_c'
 
-
 def get_stock_data_from_db(ticker: str, end_date: str, days_back: int = 400) -> Dict:
     """
     DB에서 특정 ticker의 주가 데이터를 가져옵니다.
     """
     engine = get_sqlalchemy_engine()
     try:
-        with engine.connect() as conn: # 수정
+        with engine.connect() as conn:
             table_name = get_stock_table_name(ticker)
             
             end_dt = datetime.strptime(end_date, '%Y-%m-%d')
             start_dt = end_dt - timedelta(days=days_back)
+            start_date_str = start_dt.strftime('%Y-%m-%d')
             
-            query = f"""
+            # SQLAlchemy 2.x 호환성을 위해 text()와 이름 기반 파라미터 사용
+            query = text(f"""
                 SELECT date, open, high, low, close, adj_close, volume
                 FROM {table_name}
-                WHERE stock_symbol = %s 
-                AND date BETWEEN %s AND %s
+                WHERE stock_symbol = :ticker 
+                AND date BETWEEN :start_date AND :end_date
                 ORDER BY date ASC;
-            """
+            """)
             
-            result = conn.execute(query, (ticker, start_dt.strftime('%Y-%m-%d'), end_date))
+            params = {
+                "ticker": ticker,
+                "start_date": start_date_str,
+                "end_date": end_date
+            }
+            
+            result = conn.execute(query, params)
             rows = result.fetchall()
             
             if not rows:
@@ -70,14 +78,15 @@ def get_stock_data_from_db(ticker: str, end_date: str, days_back: int = 400) -> 
             
             data = []
             for row in rows:
+                # row 객체는 이제 이름으로 컬럼 접근이 가능합니다.
                 data.append({
-                    'date': row[0],
-                    'open': float(row[1]) if row[1] else None,
-                    'high': float(row[2]) if row[2] else None,
-                    'low': float(row[3]) if row[3] else None,
-                    'close': float(row[4]) if row[4] else None,
-                    'adj close': float(row[5]) if row[5] else None,
-                    'volume': int(row[6]) if row[6] else None
+                    'date': row.date.strftime('%Y-%m-%d') if row.date else None,
+                    'open': float(row.open) if row.open is not None else None,
+                    'high': float(row.high) if row.high is not None else None,
+                    'low': float(row.low) if row.low is not None else None,
+                    'close': float(row.close) if row.close is not None else None,
+                    'adj close': float(row.adj_close) if row.adj_close is not None else None,
+                    'volume': int(row.volume) if row.volume is not None else None
                 })
             
             return {"data": data}

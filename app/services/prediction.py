@@ -8,6 +8,8 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime
 from app.db.connection import get_sqlalchemy_engine
+from sqlalchemy import text 
+
 
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -34,8 +36,12 @@ def load_data(stock_symbol):
         table = 'fnspid_stock_price_c'
     else:
         raise Exception("유효하지 않은 stock_symbol입니다.")
-    query = f"SELECT * FROM {table} WHERE stock_symbol = %s ORDER BY date"
-    df = pd.read_sql(query, engine, params=(stock_symbol,))
+
+    query = text(f"SELECT * FROM {table} WHERE stock_symbol = :stock_symbol ORDER BY date")
+    
+    # pd.read_sql은 params를 딕셔너리로 받을 수 있음
+    df = pd.read_sql(query, engine, params={"stock_symbol": stock_symbol})
+
     if df.empty:
         raise ValueError(f"DB에서 {stock_symbol}에 해당하는 데이터가 없습니다.")
     df['date'] = pd.to_datetime(df['date'])
