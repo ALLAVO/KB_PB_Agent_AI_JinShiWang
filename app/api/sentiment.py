@@ -7,7 +7,6 @@ from app.services.sentiment import (
     get_top3_articles_closest_to_weekly_score_from_list,
 )
 from app.services.cache_manager import get_mcdonald_word_info
-from app.services.summarize import summarize_article
 from app.schemas.sentiment import (
     WeeklySentimentResponse,
     WeeklySentimentWithSummaryResponse,

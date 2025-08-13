@@ -9,6 +9,8 @@ from datetime import datetime, timedelta
 from typing import Dict, List
 from openai import OpenAI
 from app.db.connection import get_sqlalchemy_engine
+from sqlalchemy import text 
+
 
 # 요청 간 최소 대기시간 (초 단위)
 RATE_LIMIT_SLEEP = 10
@@ -250,22 +252,22 @@ def get_weekly_stock_indicators_from_stooq(ticker: str, start_date: str, end_dat
             return {"error": "No data available for the requested period (data only until 2023)"}
         
         with get_sqlalchemy_engine().connect() as conn:
-            # 주간 데이터 조회
-            query = f"""
+            # 주간 데이터 조회 (SQLAlchemy 2.x 호환되도록 수정)
+            query = text(f"""
                 SELECT date, open, high, low, close, volume, adj_close
                 FROM {table_name}
-                WHERE stock_symbol = %s AND date BETWEEN %s AND %s
+                WHERE stock_symbol = :ticker AND date BETWEEN :start_date AND :end_date
                 ORDER BY date ASC
-            """
-            result = conn.execute(query, (ticker, start_date, end_date))
-            rows = result.fetchall()
+            """)
+            params = {"ticker": ticker, "start_date": start_date, "end_date": end_date}
+            result = conn.execute(query, params)
+            rows = result.mappings().all()
         
         if not rows:
             return {"error": "No price data in given period."}
         
-        # DataFrame 생성
-        columns = ['date', 'open', 'high', 'low', 'close', 'volume', 'adj_close']
-        df = pd.DataFrame(rows, columns=columns)
+        # DataFrame 생성 (딕셔너리 리스트를 사용하므로 columns 인자 불필요)
+        df = pd.DataFrame(rows)
         
         # 날짜를 인덱스로 설정하고 정렬
         df['date'] = pd.to_datetime(df['date'])
@@ -342,20 +344,21 @@ def get_stock_price_chart_data(ticker: str, start_date: str, end_date: str) -> D
             return {"error": "No data available for the requested period (data only until 2023)"}
         
         with get_sqlalchemy_engine().connect() as conn:
-            # 차트 데이터 조회
-            query = f"""
+            # 차트 데이터 조회 (SQLAlchemy 2.x 호환되도록 수정)
+            query = text(f"""
                 SELECT date, open, high, low, close, volume, adj_close
                 FROM {table_name}
-                WHERE stock_symbol = %s AND date BETWEEN %s AND %s
+                WHERE stock_symbol = :ticker AND date BETWEEN :start_date AND :end_date
                 ORDER BY date ASC
-            """
-            result = conn.execute(query, (ticker, start_date, end_date))
-            rows = result.fetchall()
+            """)
+            params = {"ticker": ticker, "start_date": start_date, "end_date": end_date}
+            result = conn.execute(query, params)
+            rows = result.mappings().all()  # 수정된 부분
         
         if not rows:
             return {"error": f"No data found for symbol {ticker}"}
         
-        # 데이터 구조화
+        # 데이터 구조화 (딕셔너리 접근 방식으로 변경)
         dates = []
         opens = []
         highs = []
@@ -364,16 +367,16 @@ def get_stock_price_chart_data(ticker: str, start_date: str, end_date: str) -> D
         volumes = []
         
         for row in rows:
-            # row[0]이 이미 문자열인 경우와 datetime 객체인 경우를 모두 처리
-            if isinstance(row[0], str):
-                dates.append(row[0])
+            # row는 이제 딕셔너리 형태
+            if isinstance(row['date'], str):
+                dates.append(row['date'])
             else:
-                dates.append(row[0].strftime('%Y-%m-%d'))
-            opens.append(float(row[1]) if row[1] is not None else None)
-            highs.append(float(row[2]) if row[2] is not None else None)
-            lows.append(float(row[3]) if row[3] is not None else None)
-            closes.append(float(row[4]) if row[4] is not None else None)  # close 컬럼 사용
-            volumes.append(float(row[5]) if row[5] is not None else None)
+                dates.append(row['date'].strftime('%Y-%m-%d'))
+            opens.append(float(row['open']) if row['open'] is not None else None)
+            highs.append(float(row['high']) if row['high'] is not None else None)
+            lows.append(float(row['low']) if row['low'] is not None else None)
+            closes.append(float(row['close']) if row['close'] is not None else None)
+            volumes.append(float(row['volume']) if row['volume'] is not None else None)
         
         return {
             "dates": dates,
@@ -439,30 +442,31 @@ def get_index_chart_data(symbol: str, start_date: str, end_date: str) -> Dict:
             return {"error": f"Unsupported index symbol: {symbol}"}
         
         with get_sqlalchemy_engine().connect() as conn:
-            # 지수 데이터 조회
-            query = f"""
+            # 지수 데이터 조회 (SQLAlchemy 2.x 호환되도록 수정)
+            query = text(f"""
                 SELECT date, {column_name}
                 FROM index_closing_price
-                WHERE date BETWEEN %s AND %s AND {column_name} IS NOT NULL
+                WHERE date BETWEEN :start_date AND :end_date AND {column_name} IS NOT NULL
                 ORDER BY date ASC
-            """
-            result = conn.execute(query, (start_date, end_date))
-            rows = result.fetchall()
+            """)
+            params = {"start_date": start_date, "end_date": end_date}
+            result = conn.execute(query, params)
+            rows = result.mappings().all()  # 수정된 부분
         
         if not rows:
             return {"error": f"No data found for symbol {symbol}"}
         
-        # 데이터 구조화
+        # 데이터 구조화 (딕셔너리 접근 방식으로 변경)
         dates = []
         closes = []
         
         for row in rows:
-            # row[0]이 이미 문자열인 경우와 datetime 객체인 경우를 모두 처리
-            if isinstance(row[0], str):
-                dates.append(row[0])
+            # row는 이제 딕셔너리 형태
+            if isinstance(row['date'], str):
+                dates.append(row['date'])
             else:
-                dates.append(row[0].strftime('%Y-%m-%d'))
-            closes.append(float(row[1]) if row[1] is not None else None)
+                dates.append(row['date'].strftime('%Y-%m-%d'))
+            closes.append(float(row[column_name]) if row[column_name] is not None else None)
         
         # index_closing_price 테이블에는 OHLV 데이터가 없으므로 close 값만 제공
         # 호환성을 위해 opens, highs, lows는 closes와 동일한 값으로, volumes는 None으로 설정
@@ -476,7 +480,8 @@ def get_index_chart_data(symbol: str, start_date: str, end_date: str) -> Dict:
         }
     except Exception as e:
         return {"error": f"Error fetching index data from database for {symbol}: {e}"}
-
+    
+    
 def get_nasdaq_index_data(start_date: str, end_date: str) -> dict:
     """
     나스닥 지수 데이터를 가져옵니다.
@@ -715,30 +720,30 @@ def get_us_indices_6months_chart(end_date: str) -> dict:
         end_str = end_dt.strftime('%Y-%m-%d')
 
         with get_sqlalchemy_engine().connect() as conn:
-            query = """
+            query = text("""
                 SELECT date, dow, sp500, nasdaq 
                 FROM index_closing_price 
-                WHERE date BETWEEN %s AND %s
+                WHERE date BETWEEN :start_date AND :end_date
                 ORDER BY date ASC;
-            """
-            result = conn.execute(query, (start_str, end_str))
-            rows = result.fetchall()
+            """)
+            params = {"start_date": start_str, "end_date": end_str}
+            result = conn.execute(query, params)
+            rows = result.mappings().all()  # 수정된 부분
         
-        # 데이터 구조화
+        # 데이터 구조화 (딕셔너리 접근 방식으로 변경)
         dates = []
         dow_closes = []
         sp500_closes = []
         nasdaq_closes = []
         
         for row in rows:
-            # row[0]이 이미 문자열인 경우와 datetime 객체인 경우를 모두 처리
-            if isinstance(row[0], str):
-                dates.append(row[0])
+            if isinstance(row['date'], str):
+                dates.append(row['date'])
             else:
-                dates.append(row[0].strftime('%Y-%m-%d'))
-            dow_closes.append(float(row[1]) if row[1] is not None else None)
-            sp500_closes.append(float(row[2]) if row[2] is not None else None)
-            nasdaq_closes.append(float(row[3]) if row[3] is not None else None)
+                dates.append(row['date'].strftime('%Y-%m-%d'))
+            dow_closes.append(float(row['dow']) if row['dow'] is not None else None)
+            sp500_closes.append(float(row['sp500']) if row['sp500'] is not None else None)
+            nasdaq_closes.append(float(row['nasdaq']) if row['nasdaq'] is not None else None)
         
         result = {
             'dow': {'dates': dates, 'closes': dow_closes},
@@ -768,30 +773,32 @@ def get_us_indices_1year_chart(end_date: str) -> dict:
         end_str = end_dt.strftime('%Y-%m-%d')
 
         with get_sqlalchemy_engine().connect() as conn:
-            query = """
+            # SQLAlchemy 2.x 호환되도록 수정
+            query = text("""
                 SELECT date, dow, sp500, nasdaq 
                 FROM index_closing_price 
-                WHERE date BETWEEN %s AND %s
+                WHERE date BETWEEN :start_date AND :end_date
                 ORDER BY date ASC;
-            """
-            result = conn.execute(query, (start_str, end_str))
-            rows = result.fetchall()
+            """)
+            params = {"start_date": start_str, "end_date": end_str}
+            result = conn.execute(query, params)
+            rows = result.mappings().all()  # 수정된 부분
         
-        # 데이터 구조화
+        # 데이터 구조화 (딕셔너리 접근 방식으로 변경)
         dates = []
         dow_closes = []
         sp500_closes = []
         nasdaq_closes = []
         
         for row in rows:
-            # row[0]이 이미 문자열인 경우와 datetime 객체인 경우를 모두 처리
-            if isinstance(row[0], str):
-                dates.append(row[0])
+            # row는 이제 딕셔너리 형태
+            if isinstance(row['date'], str):
+                dates.append(row['date'])
             else:
-                dates.append(row[0].strftime('%Y-%m-%d'))
-            dow_closes.append(float(row[1]) if row[1] is not None else None)
-            sp500_closes.append(float(row[2]) if row[2] is not None else None)
-            nasdaq_closes.append(float(row[3]) if row[3] is not None else None)
+                dates.append(row['date'].strftime('%Y-%m-%d'))
+            dow_closes.append(float(row['dow']) if row['dow'] is not None else None)
+            sp500_closes.append(float(row['sp500']) if row['sp500'] is not None else None)
+            nasdaq_closes.append(float(row['nasdaq']) if row['nasdaq'] is not None else None)
         
         result = {
             'dow': {'dates': dates, 'closes': dow_closes},
@@ -1007,44 +1014,46 @@ def get_enhanced_stock_info(ticker: str, end_date: str = None) -> Dict:
         
         with get_sqlalchemy_engine().connect() as conn:
             # 1년치 데이터 조회
-            query_1y = f"""
+            query_1y = text(f"""
                 SELECT date, open, high, low, close, volume, adj_close
                 FROM {table_name}
-                WHERE stock_symbol = %s AND date BETWEEN %s AND %s
+                WHERE stock_symbol = :ticker AND date BETWEEN :start_date AND :end_date
                 ORDER BY date ASC
-            """
-            result_1y = conn.execute(query_1y, (ticker, start_1y, final_end_date))
-            rows_1y = result_1y.fetchall()
+            """)
+            params_1y = {"ticker": ticker, "start_date": start_1y, "end_date": final_end_date}
+            result_1y = conn.execute(query_1y, params_1y)
+            rows_1y = result_1y.mappings().all()
             
             # 1개월치 데이터 조회
-            query_1m = f"""
+            query_1m = text(f"""
                 SELECT date, open, high, low, close, volume, adj_close
                 FROM {table_name}
-                WHERE stock_symbol = %s AND date BETWEEN %s AND %s
+                WHERE stock_symbol = :ticker AND date BETWEEN :start_date AND :end_date
                 ORDER BY date ASC
-            """
-            result_1m = conn.execute(query_1m, (ticker, start_1m, final_end_date))
-            rows_1m = result_1m.fetchall()
+            """)
+            params_1m = {"ticker": ticker, "start_date": start_1m, "end_date": final_end_date}
+            result_1m = conn.execute(query_1m, params_1m)
+            rows_1m = result_1m.mappings().all()
             
             # 60일치 데이터 조회
-            query_60d = f"""
+            query_60d = text(f"""
                 SELECT date, open, high, low, close, volume, adj_close
                 FROM {table_name}
-                WHERE stock_symbol = %s AND date BETWEEN %s AND %s
+                WHERE stock_symbol = :ticker AND date BETWEEN :start_date AND :end_date
                 ORDER BY date ASC
-            """
-            result_60d = conn.execute(query_60d, (ticker, start_60d, final_end_date))
-            rows_60d = result_60d.fetchall()
+            """)
+            params_60d = {"ticker": ticker, "start_date": start_60d, "end_date": final_end_date}
+            result_60d = conn.execute(query_60d, params_60d)
+            rows_60d = result_60d.mappings().all()
         
         # 데이터 확인
         if not rows_1y or not rows_1m or not rows_60d:
             return {"error": f"No historical data found for {ticker} in database"}
         
-        # DataFrame 생성
-        columns = ['date', 'open', 'high', 'low', 'close', 'volume', 'adj_close']
-        df_1y = pd.DataFrame(rows_1y, columns=columns)
-        df_1m = pd.DataFrame(rows_1m, columns=columns)
-        df_60d = pd.DataFrame(rows_60d, columns=columns)
+        # DataFrame 생성 (딕셔너리 리스트를 사용하므로 columns 인자 불필요)
+        df_1y = pd.DataFrame(rows_1y)
+        df_1m = pd.DataFrame(rows_1m)
+        df_60d = pd.DataFrame(rows_60d)
         
         # 날짜를 인덱스로 설정하고 정렬
         for df in [df_1y, df_1m, df_60d]:
